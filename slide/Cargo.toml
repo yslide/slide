@@ -1,0 +1,8 @@
+[package]
+name = "slide"
+version = "0.0.0"
+authors = ["ayazhafiz <ayaz.hafiz.1@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+libslide = { path = "../libslide" }

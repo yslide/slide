@@ -29,6 +29,9 @@ enum TokenType{
 
     // Identifies exponent - stored as a string
     Exp,
+
+    // empty token
+    Empty,
     End
 }
 
@@ -39,6 +42,16 @@ pub struct Token {
     float: f64,
 }
 
-
+impl Token{
+    pub fn is_empty(self) -> bool {
+        if let TokenType::Empty = self.token{
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+}
+        
 
 

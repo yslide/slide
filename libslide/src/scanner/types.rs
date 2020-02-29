@@ -2,15 +2,13 @@
 // Written by Luke Bhan, 2/19/2020
 //
 //
-enum TokenType{
+#[derive(PartialEq)]
+pub enum TokenType{
     // Stores a floating point number as dp
-    Num(f64),
+    Num,
 
     // Stores an int - signed
-    Int(i64),
-
-    // Stores an int - unsigned
-    UInt(u64),
+    Int,
 
     // Identifies addition - stored as a char
     Plus,
@@ -43,8 +41,15 @@ pub struct Token {
 }
 
 impl Token{
-    pub fn is_empty(self) -> bool {
-        if let TokenType::Empty = self.token{
+    pub fn new(token_i: TokenType, integer_i: i64, float_i: f64) -> Token {
+        Token{
+            token: token_i,
+            integer: integer_i,
+            float: float_i
+        }
+    }
+    pub fn is_empty(&mut self) -> bool {
+        if TokenType::Empty == self.token{
             return true;
         }
         else{

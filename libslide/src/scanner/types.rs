@@ -25,8 +25,11 @@ pub enum TokenType{
     // Identifies modulo - stored as a char
     Mod,
 
-    // Identifies exponent - stored as a string
+    // Identifies exponent - stored as a char
     Exp,
+
+    // Identifies an equal sign - stored as a char
+    Equal, 
 
     // empty token
     Empty,
@@ -35,19 +38,12 @@ pub enum TokenType{
 
 // This will hold are token data
 pub struct Token {
-    token: TokenType,
-    integer: i64,
-    float: f64,
+    pub token: TokenType,
+    pub integer: i64,
+    pub float: f64,
 }
 
 impl Token{
-    pub fn new(token_i: TokenType, integer_i: i64, float_i: f64) -> Token {
-        Token{
-            token: token_i,
-            integer: integer_i,
-            float: float_i
-        }
-    }
     pub fn is_empty(&mut self) -> bool {
         if TokenType::Empty == self.token{
             return true;

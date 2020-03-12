@@ -24,11 +24,12 @@ impl Scanner {
             '/' => t = TokenType::Div,
             '%' => t = TokenType::Mod,
             '^' => t = TokenType::Exp,
+            '=' => t = TokenType::Equal,
              _  => t = TokenType::Empty
         }
-        let ret = Token(t, 0, 0.0);
+        let ret = Token{token: t, integer: 0, float: 0.0};
         return ret;
-    }
+   }
 
     fn iterate_digit(&mut self,mut i: usize,mut c: char) -> Token{
         let mut int_str = "".to_owned();
@@ -47,10 +48,10 @@ impl Scanner {
                 i += 1;
                 c = self.input.as_bytes()[i] as char;
             }
-            ret = Token(TokenType::Num,(int_str.parse::<i64>().unwrap()), (dec_str.parse::<f64>().unwrap()))
+            ret = Token{token: TokenType::Num, integer: int_str.parse::<i64>().unwrap(), float: dec_str.parse::<f64>().unwrap()}
         }
-        else {
-            ret = Token(TokenType::Int, (int_str.parse::<i64>().unwrap()),0.0)
+        else{
+            ret = Token{token:TokenType::Int, integer: int_str.parse::<i64>().unwrap(),float: 0.0}
         }
         return ret;
     }

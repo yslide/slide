@@ -37,7 +37,7 @@ impl Scanner {
         return ret;
    }
 
-    // iterates through any digits to create a token of that value: private helper method
+    // iterates through any digits to create a token of that value
     fn iterate_digit(&mut self,mut i: usize,mut c: char) -> (Token, usize){
         let mut int_str = "".to_owned();
         let mut dec_str = "0.".to_owned();

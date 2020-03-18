@@ -38,7 +38,7 @@ pub enum TokenType{
     CloseParen, 
 
     // open bracket [
-    OpenBra, 
+    OpenBracket, 
     
     // close bracket ]
     CloseBracket,

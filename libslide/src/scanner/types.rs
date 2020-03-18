@@ -41,7 +41,7 @@ pub enum TokenType{
     OpenBra, 
     
     // close bracket ]
-    CloseBra,
+    CloseBracket,
 
     // empty token
     Empty

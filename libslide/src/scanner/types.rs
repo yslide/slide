@@ -47,7 +47,7 @@ pub enum TokenType{
     Empty
 }
 
-// This will hold are token data
+// This will hold token data
 #[derive(Copy, Clone, Debug)]
 pub struct Token {
     pub token: TokenType,
@@ -127,4 +127,3 @@ mod tests {
         assert_ne!(true, t == r);
     }
 }
-

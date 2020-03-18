@@ -40,7 +40,7 @@ impl Scanner {
     // iterates through any digits to create a token of that value
     fn iterate_digit(&mut self,mut i: usize,mut c: char) -> (Token, usize){
         let mut int_str = "".to_owned();
-        let mut dec_str = "0.".to_owned();
+        let mut dec_str = ".".to_owned();
         let ret: Token;
         // iterate through integer part
         while c.is_digit(10) && i < self.input.chars().count() {
@@ -61,8 +61,9 @@ impl Scanner {
                     c = self.input.as_bytes()[i] as char;
                 }
             }
+            int_str.push_str(&dec_str);
             // turn integer and decmial strings into token
-            ret = Token{token: TokenType::Num(int_str.parse::<i64>().unwrap() as f64 + dec_str.parse::<f64>().unwrap())}
+            ret = Token{token: TokenType::Num(int_str.parse::<f64>().unwrap())}
         }
         else{
             // turn integer string into token and default the float

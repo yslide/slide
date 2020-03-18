@@ -9,9 +9,9 @@ pub struct Scanner {
 
 impl Scanner {
     // instantiate a new scanner
-    pub fn new(input: &str) -> Scanner {
+    pub fn new<T: Into<String>>(input: T) -> Scanner {
         Scanner{
-            input: input.to_owned(),
+            input: input.into(),
             output: Vec::new()
         }
     }
@@ -230,4 +230,3 @@ mod tests{
 
 
         
-

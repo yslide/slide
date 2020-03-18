@@ -18,21 +18,20 @@ impl Scanner {
 
     // matches token with symbol and creates it: private helper function 
    fn create_symbol_token(c: char) -> Token{
-        let t: TokenType;
-        match c {
-            '+' => t = TokenType::Plus,
-            '-' => t = TokenType::Minus,
-            '*' => t = TokenType::Mult,
-            '/' => t = TokenType::Div,
-            '%' => t = TokenType::Mod,
-            '^' => t = TokenType::Exp,
-            '=' => t = TokenType::Equal,
-            '(' => t = TokenType::OpenParen, 
-            ')' => t = TokenType::CloseParen, 
-            '[' => t = TokenType::OpenBra, 
-            ']' => t = TokenType::CloseBra,
-             _  => t = TokenType::Empty
-        }
+        let t = match c {
+            '+' => TokenType::Plus,
+            '-' => TokenType::Minus,
+            '*' => TokenType::Mult,
+            '/' => TokenType::Div,
+            '%' => TokenType::Mod,
+            '^' => TokenType::Exp,
+            '=' => TokenType::Equal,
+            '(' => TokenType::OpenParen, 
+            ')' => TokenType::CloseParen, 
+            '[' => TokenType::OpenBra, 
+            ']' => TokenType::CloseBra,
+             _  => TokenType::Empty
+        };
         let ret = Token{token: t, ..Default::default()};
         return ret;
    }

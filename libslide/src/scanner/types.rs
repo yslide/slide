@@ -5,10 +5,10 @@
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum TokenType{
     // Stores a floating point number as dp
-    Num,
+    Num(f64),
 
     // Stores an int - signed
-    Int,
+    Int(i64),
 
     // Identifies addition - stored as a char
     Plus,
@@ -51,8 +51,6 @@ pub enum TokenType{
 #[derive(Copy, Clone, Debug)]
 pub struct Token {
     pub token: TokenType,
-    pub integer: i64,
-    pub float: f64,
 }
 
 impl Token{
@@ -68,13 +66,13 @@ impl Token{
 
 impl Default for Token{
     fn default() -> Token{
-        Token {token: TokenType::Empty, integer: Default::default(), float: Default::default()}
+        Token {token: TokenType::Empty}
     }
 }
 
 impl PartialEq for Token{
     fn eq(&self, other: &Self) -> bool{
-        self.token == other.token && self.integer == other.integer && self.float == other.float
+        self.token == other.token
     }
 }
         
@@ -90,20 +88,8 @@ mod tests {
 
     #[test]
     fn test_empty_2() {
-        let t = Token{token: TokenType::Exp, ..Default::default()};
+        let t = Token{token: TokenType::Exp};
         assert_ne!(true, t.is_empty());
-    }
-
-    #[test]
-    fn test_default_int(){
-        let t: Token = Default::default();
-        assert_eq!(0, t.integer);
-    }
-
-    #[test]
-    fn test_default_float(){
-        let t: Token = Default::default();
-        assert_eq!(0.0, t.float);
     }
 
     #[test]
@@ -115,29 +101,29 @@ mod tests {
 
     #[test]
     fn test_eq_2() {
-        let t = Token{token: TokenType::Plus, ..Default::default()};
-        let r = Token{token: TokenType::Plus, ..Default::default()};
+        let t = Token{token: TokenType::Plus};
+        let r = Token{token: TokenType::Plus};
         assert_eq!(true, t == r);
     }
 
     #[test] 
     fn test_eq_3() {
-        let t = Token{token: TokenType::Num, integer: 25, float: 0.25};
-        let r = Token{token: TokenType::Num, integer: 25, float: 0.25};
+        let t = Token{token: TokenType::Num(25.25)};
+        let r = Token{token: TokenType::Num(25.25)};
         assert_eq!(true, t == r);
     }
 
     #[test]
     fn test_neq_1(){
-        let t = Token{token: TokenType::Plus, ..Default::default()};
-        let r = Token{token: TokenType::Minus, ..Default::default()};
+        let t = Token{token: TokenType::Plus};
+        let r = Token{token: TokenType::Minus};
         assert_ne!(true, t == r);
     }
 
     #[test]
     fn test_neq_2(){
-        let t = Token{token: TokenType::Num, integer: 25, float: 0.025};
-        let r = Token{token: TokenType::Num, integer: 25, float: 0.25};
+        let t = Token{token: TokenType::Num(25.025)};
+        let r = Token{token: TokenType::Num(25.25)};
         assert_ne!(true, t == r);
     }
 }

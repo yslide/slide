@@ -2,33 +2,33 @@
 // Written by Luke Bhan, 2/19/2020
 //
 //
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum TokenType{
     // Stores a floating point number as dp
-    Num(f64),
+    Float(f64),
 
     // Stores an int - signed
     Int(i64),
 
-    // Identifies addition - stored as a char
+    // Identifies addition 
     Plus,
 
-    // Identifies subtraction - stored as a char
+    // Identifies subtraction 
     Minus, 
 
-    // Identifies multiplication - stored as a char
+    // Identifies multiplication
     Mult,
 
-    // Identifies division - stored as a char
+    // Identifies division 
     Div,
 
-    // Identifies modulo - stored as a char
+    // Identifies modulo
     Mod,
 
-    // Identifies exponent - stored as a char
+    // Identifies exponent
     Exp,
 
-    // Identifies an equal sign - stored as a char
+    // Identifies an equal sign
     Equal, 
 
     // open parentheses (
@@ -43,59 +43,23 @@ pub enum TokenType{
     // close bracket ]
     CloseBracket,
 
-    // empty token
-    Empty
+    // invalid token
+    Invalid(String)
 }
 
-// This will hold token data
-#[derive(Copy, Clone, Debug)]
-pub struct Token {
-    pub token: TokenType,
+#[derive(PartialEq, Clone, Debug)]
+pub struct Token{
+    pub token: TokenType
 }
 
-impl Token{
-    pub fn is_empty(self) -> bool {
-        if TokenType::Empty == self.token{
-            return true;
-        }
-        else{
-            return false;
-        }
-    }
-}
-
-impl Default for Token{
-    fn default() -> Token{
-        Token {token: TokenType::Empty}
-    }
-}
-
-impl PartialEq for Token{
-    fn eq(&self, other: &Self) -> bool{
-        self.token == other.token
-    }
-}
-        
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_empty_1() {
-        let t: Token = Default::default();
-        assert_eq!(true, t.is_empty());
-    }    
-
-    #[test]
-    fn test_empty_2() {
-        let t = Token{token: TokenType::Exp};
-        assert_ne!(true, t.is_empty());
-    }
-
-    #[test]
     fn test_eq_1(){
-        let t: Token = Default::default();
-        let r: Token = Default::default();
+        let t = Token{token: TokenType::Invalid("s".to_string())};
+        let r =  Token{token: TokenType::Invalid("s".to_string())};
         assert_eq!(true, t == r);
     }
 
@@ -108,8 +72,8 @@ mod tests {
 
     #[test] 
     fn test_eq_3() {
-        let t = Token{token: TokenType::Num(25.25)};
-        let r = Token{token: TokenType::Num(25.25)};
+        let t = Token{token: TokenType::Float(25.25)};
+        let r = Token{token: TokenType::Float(25.25)};
         assert_eq!(true, t == r);
     }
 
@@ -122,8 +86,9 @@ mod tests {
 
     #[test]
     fn test_neq_2(){
-        let t = Token{token: TokenType::Num(25.025)};
-        let r = Token{token: TokenType::Num(25.25)};
+        let t = Token{token: TokenType::Float(25.025)};
+        let r = Token{token: TokenType::Float(25.25)};
         assert_ne!(true, t == r);
     }
 }
+

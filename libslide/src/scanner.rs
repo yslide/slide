@@ -28,41 +28,34 @@ impl Scanner {
             '=' => TokenType::Equal,
             '(' => TokenType::OpenParen, 
             ')' => TokenType::CloseParen, 
-            '[' => TokenType::OpenBra, 
-            ']' => TokenType::CloseBra,
-             _  => TokenType::Empty
+            '[' => TokenType::OpenBracket,
+            ']' => TokenType::CloseBracket,
+             _  => TokenType::Invalid(c.to_string())
         };
-        let ret = Token{token: t, ..Default::default()};
+        let ret = Token{token: t};
         return ret;
    }
 
     // iterates through any digits to create a token of that value
-    fn iterate_digit(&mut self,mut i: usize,mut c: char) -> (Token, usize){
+    fn iterate_digit(&mut self,mut i: usize) -> (Token, usize){
         let mut int_str = "".to_owned();
         let mut dec_str = ".".to_owned();
         let ret: Token;
         // iterate through integer part
-        while c.is_digit(10) && i < self.input.chars().count() {
-            int_str.push(c);
+        while i < self.input.chars().count() && (self.input.as_bytes()[i] as char).is_digit(10){
+            int_str.push(self.input.as_bytes()[i] as char);
             i += 1;
-            if i < self.input.chars().count() {
-                c = self.input.as_bytes()[i] as char;
-            }
         }
         // iterate through decimal
-        if{c == '.'}{
+        if i < self.input.chars().count() && (self.input.as_bytes()[i] as char)== '.'{
             i += 1;
-            c = self.input.as_bytes()[i] as char;
-            while c.is_digit(10) && i < self.input.chars().count(){
-                dec_str.push(c);
+            while i < self.input.chars().count() && (self.input.as_bytes()[i] as char).is_digit(10){
+                dec_str.push(self.input.as_bytes()[i] as char);
                 i += 1;
-                if i < self.input.chars().count() {
-                    c = self.input.as_bytes()[i] as char;
-                }
             }
             int_str.push_str(&dec_str);
             // turn integer and decmial strings into token
-            ret = Token{token: TokenType::Num(int_str.parse::<f64>().unwrap())}
+            ret = Token{token: TokenType::Float(int_str.parse::<f64>().unwrap())}
         }
         else{
             // turn integer string into token and default the float
@@ -78,24 +71,16 @@ impl Scanner {
         let mut tuple: (Token, usize);
         // iterate through string
         while i < self.input.chars().count() {
-            c = self.input.as_bytes()[i] as char;
             // ignore whitespace
-            if !c.is_whitespace() {
+            if !((self.input.as_bytes()[i] as char).is_whitespace()) {
                 // check for digit and call correct helper function 
-                if c.is_digit(10) {
-                    tuple = Scanner::iterate_digit(self, i, c);
+                if (self.input.as_bytes()[i] as char).is_digit(10) {
+                    tuple = Scanner::iterate_digit(self, i);
                     i = tuple.1;
                     self.output.push(tuple.0);
                 }
                 else{
-                    t = Scanner::create_symbol_token(c);
-                    if !t.is_empty() {
-                        self.output.push(t);
-                    }
-                    // throw error if token is not correct
-                    else{
-                        panic!("Character invalid");
-                    }
+                    self.output.push(Scanner::create_symbol_token(self.input.as_bytes()[i] as char));
                     i += 1;
                 }       
             }
@@ -177,7 +162,7 @@ mod tests{
         let mut s = Scanner::new("253.253");
         s.scan();
         let mut result = Vec::<Token>::new();
-        result.push(Token{token: TokenType::Num(253.253)});
+        result.push(Token{token: TokenType::Float(253.253)});
         assert_eq!(true, compare_vec::<Token>(&result, &s.output));
     }
 
@@ -186,9 +171,9 @@ mod tests{
         let mut s = Scanner::new("2.2 3.3 33.44");
         s.scan();
         let mut result = Vec::<Token>::new();
-        result.push(Token{token: TokenType::Num(2.2)});
-        result.push(Token{token: TokenType::Num(3.3)});
-        result.push(Token{token: TokenType::Num(33.44)});
+        result.push(Token{token: TokenType::Float(2.2)});
+        result.push(Token{token: TokenType::Float(3.3)});
+        result.push(Token{token: TokenType::Float(33.44)});
         assert_eq!(true, compare_vec::<Token>(&result, &s.output));
     }
 
@@ -197,13 +182,13 @@ mod tests{
         let mut s = Scanner::new("2.2 + 5 = 3.3 - 6.6 + 27 /( 2 ^ 5 ) * [2%2]");
         s.scan();
         let mut result = Vec::<Token>::new();
-        result.push(Token{token: TokenType::Num(2.2)});
+        result.push(Token{token: TokenType::Float(2.2)});
         result.push(Token{token: TokenType::Plus});
         result.push(Token{token: TokenType::Int(5)});
         result.push(Token{token: TokenType::Equal});
-        result.push(Token{token: TokenType::Num(3.3)});
+        result.push(Token{token: TokenType::Float(3.3)});
         result.push(Token{token: TokenType::Minus});
-        result.push(Token{token: TokenType::Num(6.6)});
+        result.push(Token{token: TokenType::Float(6.6)});
         result.push(Token{token: TokenType::Plus});
         result.push(Token{token: TokenType::Int(27)});
         result.push(Token{token: TokenType::Div});
@@ -213,11 +198,11 @@ mod tests{
         result.push(Token{token: TokenType::Int(5)});
         result.push(Token{token: TokenType::CloseParen});
         result.push(Token{token: TokenType::Mult});
-        result.push(Token{token: TokenType::OpenBra});
+        result.push(Token{token: TokenType::OpenBracket});
         result.push(Token{token: TokenType::Int(2)});
         result.push(Token{token: TokenType::Mod});
         result.push(Token{token: TokenType::Int(2)});
-        result.push(Token{token: TokenType::CloseBra});
+        result.push(Token{token: TokenType::CloseBracket});
         assert_eq!(true, compare_vec::<Token>(&result, &s.output));
     }    
 } 

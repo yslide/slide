@@ -49,7 +49,7 @@ pub enum TokenType{
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct Token{
-    pub token: TokenType
+    pub token_type: TokenType
 }
 
 #[cfg(test)]
@@ -58,36 +58,36 @@ mod tests {
 
     #[test]
     fn test_eq_1(){
-        let t = Token{token: TokenType::Invalid("s".to_string())};
-        let r =  Token{token: TokenType::Invalid("s".to_string())};
+        let t = Token{token_type: TokenType::Invalid("s".into())};
+        let r =  Token{token_type: TokenType::Invalid("s".into())};
         assert_eq!(true, t == r);
     }
 
     #[test]
     fn test_eq_2() {
-        let t = Token{token: TokenType::Plus};
-        let r = Token{token: TokenType::Plus};
+        let t = Token{token_type: TokenType::Plus};
+        let r = Token{token_type: TokenType::Plus};
         assert_eq!(true, t == r);
     }
 
     #[test] 
     fn test_eq_3() {
-        let t = Token{token: TokenType::Float(25.25)};
-        let r = Token{token: TokenType::Float(25.25)};
+        let t = Token{token_type: TokenType::Float(25.25)};
+        let r = Token{token_type: TokenType::Float(25.25)};
         assert_eq!(true, t == r);
     }
 
     #[test]
     fn test_neq_1(){
-        let t = Token{token: TokenType::Plus};
-        let r = Token{token: TokenType::Minus};
+        let t = Token{token_type: TokenType::Plus};
+        let r = Token{token_type: TokenType::Minus};
         assert_ne!(true, t == r);
     }
 
     #[test]
     fn test_neq_2(){
-        let t = Token{token: TokenType::Float(25.025)};
-        let r = Token{token: TokenType::Float(25.25)};
+        let t = Token{token_type: TokenType::Float(25.025)};
+        let r = Token{token_type: TokenType::Float(25.25)};
         assert_ne!(true, t == r);
     }
 }

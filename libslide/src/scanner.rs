@@ -32,7 +32,7 @@ impl Scanner {
             ']' => TokenType::CloseBracket,
              _  => TokenType::Invalid(c.to_string())
         };
-        let ret = Token{token: t};
+        let ret = Token{token_type: t};
         return ret;
    }
 
@@ -55,11 +55,11 @@ impl Scanner {
             }
             int_str.push_str(&dec_str);
             // turn integer and decmial strings into token
-            ret = Token{token: TokenType::Float(int_str.parse::<f64>().unwrap())}
+            ret = Token{token_type: TokenType::Float(int_str.parse::<f64>().unwrap())}
         }
         else{
             // turn integer string into token and default the float
-            ret = Token{token:TokenType::Int(int_str.parse::<i64>().unwrap())}
+            ret = Token{token_type: TokenType::Int(int_str.parse::<i64>().unwrap())}
         }
         return (ret, i);
     }
@@ -96,17 +96,12 @@ impl Scanner {
 mod tests{
     use super::*;
 
-    fn compare_vec<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) -> bool{
-        let equal = a.iter().zip(b.iter()).filter(|&(a,b)| a == b).count();
-        equal == a.len() && equal == b.len()
-    }
-
     #[test]
     fn test_empty_string_scan() {
         let mut s = Scanner::new("");
         s.scan();
         let result = Vec::<Token>::new();
-        assert_eq!(true, compare_vec::<Token>(&result, &s.output));
+        assert_eq!(true, result==s.output);
     }
 
     #[test]
@@ -114,8 +109,8 @@ mod tests{
         let mut s = Scanner::new("=");
         s.scan();
         let mut result = Vec::<Token>::new();
-        result.push(Token{token: TokenType::Equal});
-        assert_eq!(true, compare_vec::<Token>(&result, &s.output));
+        result.push(Token{token_type: TokenType::Equal});
+        assert_eq!(true, result==s.output);
     }
 
     #[test]
@@ -123,8 +118,8 @@ mod tests{
         let mut s = Scanner::new("     =             ");
         s.scan();
         let mut result = Vec::<Token>::new();
-        result.push(Token{token: TokenType::Equal});
-        assert_eq!(true, compare_vec::<Token>(&result, &s.output));
+        result.push(Token{token_type: TokenType::Equal});
+        assert_eq!(true, result==s.output);
     }
 
     #[test]
@@ -132,8 +127,8 @@ mod tests{
         let mut s = Scanner::new("2");
         s.scan();
         let mut result = Vec::<Token>::new();
-        result.push(Token{token: TokenType::Int(2)});
-        assert_eq!(true, compare_vec::<Token>(&result, &s.output));
+        result.push(Token{token_type: TokenType::Int(2)});
+        assert_eq!(true, result==s.output);
     }
 
     #[test]
@@ -141,8 +136,8 @@ mod tests{
         let mut s = Scanner::new("22233355567");
         s.scan();
         let mut result = Vec::<Token>::new();
-        result.push(Token{token: TokenType::Int(22233355567)});
-        assert_eq!(true, compare_vec::<Token>(&result, &s.output));
+        result.push(Token{token_type: TokenType::Int(22233355567)});
+        assert_eq!(true, result==s.output);
     }
 
     #[test]
@@ -150,11 +145,11 @@ mod tests{
         let mut s = Scanner::new("2 3 45 3");
         s.scan();
         let mut result = Vec::<Token>::new();
-        result.push(Token{token: TokenType::Int(2)});
-        result.push(Token{token: TokenType::Int(3)});
-        result.push(Token{token: TokenType::Int(45)});
-        result.push(Token{token: TokenType::Int(3)});
-        assert_eq!(true, compare_vec::<Token>(&result, &s.output));
+        result.push(Token{token_type: TokenType::Int(2)});
+        result.push(Token{token_type: TokenType::Int(3)});
+        result.push(Token{token_type: TokenType::Int(45)});
+        result.push(Token{token_type: TokenType::Int(3)});
+        assert_eq!(true, result==s.output);
     }
 
     #[test]
@@ -162,8 +157,8 @@ mod tests{
         let mut s = Scanner::new("253.253");
         s.scan();
         let mut result = Vec::<Token>::new();
-        result.push(Token{token: TokenType::Float(253.253)});
-        assert_eq!(true, compare_vec::<Token>(&result, &s.output));
+        result.push(Token{token_type: TokenType::Float(253.253)});
+        assert_eq!(true, result==s.output);
     }
 
     #[test]
@@ -171,10 +166,10 @@ mod tests{
         let mut s = Scanner::new("2.2 3.3 33.44");
         s.scan();
         let mut result = Vec::<Token>::new();
-        result.push(Token{token: TokenType::Float(2.2)});
-        result.push(Token{token: TokenType::Float(3.3)});
-        result.push(Token{token: TokenType::Float(33.44)});
-        assert_eq!(true, compare_vec::<Token>(&result, &s.output));
+        result.push(Token{token_type: TokenType::Float(2.2)});
+        result.push(Token{token_type: TokenType::Float(3.3)});
+        result.push(Token{token_type: TokenType::Float(33.44)});
+        assert_eq!(true, result==s.output);
     }
 
     #[test]
@@ -182,28 +177,28 @@ mod tests{
         let mut s = Scanner::new("2.2 + 5 = 3.3 - 6.6 + 27 /( 2 ^ 5 ) * [2%2]");
         s.scan();
         let mut result = Vec::<Token>::new();
-        result.push(Token{token: TokenType::Float(2.2)});
-        result.push(Token{token: TokenType::Plus});
-        result.push(Token{token: TokenType::Int(5)});
-        result.push(Token{token: TokenType::Equal});
-        result.push(Token{token: TokenType::Float(3.3)});
-        result.push(Token{token: TokenType::Minus});
-        result.push(Token{token: TokenType::Float(6.6)});
-        result.push(Token{token: TokenType::Plus});
-        result.push(Token{token: TokenType::Int(27)});
-        result.push(Token{token: TokenType::Div});
-        result.push(Token{token: TokenType::OpenParen});
-        result.push(Token{token: TokenType::Int(2)});
-        result.push(Token{token: TokenType::Exp});
-        result.push(Token{token: TokenType::Int(5)});
-        result.push(Token{token: TokenType::CloseParen});
-        result.push(Token{token: TokenType::Mult});
-        result.push(Token{token: TokenType::OpenBracket});
-        result.push(Token{token: TokenType::Int(2)});
-        result.push(Token{token: TokenType::Mod});
-        result.push(Token{token: TokenType::Int(2)});
-        result.push(Token{token: TokenType::CloseBracket});
-        assert_eq!(true, compare_vec::<Token>(&result, &s.output));
+        result.push(Token{token_type: TokenType::Float(2.2)});
+        result.push(Token{token_type: TokenType::Plus});
+        result.push(Token{token_type: TokenType::Int(5)});
+        result.push(Token{token_type: TokenType::Equal});
+        result.push(Token{token_type: TokenType::Float(3.3)});
+        result.push(Token{token_type: TokenType::Minus});
+        result.push(Token{token_type: TokenType::Float(6.6)});
+        result.push(Token{token_type: TokenType::Plus});
+        result.push(Token{token_type: TokenType::Int(27)});
+        result.push(Token{token_type: TokenType::Div});
+        result.push(Token{token_type: TokenType::OpenParen});
+        result.push(Token{token_type: TokenType::Int(2)});
+        result.push(Token{token_type: TokenType::Exp});
+        result.push(Token{token_type: TokenType::Int(5)});
+        result.push(Token{token_type: TokenType::CloseParen});
+        result.push(Token{token_type: TokenType::Mult});
+        result.push(Token{token_type: TokenType::OpenBracket});
+        result.push(Token{token_type: TokenType::Int(2)});
+        result.push(Token{token_type: TokenType::Mod});
+        result.push(Token{token_type: TokenType::Int(2)});
+        result.push(Token{token_type: TokenType::CloseBracket});
+        assert_eq!(true, result==s.output);
     }    
 } 
         

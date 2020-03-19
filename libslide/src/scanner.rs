@@ -3,7 +3,7 @@ use types::TokenType;
 use types::Token;
 
 pub struct Scanner {
-    input: String, 
+    input: Vec<char>, 
     pub output: Vec<Token>
 }
 
@@ -11,7 +11,7 @@ impl Scanner {
     // instantiate a new scanner
     pub fn new<T: Into<String>>(input: T) -> Scanner {
         Scanner{
-            input: input.into(),
+            input: input.into().chars().collect(),
             output: Vec::new()
         }
     }
@@ -42,15 +42,15 @@ impl Scanner {
         let mut dec_str = ".".to_owned();
         let ret: Token;
         // iterate through integer part
-        while i < self.input.chars().count() && (self.input.as_bytes()[i] as char).is_digit(10){
-            int_str.push(self.input.as_bytes()[i] as char);
+        while i < self.input.len() && (self.input[i]).is_digit(10){
+            int_str.push(self.input[i]);
             i += 1;
         }
         // iterate through decimal
-        if i < self.input.chars().count() && (self.input.as_bytes()[i] as char)== '.'{
+        if i < self.input.len() && self.input[i] == '.'{
             i += 1;
-            while i < self.input.chars().count() && (self.input.as_bytes()[i] as char).is_digit(10){
-                dec_str.push(self.input.as_bytes()[i] as char);
+            while i < self.input.len() && (self.input[i]).is_digit(10){
+                dec_str.push(self.input[i]);
                 i += 1;
             }
             int_str.push_str(&dec_str);
@@ -70,17 +70,17 @@ impl Scanner {
         let mut t: Token;
         let mut tuple: (Token, usize);
         // iterate through string
-        while i < self.input.chars().count() {
+        while i < self.input.len() {
             // ignore whitespace
-            if !((self.input.as_bytes()[i] as char).is_whitespace()) {
+            if !((self.input[i]).is_whitespace()) {
                 // check for digit and call correct helper function 
-                if (self.input.as_bytes()[i] as char).is_digit(10) {
+                if (self.input[i]).is_digit(10) {
                     tuple = Scanner::iterate_digit(self, i);
                     i = tuple.1;
                     self.output.push(tuple.0);
                 }
                 else{
-                    self.output.push(Scanner::create_symbol_token(self.input.as_bytes()[i] as char));
+                    self.output.push(Scanner::create_symbol_token(self.input[i]));
                     i += 1;
                 }       
             }

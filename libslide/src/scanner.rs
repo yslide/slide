@@ -1,23 +1,23 @@
 mod types;
-use types::TokenType;
 use types::Token;
+use types::TokenType;
 
 pub struct Scanner {
-    input: Vec<char>, 
-    pub output: Vec<Token>
+    input: Vec<char>,
+    pub output: Vec<Token>,
 }
 
 impl Scanner {
     // instantiate a new scanner
     pub fn new<T: Into<String>>(input: T) -> Scanner {
-        Scanner{
+        Scanner {
             input: input.into().chars().collect(),
-            output: Vec::new()
+            output: Vec::new(),
         }
     }
 
-    // matches token with symbol and creates it: private helper function 
-   fn create_symbol_token(c: char) -> Token{
+    // matches token with symbol and creates it: private helper function
+    fn create_symbol_token(c: char) -> Token {
         let t = match c {
             '+' => TokenType::Plus,
             '-' => TokenType::Minus,
@@ -26,179 +26,129 @@ impl Scanner {
             '%' => TokenType::Mod,
             '^' => TokenType::Exp,
             '=' => TokenType::Equal,
-            '(' => TokenType::OpenParen, 
-            ')' => TokenType::CloseParen, 
+            '(' => TokenType::OpenParen,
+            ')' => TokenType::CloseParen,
             '[' => TokenType::OpenBracket,
             ']' => TokenType::CloseBracket,
-             _  => TokenType::Invalid(c.to_string())
+            _ => TokenType::Invalid(c.to_string()),
         };
-        let ret = Token{token_type: t};
+        let ret = Token { token_type: t };
         return ret;
-   }
+    }
 
     // iterates through any digits to create a token of that value
-    fn iterate_digit(&mut self,mut i: usize) -> (Token, usize){
+    fn iterate_digit(&mut self, mut i: usize) -> (Token, usize) {
         let mut int_str = "".to_owned();
         let mut dec_str = ".".to_owned();
         let ret: Token;
         // iterate through integer part
-        while i < self.input.len() && (self.input[i]).is_digit(10){
+        while i < self.input.len() && (self.input[i]).is_digit(10) {
             int_str.push(self.input[i]);
             i += 1;
         }
         // iterate through decimal
-        if i < self.input.len() && self.input[i] == '.'{
+        if i < self.input.len() && self.input[i] == '.' {
             i += 1;
-            while i < self.input.len() && (self.input[i]).is_digit(10){
+            while i < self.input.len() && (self.input[i]).is_digit(10) {
                 dec_str.push(self.input[i]);
                 i += 1;
             }
             int_str.push_str(&dec_str);
             // turn integer and decmial strings into token
-            ret = Token{token_type: TokenType::Float(int_str.parse::<f64>().unwrap())}
-        }
-        else{
+            ret = Token {
+                token_type: TokenType::Float(int_str.parse::<f64>().unwrap()),
+            }
+        } else {
             // turn integer string into token and default the float
-            ret = Token{token_type: TokenType::Int(int_str.parse::<i64>().unwrap())}
+            ret = Token {
+                token_type: TokenType::Int(int_str.parse::<i64>().unwrap()),
+            }
         }
         return (ret, i);
     }
 
-    pub fn scan(&mut self){
+    pub fn scan(&mut self) {
         let mut i: usize = 0;
-        let mut c: char;
-        let mut t: Token;
-        let mut tuple: (Token, usize);
         // iterate through string
         while i < self.input.len() {
             // ignore whitespace
             if !((self.input[i]).is_whitespace()) {
-                // check for digit and call correct helper function 
+                // check for digit and call correct helper function
                 if (self.input[i]).is_digit(10) {
-                    tuple = Scanner::iterate_digit(self, i);
-                    i = tuple.1;
-                    self.output.push(tuple.0);
-                }
-                else{
-                    self.output.push(Scanner::create_symbol_token(self.input[i]));
+                    let (num, new_idx) = self.iterate_digit(i);
+                    i = new_idx;
+                    self.output.push(num);
+                } else {
+                    self.output
+                        .push(Scanner::create_symbol_token(self.input[i]));
                     i += 1;
-                }       
-            }
-            else{
+                }
+            } else {
                 i += 1;
             }
         }
     }
-    
 }
 
 #[cfg(test)]
-mod tests{
-    use super::*;
+mod tests {
+    // Tests the Scanner's output against a humanized string representation of the expected tokens.
+    // See [Token]'s impl of Display for more details.
+    // [Token]: src/scanner/types.rs
+    macro_rules! scanner_tests {
+        ($($name:ident: $program:expr, $format_str:expr)*) => {
+        $(
+            #[test]
+            fn $name() {
+                use crate::scanner::Scanner;
 
-    #[test]
-    fn test_empty_string_scan() {
-        let mut s = Scanner::new("");
-        s.scan();
-        let result = Vec::<Token>::new();
-        assert_eq!(true, result==s.output);
+                let mut scanner = Scanner::new($program);
+                scanner.scan();
+                let formatted_tokens = scanner
+                    .output
+                    .into_iter()
+                    .map(|tok| tok.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                assert_eq!(formatted_tokens, $format_str);
+            }
+        )*
+        }
     }
 
-    #[test]
-    fn test_equal_string_scan() {
-        let mut s = Scanner::new("=");
-        s.scan();
-        let mut result = Vec::<Token>::new();
-        result.push(Token{token_type: TokenType::Equal});
-        assert_eq!(true, result==s.output);
+    mod scan {
+        scanner_tests! {
+            integer: "2", "2"
+            float: "3.2", "3.2"
+            plus: "+", "+"
+            minus: "-", "-"
+            mult: "*", "*"
+            div: "/", "/"
+            modulo: "%", "%"
+            exp: "^", "^"
+            equal: "=", "="
+            open_paren: "(", "("
+            close_paren: ")", ")"
+            open_bracket: "[", "["
+            close_bracket: "]", "]"
+
+            empty_string: "", ""
+            skip_whitespace: "  =  ", "="
+
+            multiple_integers: "1 2 3", "1 2 3"
+            multiple_floats: "1.2 2.3 3.4", "1.2 2.3 3.4"
+            multiple_numbers_mixed: "1 2.3 4", "1 2.3 4"
+
+            expressions: "1 + 2 ^ 5", "1 + 2 ^ 5"
+        }
     }
 
-    #[test]
-    fn test_equal_string_scan_with_whitespace(){
-        let mut s = Scanner::new("     =             ");
-        s.scan();
-        let mut result = Vec::<Token>::new();
-        result.push(Token{token_type: TokenType::Equal});
-        assert_eq!(true, result==s.output);
+    mod scan_invalid {
+        scanner_tests! {
+            invalid_numbers: "1.2.3", "1.2 Invalid(.) 3"
+            invalid_tokens: "@", "Invalid(@)"
+            invalid_tokens_mixed_with_valid: "=@/", "= Invalid(@) /"
+            invalid_expressions: "1 + * 2", "1 + * 2"
+        }
     }
-
-    #[test]
-    fn test_integer_scan(){
-        let mut s = Scanner::new("2");
-        s.scan();
-        let mut result = Vec::<Token>::new();
-        result.push(Token{token_type: TokenType::Int(2)});
-        assert_eq!(true, result==s.output);
-    }
-
-    #[test]
-    fn test_multi_digit_integer_scan(){
-        let mut s = Scanner::new("22233355567");
-        s.scan();
-        let mut result = Vec::<Token>::new();
-        result.push(Token{token_type: TokenType::Int(22233355567)});
-        assert_eq!(true, result==s.output);
-    }
-
-    #[test]
-    fn test_two_digit_integer_scan() {
-        let mut s = Scanner::new("2 3 45 3");
-        s.scan();
-        let mut result = Vec::<Token>::new();
-        result.push(Token{token_type: TokenType::Int(2)});
-        result.push(Token{token_type: TokenType::Int(3)});
-        result.push(Token{token_type: TokenType::Int(45)});
-        result.push(Token{token_type: TokenType::Int(3)});
-        assert_eq!(true, result==s.output);
-    }
-
-    #[test]
-    fn test_decimal_scan() {
-        let mut s = Scanner::new("253.253");
-        s.scan();
-        let mut result = Vec::<Token>::new();
-        result.push(Token{token_type: TokenType::Float(253.253)});
-        assert_eq!(true, result==s.output);
-    }
-
-    #[test]
-    fn test_multi_decimal_scan() {
-        let mut s = Scanner::new("2.2 3.3 33.44");
-        s.scan();
-        let mut result = Vec::<Token>::new();
-        result.push(Token{token_type: TokenType::Float(2.2)});
-        result.push(Token{token_type: TokenType::Float(3.3)});
-        result.push(Token{token_type: TokenType::Float(33.44)});
-        assert_eq!(true, result==s.output);
-    }
-
-    #[test]
-    fn test_decimal_integer_symbol_scan(){
-        let mut s = Scanner::new("2.2 + 5 = 3.3 - 6.6 + 27 /( 2 ^ 5 ) * [2%2]");
-        s.scan();
-        let mut result = Vec::<Token>::new();
-        result.push(Token{token_type: TokenType::Float(2.2)});
-        result.push(Token{token_type: TokenType::Plus});
-        result.push(Token{token_type: TokenType::Int(5)});
-        result.push(Token{token_type: TokenType::Equal});
-        result.push(Token{token_type: TokenType::Float(3.3)});
-        result.push(Token{token_type: TokenType::Minus});
-        result.push(Token{token_type: TokenType::Float(6.6)});
-        result.push(Token{token_type: TokenType::Plus});
-        result.push(Token{token_type: TokenType::Int(27)});
-        result.push(Token{token_type: TokenType::Div});
-        result.push(Token{token_type: TokenType::OpenParen});
-        result.push(Token{token_type: TokenType::Int(2)});
-        result.push(Token{token_type: TokenType::Exp});
-        result.push(Token{token_type: TokenType::Int(5)});
-        result.push(Token{token_type: TokenType::CloseParen});
-        result.push(Token{token_type: TokenType::Mult});
-        result.push(Token{token_type: TokenType::OpenBracket});
-        result.push(Token{token_type: TokenType::Int(2)});
-        result.push(Token{token_type: TokenType::Mod});
-        result.push(Token{token_type: TokenType::Int(2)});
-        result.push(Token{token_type: TokenType::CloseBracket});
-        assert_eq!(true, result==s.output);
-    }    
-} 
-        
+}

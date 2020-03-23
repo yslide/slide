@@ -2,24 +2,27 @@
 // Written by Luke Bhan, 2/19/2020
 //
 //
+
+use core::fmt;
+
 #[derive(PartialEq, Clone, Debug)]
-pub enum TokenType{
+pub enum TokenType {
     // Stores a floating point number as dp
     Float(f64),
 
     // Stores an int - signed
     Int(i64),
 
-    // Identifies addition 
+    // Identifies addition
     Plus,
 
-    // Identifies subtraction 
-    Minus, 
+    // Identifies subtraction
+    Minus,
 
     // Identifies multiplication
     Mult,
 
-    // Identifies division 
+    // Identifies division
     Div,
 
     // Identifies modulo
@@ -29,66 +32,88 @@ pub enum TokenType{
     Exp,
 
     // Identifies an equal sign
-    Equal, 
+    Equal,
 
     // open parentheses (
     OpenParen,
 
     // close parentheses )
-    CloseParen, 
+    CloseParen,
 
     // open bracket [
-    OpenBracket, 
-    
+    OpenBracket,
+
     // close bracket ]
     CloseBracket,
 
     // invalid token
-    Invalid(String)
+    Invalid(String),
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub struct Token{
-    pub token_type: TokenType
+pub struct Token {
+    pub token_type: TokenType,
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use TokenType::*;
+        write!(
+            f,
+            "{}",
+            match &self.token_type {
+                Float(num) => num.to_string(),
+                Int(num) => num.to_string(),
+                Plus => "+".into(),
+                Minus => "-".into(),
+                Mult => "*".into(),
+                Div => "/".into(),
+                Mod => "%".into(),
+                Exp => "^".into(),
+                Equal => "=".into(),
+                OpenParen => "(".into(),
+                CloseParen => ")".into(),
+                OpenBracket => "[".into(),
+                CloseBracket => "]".into(),
+                Invalid(s) => format!("Invalid({})", s),
+            }
+        )
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    mod format {
+        use crate::scanner::types::*;
 
-    #[test]
-    fn test_eq_1(){
-        let t = Token{token_type: TokenType::Invalid("s".into())};
-        let r =  Token{token_type: TokenType::Invalid("s".into())};
-        assert_eq!(true, t == r);
+        macro_rules! format_tests {
+        ($($name:ident: $token_type:expr, $format_str:expr)*) => {
+        $(
+            #[test]
+            fn $name() {
+                use TokenType::*;
+                let tok = Token {token_type: $token_type};
+                assert_eq!(tok.to_string(), $format_str);
+            }
+        )*
+        }
     }
 
-    #[test]
-    fn test_eq_2() {
-        let t = Token{token_type: TokenType::Plus};
-        let r = Token{token_type: TokenType::Plus};
-        assert_eq!(true, t == r);
-    }
-
-    #[test] 
-    fn test_eq_3() {
-        let t = Token{token_type: TokenType::Float(25.25)};
-        let r = Token{token_type: TokenType::Float(25.25)};
-        assert_eq!(true, t == r);
-    }
-
-    #[test]
-    fn test_neq_1(){
-        let t = Token{token_type: TokenType::Plus};
-        let r = Token{token_type: TokenType::Minus};
-        assert_ne!(true, t == r);
-    }
-
-    #[test]
-    fn test_neq_2(){
-        let t = Token{token_type: TokenType::Float(25.025)};
-        let r = Token{token_type: TokenType::Float(25.25)};
-        assert_ne!(true, t == r);
+        format_tests! {
+            float: Float(1.3), "1.3"
+            int: Int(10), "10"
+            plus: Plus, "+"
+            minus: Minus, "-"
+            mult: Mult, "*"
+            div: Div, "/"
+            modulo: Mod, "%"
+            exp: Exp, "^"
+            equal: Equal, "="
+            open_paren: OpenParen, "("
+            close_paren: CloseParen, ")"
+            open_bracket: OpenBracket, "["
+            close_bracket: CloseBracket, "]"
+            invalid: Invalid("@&@".into()), "Invalid(@&@)"
+        }
     }
 }
-

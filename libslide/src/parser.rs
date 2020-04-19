@@ -41,35 +41,27 @@ impl <'a> Parser<'a>{
     }
 
     fn expr(&mut self) -> Box<Expr> {
-        self.add_sum_term();
-        return self.add_sub_term_tail();
+        return self.add_sub_term();
     }
 
-    fn add_sub_term_tail(&mut self) -> Box<Expr> {
+    fn add_sub_term(&mut self) -> Box<Expr> {
         let mut node = self.mul_divide_term();
         if self.cur_token.token_type == TokenType::Plus || self.cur_token.token_type == TokenType::Minus{
-            node = Box::new(Expr::BinOp(BinOp{item: self.cur_token.clone(), lhs: node, rhs: self.mul_divide_term()}));
+            let t = self.cur_token.clone();
             self.cur_token = self.get_token();
-        }
-        return node;
-    }
-
-    fn add_sum_term(&mut self) -> Box<Expr> {
-        self.mul_divide_term();
-        return self.mul_divide_term_tail();
-    }
-
-    fn mul_divide_term_tail(&mut self) -> Box<Expr> {
-        let mut node = self.num_term();
-        if self.cur_token.token_type == TokenType::Mult || self.cur_token.token_type == TokenType::Div {
-            node = Box::new(Expr::BinOp(BinOp{item: self.cur_token.clone(), lhs: node, rhs: self.num_term()}));
-            self.cur_token = self.get_token();
+            node = Box::new(Expr::BinOp(BinOp{item: t, lhs: node, rhs: self.mul_divide_term()}));
         }
         return node;
     }
 
     fn mul_divide_term(&mut self) -> Box<Expr> {
-        return self.num_term();
+        let mut node = self.num_term();
+        if self.cur_token.token_type == TokenType::Mult || self.cur_token.token_type == TokenType::Div {
+            let t = self.cur_token.clone();
+            self.cur_token = self.get_token();
+            node = Box::new(Expr::BinOp(BinOp{item: t, lhs: node, rhs: self.num_term()}));
+        }
+        return node;
     }
 
     fn num_term(&mut self) -> Box<Expr> {
@@ -83,14 +75,18 @@ impl <'a> Parser<'a>{
             if let TokenType::Float(f) = self.cur_token.token_type{
                 node = Box::new(Expr::Float(f));
             }
-            self.cur_token = self.get_token();
+            if self.index < self.input.len(){
+                self.cur_token = self.get_token();
+            }
             return node;
         }
         else if std::mem::discriminant(&self.cur_token.token_type) == std::mem::discriminant(&TokenType::Int(1)) {
             if let TokenType::Int(i) = self.cur_token.token_type{
                 node = Box::new(Expr::Int(i));
             }
-            self.cur_token = self.get_token();
+            if self.index < self.input.len(){
+                self.cur_token = self.get_token();
+            }
             return node;
         }
         else if self.cur_token.token_type == TokenType::OpenParen {
@@ -109,7 +105,31 @@ impl <'a> Parser<'a>{
             return node;
         }
         else {
-            panic!("Invalid Token");
+            // this should never be reached
+            panic!("Invalid input");
         }
     } 
 }
+
+#[cfg(test)]
+mod tests{
+    use crate::scanner::*;
+    use super::*;
+    #[test]
+    fn test_basic() {
+        let a = "5*5";
+        let mut scanner = Scanner::new(a);
+        scanner.scan();
+        let mut parser = Parser::new(&scanner.output);
+        parser.expr();
+    }
+
+    fn test_simple() {
+        let a = "5+5";
+        let mut scanner = Scanner::new(a);
+        scanner.scan();
+        let mut parser = Parser::new(&scanner.output);
+        parser.expr();
+    }
+}
+

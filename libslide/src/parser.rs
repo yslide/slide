@@ -1,63 +1,115 @@
 use crate::scanner::types::Token;
+use crate::scanner::types::TokenType;
 
 pub enum Expr {
     Float(f64),
     Int(i64),
-    BinOp(Box<BinOp>),
+    BinOp(BinOp),
     // I added un op even though I havent implemented + or -
-    UnaryOp(Box<UnaryOp>),
+    UnaryOp(UnaryOp),
 }
 
 pub struct BinOp {
     pub item: Token,
-    pub lhs: Expr,
-    pub rhs: Expr
+    pub lhs: Box<Expr>,
+    pub rhs: Box<Expr>,
 }
 
 pub struct UnaryOp{
     pub item: Token, 
-    pub rhs: Expr
+    pub rhs: Box<Expr>,
 }
 
-pub struct Parser {
-    input: Vec<Token>,
+pub struct Parser<'a>{
+    input: &'a Vec<Token>,
     index: usize,
+    cur_token: Token,
 }
 
-impl Parser {
-    pub fn new (input: Vec<Token>) -> Parser{
+impl <'a> Parser<'a>{
+    pub fn new (input: &Vec<Token>) -> Parser{
         Parser{
             input: input.into(),
-            index: 0,
+            index: 1,
+            cur_token: input[0].clone().into(),
         }
     }
 
-    pub fn parse(self) -> Expr {
-        while self.index < self.input.len(){
-            let mut cur = self.get_token();
-            self.e1(cur);
-            self.e1_tail(cur);
-        }
-        // here i need to return the head
-    }
-
-    fn e1(self, cur: Token) -> (){
-        // self.e2(cur);
-        // self.e2_tail(cur);
-    }
-
-    fn e1_tail(self, cur: Token) -> () {
-        if(cur.token_type == TokenType::Plus){
-            // add plus node to tree
-        }
-        else if {cur.token_type == TokenType::Minus){
-            // add minus node to tree
-        }
-    }
-
-    fn get_token(self) -> Token{
+    fn get_token(&mut self) -> Token{
         self.index = self.index+1;
-        return self.input[self.index-1];
+        return self.input[self.index-1].clone();
     }
-    
+
+    fn expr(&mut self) -> Box<Expr> {
+        self.add_sum_term();
+        return self.add_sub_term_tail();
+    }
+
+    fn add_sub_term_tail(&mut self) -> Box<Expr> {
+        let mut node = self.mul_divide_term();
+        if self.cur_token.token_type == TokenType::Plus || self.cur_token.token_type == TokenType::Minus{
+            node = Box::new(Expr::BinOp(BinOp{item: self.cur_token.clone(), lhs: node, rhs: self.mul_divide_term()}));
+            self.cur_token = self.get_token();
+        }
+        return node;
+    }
+
+    fn add_sum_term(&mut self) -> Box<Expr> {
+        self.mul_divide_term();
+        return self.mul_divide_term_tail();
+    }
+
+    fn mul_divide_term_tail(&mut self) -> Box<Expr> {
+        let mut node = self.num_term();
+        if self.cur_token.token_type == TokenType::Mult || self.cur_token.token_type == TokenType::Div {
+            node = Box::new(Expr::BinOp(BinOp{item: self.cur_token.clone(), lhs: node, rhs: self.num_term()}));
+            self.cur_token = self.get_token();
+        }
+        return node;
+    }
+
+    fn mul_divide_term(&mut self) -> Box<Expr> {
+        return self.num_term();
+    }
+
+    fn num_term(&mut self) -> Box<Expr> {
+        // 5.0 is a placeholder. mem::discriminant only compares variant types and ignores data
+        // this is pretty fucking cool rust has it
+        // this value should never be returned
+        let mut node = Box::new(Expr::Int(1));
+        if std::mem::discriminant(&self.cur_token.token_type) == std::mem::discriminant(&TokenType::Float(5.0)) { 
+            // look into a better way of doing this. only other method I can find is match
+            // by this I mean extract the data of variant float
+            if let TokenType::Float(f) = self.cur_token.token_type{
+                node = Box::new(Expr::Float(f));
+            }
+            self.cur_token = self.get_token();
+            return node;
+        }
+        else if std::mem::discriminant(&self.cur_token.token_type) == std::mem::discriminant(&TokenType::Int(1)) {
+            if let TokenType::Int(i) = self.cur_token.token_type{
+                node = Box::new(Expr::Int(i));
+            }
+            self.cur_token = self.get_token();
+            return node;
+        }
+        else if self.cur_token.token_type == TokenType::OpenParen {
+            // eat left paren
+            self.cur_token = self.get_token();
+            node = self.expr();
+            // eat right paren
+            self.cur_token = self.get_token();
+            return node;
+        }
+        else if self.cur_token.token_type == TokenType::OpenBracket {
+            // eat left brac\ket{
+            self.cur_token = self.get_token();
+            node = self.expr();
+            self.cur_token = self.get_token();
+            return node;
+        }
+        else {
+            panic!("Invalid Token");
+        }
+    } 
 }

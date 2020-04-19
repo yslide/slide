@@ -1,6 +1,5 @@
-mod types;
-use types::Token;
-use types::TokenType;
+pub mod types;
+pub use types::*;
 
 pub struct Scanner {
     input: Vec<char>,

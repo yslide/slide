@@ -1,6 +1,7 @@
 mod types;
-use crate::scanner::{Token, TokenType};
 pub use types::*;
+use crate::scanner::{Token, TokenType};
+
 
 pub struct Parser<'a> {
     input: &'a Vec<Token>,
@@ -62,45 +63,42 @@ impl<'a> Parser<'a> {
         // 5.0 is a placeholder. mem::discriminant only compares variant types and ignores data
         // this is pretty fucking cool rust has it
         // this value should never be returned
-        let mut node = Box::new(Expr::Int(1));
-        if std::mem::discriminant(&self.cur_token.token_type)
-            == std::mem::discriminant(&TokenType::Float(5.0))
-        {
-            // look into a better way of doing this. only other method I can find is match
-            // by this I mean extract the data of variant float
-            if let TokenType::Float(f) = self.cur_token.token_type {
+        let node: Box<Expr>;
+        match self.cur_token.token_type {
+            TokenType::Float(f) => {
                 node = Box::new(Expr::Float(f));
-            }
-            if self.index < self.input.len() {
-                self.cur_token = self.get_token();
-            }
-            return node;
-        } else if std::mem::discriminant(&self.cur_token.token_type)
-            == std::mem::discriminant(&TokenType::Int(1))
-        {
-            if let TokenType::Int(i) = self.cur_token.token_type {
+                if self.index < self.input.len() {
+                    self.cur_token = self.get_token();
+                }
+                return node;
+            },
+            TokenType::Int(i) => {
                 node = Box::new(Expr::Int(i));
-            }
-            if self.index < self.input.len() {
+                if self.index < self.input.len() {
+                    self.cur_token = self.get_token();
+                }
+                return node;
+            },
+            // @todo check for paren errors
+            TokenType::OpenParen => {
+                // eat left paren
                 self.cur_token = self.get_token();
+                node = self.expr();
+                // eat right paren
+                self.cur_token = self.get_token();
+                return node;
+            },
+            TokenType::OpenBracket => {
+                // eat left brac\ket{
+                self.cur_token = self.get_token();
+                node = self.expr();
+                self.cur_token = self.get_token();
+                return node;
             }
-            return node;
-        } else if self.cur_token.token_type == TokenType::OpenParen {
-            // eat left paren
-            self.cur_token = self.get_token();
-            node = self.expr();
-            // eat right paren
-            self.cur_token = self.get_token();
-            return node;
-        } else if self.cur_token.token_type == TokenType::OpenBracket {
-            // eat left brac\ket{
-            self.cur_token = self.get_token();
-            node = self.expr();
-            self.cur_token = self.get_token();
-            return node;
-        } else {
+            _ => {
             // this should never be reached
             panic!("Invalid input");
+            },
         }
     }
 }

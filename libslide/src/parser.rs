@@ -28,7 +28,7 @@ impl<'a> Parser<'a> {
     }
 
     fn add_sub_term(&mut self) -> Box<Expr> {
-        let mut node = self.mul_divide_term();
+        let mut node = self.mul_divide_mod_term();
         if self.cur_token.token_type == TokenType::Plus
             || self.cur_token.token_type == TokenType::Minus
         {
@@ -37,16 +37,16 @@ impl<'a> Parser<'a> {
             node = Box::new(Expr::BinOp(BinOp {
                 item: t,
                 lhs: node,
-                rhs: self.mul_divide_term(),
+                rhs: self.mul_divide_mod_term(),
             }));
         }
         return node;
     }
 
-    fn mul_divide_term(&mut self) -> Box<Expr> {
+    fn mul_divide_mod_term(&mut self) -> Box<Expr> {
         let mut node = self.num_term();
         if self.cur_token.token_type == TokenType::Mult
-            || self.cur_token.token_type == TokenType::Div
+            || self.cur_token.token_type == TokenType::Div || self.cur_token.token_type == TokenType::Mod
         {
             let t = self.cur_token.clone();
             self.cur_token = self.get_token();
@@ -132,6 +132,7 @@ mod tests {
             subtraction: "2 - 2", "(- 2 2)"
             multiplication: "2 * 2", "(* 2 2)"
             division: "2 / 2", "(/ 2 2)"
+            modulo:  "2 % 5", "(% 2 5)"
         }
     }
 }

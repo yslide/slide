@@ -21,7 +21,11 @@ impl<'a> Parser<'a> {
 
     fn advance(&mut self) -> bool {
         self.index += 1;
-        return self.index <= self.input.len();
+        self.done()
+    }
+
+    fn done(&self) -> bool {
+        self.index >= self.input.len()
     }
 
     pub fn expr(&mut self) -> Box<Expr> {
@@ -83,10 +87,7 @@ impl<'a> Parser<'a> {
                 self.advance();
                 node
             }
-            _ => {
-                println!("{}", self.token());
-                unreachable!()
-            }
+            _ => unreachable!(),
         };
         self.advance();
         node

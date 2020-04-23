@@ -24,11 +24,6 @@ impl<'a> Parser<'a> {
         self.done()
     }
 
-    fn check_end_paren(&mut self) -> bool{
-        return self.token().token_type == TokenType::CloseParen || 
-            self.token().token_type == TokenType::CloseBracket
-    }
-
     fn done(&self) -> bool {
         self.index >= self.input.len()
     }
@@ -57,7 +52,7 @@ impl<'a> Parser<'a> {
     }
 
     fn mul_divide_mod_term(&mut self) -> Box<Expr> {
-        let lhs = self.num_term();
+        let lhs = self.exponent_term();
         match self.token().token_type {
             TokenType::Mult | TokenType::Div | TokenType::Mod => {
                 let operand = self.token().clone();
@@ -65,12 +60,29 @@ impl<'a> Parser<'a> {
                 Box::new(Expr::BinOp(BinOp {
                     op: operand,
                     lhs,
-                    rhs: self.num_term(),
+                    rhs: self.exponent_term(),
                 }))
             }
             _ => lhs,
         }
     }
+
+    fn exponent_term(&mut self) -> Box<Expr> {
+        let lhs = self.num_term();
+        match self.token().token_type {
+            TokenType::Exp => {
+                let operand = self.token().clone();
+                self.advance();
+                Box::new(Expr::BinOp(BinOp {
+                    op: operand, 
+                    lhs, 
+                    rhs: self.exponent_term(),
+                }))
+            }
+            _ => lhs,
+        }
+    }
+                    
 
     fn num_term(&mut self) -> Box<Expr> {
         let node = match self.token().token_type {
@@ -127,6 +139,7 @@ mod tests {
             multiplication:          "2 * 2",     "(* 2 2)"
             division:                "2 / 2",     "(/ 2 2)"
             modulo:                  "2 % 5",     "(% 2 5)"
+            exponent:                "2 ^ 3",     "(^ 2 3)"
             precedence_plus_times:   "1 + 2 * 3",   "(+ 1 (* 2 3))"
             precedence_times_plus:   "1 * 2 + 3", "(+ (* 1 2) 3)"
             precedence_plus_div:     "1 + 2 / 3", "(+ 1 (/ 2 3))"
@@ -139,10 +152,16 @@ mod tests {
             precedence_div_minus:    "1 / 2 - 3", "(- (/ 1 2) 3)"
             precedence_minus_mod:    "1 - 2 % 3", "(- 1 (% 2 3))"
             precedence_mod_minus:    "1 % 2 - 3", "(- (% 1 2) 3)"
+            precedence_expo_plus:    "1 + 2 ^ 3", "(+ 1 (^ 2 3))"
+            precedence_plus_exp:     "1 ^ 2 + 3", "(+ (^ 1 2) 3)"
+            precedence_expo_times:   "1 * 2 ^ 3", "(* 1 (^ 2 3))"
+            precedence_time_expo:    "1 ^ 2 * 3", "(* (^ 1 2) 3)"
+            precedence_expo_exp:     "1 ^ 2 ^ 3", "(^ 1 (^ 2 3))"
             parentheses_plus_times:  "(1+2) * 3", "(* (+ 1 2) 3)"
             parentheses_time_plus:   "3 * (1+2)", "(* 3 (+ 1 2))"
             praentheses_time_mod:    "3 * (2%2)", "(* 3 (% 2 2))"
             parentheses_mod_time:    "(2%2) * 3", "(* (% 2 2) 3)"
+            parenthese_exp_time:      "2 ^ (3^4*5)", "(^ 2 (* (^ 3 4) 5))"
         }
     }
 }

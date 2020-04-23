@@ -26,7 +26,7 @@ impl fmt::Display for Expr {
 }
 
 pub struct BinOp {
-    pub item: Token,
+    pub op: Token,
     pub lhs: Box<Expr>,
     pub rhs: Box<Expr>,
 }
@@ -36,7 +36,7 @@ impl fmt::Display for BinOp {
         write!(
             f,
             "({} {} {})",
-            self.item.to_string(),
+            self.op.to_string(),
             self.lhs.to_string(),
             self.rhs.to_string(),
         )
@@ -44,13 +44,13 @@ impl fmt::Display for BinOp {
 }
 
 pub struct UnaryOp {
-    pub item: Token,
+    pub op: Token,
     pub rhs: Box<Expr>,
 }
 
 impl fmt::Display for UnaryOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({} {})", self.item.to_string(), self.rhs.to_string(),)
+        write!(f, "({} {})", self.op.to_string(), self.rhs.to_string(),)
     }
 }
 
@@ -76,12 +76,12 @@ mod tests {
             float: Expr::Float(1.3), "1.3"
             int: Expr::Int(10), "10"
             binary_op: Expr::BinOp(BinOp {
-                item: Token {token_type: TokenType::Plus},
+                op: Token {token_type: TokenType::Plus},
                 lhs: Box::new(Expr::Int(1)),
                 rhs: Box::new(Expr::Int(2))
             }), "(+ 1 2)"
             unary_op: Expr::UnaryOp(UnaryOp {
-                item: Token {token_type: TokenType::Plus},
+                op: Token {token_type: TokenType::Plus},
                 rhs: Box::new(Expr::Int(1))
             }), "(+ 1)"
         }

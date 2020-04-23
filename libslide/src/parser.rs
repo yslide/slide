@@ -1,26 +1,27 @@
 mod types;
-pub use types::*;
 use crate::scanner::{Token, TokenType};
-
+pub use types::*;
 
 pub struct Parser<'a> {
     input: &'a Vec<Token>,
     index: usize,
-    cur_token: Token,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(input: &Vec<Token>) -> Parser {
         Parser {
             input: input.into(),
-            index: 1,
-            cur_token: input[0].clone().into(),
+            index: 0,
         }
     }
 
-    fn get_token(&mut self) -> Token {
-        self.index = self.index + 1;
-        return self.input[self.index - 1].clone();
+    fn token(&self) -> &Token {
+        &self.input[self.index]
+    }
+
+    fn advance(&mut self) -> bool {
+        self.index += 1;
+        return self.index <= self.input.len();
     }
 
     pub fn expr(&mut self) -> Box<Expr> {
@@ -28,78 +29,67 @@ impl<'a> Parser<'a> {
     }
 
     fn add_sub_term(&mut self) -> Box<Expr> {
-        let mut node = self.mul_divide_mod_term();
-        if self.cur_token.token_type == TokenType::Plus
-            || self.cur_token.token_type == TokenType::Minus
-        {
-            let t = self.cur_token.clone();
-            self.cur_token = self.get_token();
-            node = Box::new(Expr::BinOp(BinOp {
-                item: t,
-                lhs: node,
-                rhs: self.mul_divide_mod_term(),
-            }));
+        let lhs = self.mul_divide_mod_term();
+        match self.token().token_type {
+            TokenType::Plus | TokenType::Minus => {
+                let operand = self.token().clone();
+                self.advance();
+                Box::new(Expr::BinOp(BinOp {
+                    op: operand,
+                    lhs,
+                    rhs: self.mul_divide_mod_term(),
+                }))
+            }
+            TokenType::EOF => lhs,
+            _ => unreachable!(),
         }
-        return node;
     }
 
     fn mul_divide_mod_term(&mut self) -> Box<Expr> {
-        let mut node = self.num_term();
-        if self.cur_token.token_type == TokenType::Mult
-            || self.cur_token.token_type == TokenType::Div || self.cur_token.token_type == TokenType::Mod
-        {
-            let t = self.cur_token.clone();
-            self.cur_token = self.get_token();
-            node = Box::new(Expr::BinOp(BinOp {
-                item: t,
-                lhs: node,
-                rhs: self.num_term(),
-            }));
+        let lhs = self.num_term();
+        match self.token().token_type {
+            TokenType::Mult | TokenType::Div | TokenType::Mod => {
+                let operand = self.token().clone();
+                self.advance();
+                Box::new(Expr::BinOp(BinOp {
+                    op: operand,
+                    lhs,
+                    rhs: self.num_term(),
+                }))
+            }
+            _ => lhs,
         }
-        return node;
     }
 
     fn num_term(&mut self) -> Box<Expr> {
-        // 5.0 is a placeholder. mem::discriminant only compares variant types and ignores data
-        // this is pretty fucking cool rust has it
-        // this value should never be returned
-        let node: Box<Expr>;
-        match self.cur_token.token_type {
-            TokenType::Float(f) => {
-                node = Box::new(Expr::Float(f));
-                if self.index < self.input.len() {
-                    self.cur_token = self.get_token();
-                }
-                return node;
-            },
-            TokenType::Int(i) => {
-                node = Box::new(Expr::Int(i));
-                if self.index < self.input.len() {
-                    self.cur_token = self.get_token();
-                }
-                return node;
-            },
-            // @todo check for paren errors
+        let node = match self.token().token_type {
+            TokenType::Float(f) => Box::new(Expr::Float(f)),
+            TokenType::Int(i) => Box::new(Expr::Int(i)),
+            // TODO: check for paren errors
             TokenType::OpenParen => {
                 // eat left paren
-                self.cur_token = self.get_token();
-                node = self.expr();
+                self.advance();
+                let node = self.expr();
                 // eat right paren
-                self.cur_token = self.get_token();
-                return node;
-            },
+                self.advance();
+                node
+            }
+            // TODO: check for bracket errors
             TokenType::OpenBracket => {
-                // eat left brac\ket{
-                self.cur_token = self.get_token();
-                node = self.expr();
-                self.cur_token = self.get_token();
-                return node;
+                // eat left bracket
+                self.advance();
+                let node = self.expr();
+                // eat right bracket
+                self.advance();
+                node
             }
             _ => {
-            // this should never be reached
-            panic!("Invalid input");
-            },
-        }
+                println!("{}", self.token());
+                unreachable!()
+            }
+        };
+        self.advance();
+        node
     }
 }
 
@@ -128,11 +118,23 @@ mod tests {
 
     mod parse {
         parser_tests! {
-            addition: "2 + 2", "(+ 2 2)"
-            subtraction: "2 - 2", "(- 2 2)"
-            multiplication: "2 * 2", "(* 2 2)"
-            division: "2 / 2", "(/ 2 2)"
-            modulo:  "2 % 5", "(% 2 5)"
+            addition:                "2 + 2",     "(+ 2 2)"
+            subtraction:             "2 - 2",     "(- 2 2)"
+            multiplication:          "2 * 2",     "(* 2 2)"
+            division:                "2 / 2",     "(/ 2 2)"
+            modulo:                  "2 % 5",     "(% 2 5)"
+            precedence_plus_times:   "1 + 2 * 3", "(+ 1 (* 2 3))"
+            precedence_times_plus:   "1 * 2 + 3", "(+ (* 1 2) 3)"
+            precedence_plus_div:     "1 + 2 / 3", "(+ 1 (/ 2 3))"
+            precedence_div_plus:     "1 / 2 + 3", "(+ (/ 1 2) 3)"
+            precedence_plus_mod:     "1 + 2 % 3", "(+ 1 (% 2 3))"
+            precedence_mod_plus:     "1 % 2 + 3", "(+ (% 1 2) 3)"
+            precedence_minus_times:  "1 - 2 * 3", "(- 1 (* 2 3))"
+            precedence_times_minus:  "1 * 2 - 3", "(- (* 1 2) 3)"
+            precedence_minus_div:    "1 - 2 / 3", "(- 1 (/ 2 3))"
+            precedence_div_minus:    "1 / 2 - 3", "(- (/ 1 2) 3)"
+            precedence_minus_mod:    "1 - 2 % 3", "(- 1 (% 2 3))"
+            precedence_mod_minus:    "1 % 2 - 3", "(- (% 1 2) 3)"
         }
     }
 }

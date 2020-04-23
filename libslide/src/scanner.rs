@@ -86,6 +86,10 @@ impl Scanner {
                 i += 1;
             }
         }
+
+        self.output.push(Token {
+            token_type: TokenType::EOF,
+        });
     }
 }
 
@@ -103,13 +107,13 @@ mod tests {
 
                 let mut scanner = Scanner::new($program);
                 scanner.scan();
-                let formatted_tokens = scanner
+                let mut tokens = scanner
                     .output
                     .into_iter()
                     .map(|tok| tok.to_string())
-                    .collect::<Vec<_>>()
-                    .join(" ");
-                assert_eq!(formatted_tokens, $format_str);
+                    .collect::<Vec<_>>();
+                tokens.pop();
+                assert_eq!(tokens.join(" "), $format_str);
             }
         )*
         }

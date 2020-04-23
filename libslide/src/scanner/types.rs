@@ -48,6 +48,9 @@ pub enum TokenType {
 
     // invalid token
     Invalid(String),
+
+    // end of file
+    EOF,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -76,6 +79,7 @@ impl fmt::Display for Token {
                 OpenBracket => "[".into(),
                 CloseBracket => "]".into(),
                 Invalid(s) => format!("Invalid({})", s),
+                EOF => format!("<EOF>"),
             }
         )
     }

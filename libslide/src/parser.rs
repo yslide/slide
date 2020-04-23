@@ -86,25 +86,41 @@ impl<'a> Parser<'a> {
 
     fn num_term(&mut self) -> Box<Expr> {
         let node = match self.token().token_type {
-            TokenType::Float(f) => Box::new(Expr::Float(f)),
-            TokenType::Int(i) => Box::new(Expr::Int(i)),
-            // TODO: check for paren errors
+            TokenType::Plus | TokenType::Minus => {
+                let operand = self.token().clone();
+                self.advance();
+                let node = Box::new(Expr::UnaryOp( UnaryOp {
+                    op: operand, 
+                    rhs: self.exponent_term(),
+                }));
+                node
+            }
+            TokenType::Float(f) => {
+                let node = Box::new(Expr::Float(f));
+                self.advance();
+                node
+            }
+            TokenType::Int(i) => {
+                let node = Box::new(Expr::Int(i));
+                self.advance();
+                node
+            }
             TokenType::OpenParen => {
                 // eat left paren
                 self.advance();
                 let node = self.expr();
+                self.advance();
                 node
             }
-            // TODO: check for bracket errors
             TokenType::OpenBracket => {
                 // eat left bracket
                 self.advance();
                 let node = self.expr();
+                self.advance();
                 node
             }
             _ => unreachable!(),
         };
-        self.advance();
         node
     }
 }
@@ -161,7 +177,10 @@ mod tests {
             parentheses_time_plus:   "3 * (1+2)", "(* 3 (+ 1 2))"
             praentheses_time_mod:    "3 * (2%2)", "(* 3 (% 2 2))"
             parentheses_mod_time:    "(2%2) * 3", "(* (% 2 2) 3)"
-            parenthese_exp_time:      "2 ^ (3^4*5)", "(^ 2 (* (^ 3 4) 5))"
+            parenthese_exp_time:     "2 ^ (3^4*5)", "(^ 2 (* (^ 3 4) 5))"
+            unary_minus:             "-2", "(- 2)" 
+            unary_expo:              "-2^3", "(- (^ 2 3))"
+            unary_quad:            "+-+-2", "(+ (- (+ (- 2))))"
         }
     }
 }

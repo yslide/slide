@@ -28,8 +28,26 @@ impl<'a> Parser<'a> {
         self.index >= self.input.len()
     }
 
-    pub fn expr(&mut self) -> Box<Expr> { 
-        return self.add_sub_term();
+    fn assignment(&mut self) -> Box<Expr> {
+        let lhs = self.token().clone();
+        self.advance();
+        match self.token().token_type {
+            TokenType::Equal => {
+                let operand = self.token().clone();
+                self.advance();
+                Box::new(Expr::Variable(Variable {
+                    op: operand,
+                    lhs: lhs,
+                    rhs: self.expr(),
+                }))
+
+            }
+            _ => unreachable!()
+        }
+    }     
+
+    pub fn expr(&mut self) -> Box<Expr> {
+        self.add_sub_term()
     }
 
     fn add_sub_term(&mut self) -> Box<Expr> {
@@ -74,23 +92,22 @@ impl<'a> Parser<'a> {
                 let operand = self.token().clone();
                 self.advance();
                 Box::new(Expr::BinOp(BinOp {
-                    op: operand, 
-                    lhs, 
+                    op: operand,
+                    lhs,
                     rhs: self.exponent_term(),
                 }))
             }
             _ => lhs,
         }
     }
-                    
 
     fn num_term(&mut self) -> Box<Expr> {
         let node = match self.token().token_type {
             TokenType::Plus | TokenType::Minus => {
                 let operand = self.token().clone();
                 self.advance();
-                let node = Box::new(Expr::UnaryOp( UnaryOp {
-                    op: operand, 
+                let node = Box::new(Expr::UnaryOp(UnaryOp {
+                    op: operand,
                     rhs: self.exponent_term(),
                 }));
                 node
@@ -119,7 +136,10 @@ impl<'a> Parser<'a> {
                 self.advance();
                 node
             }
-            _ => unreachable!(),
+            TokenType::Variable(_) => {
+                self.assignment()
+            }
+            _ => unreachable!()
         };
         node
     }
@@ -150,37 +170,41 @@ mod tests {
 
     mod parse {
         parser_tests! {
-            addition:                "2 + 2",     "(+ 2 2)"
-            subtraction:             "2 - 2",     "(- 2 2)"
-            multiplication:          "2 * 2",     "(* 2 2)"
-            division:                "2 / 2",     "(/ 2 2)"
-            modulo:                  "2 % 5",     "(% 2 5)"
-            exponent:                "2 ^ 3",     "(^ 2 3)"
-            precedence_plus_times:   "1 + 2 * 3",   "(+ 1 (* 2 3))"
-            precedence_times_plus:   "1 * 2 + 3", "(+ (* 1 2) 3)"
-            precedence_plus_div:     "1 + 2 / 3", "(+ 1 (/ 2 3))"
-            precedence_div_plus:     "1 / 2 + 3", "(+ (/ 1 2) 3)"
-            precedence_plus_mod:     "1 + 2 % 3", "(+ 1 (% 2 3))"
-            precedence_mod_plus:     "1 % 2 + 3", "(+ (% 1 2) 3)"
-            precedence_minus_times:  "1 - 2 * 3", "(- 1 (* 2 3))"
-            precedence_times_minus:  "1 * 2 - 3", "(- (* 1 2) 3)"
-            precedence_minus_div:    "1 - 2 / 3", "(- 1 (/ 2 3))"
-            precedence_div_minus:    "1 / 2 - 3", "(- (/ 1 2) 3)"
-            precedence_minus_mod:    "1 - 2 % 3", "(- 1 (% 2 3))"
-            precedence_mod_minus:    "1 % 2 - 3", "(- (% 1 2) 3)"
-            precedence_expo_plus:    "1 + 2 ^ 3", "(+ 1 (^ 2 3))"
-            precedence_plus_exp:     "1 ^ 2 + 3", "(+ (^ 1 2) 3)"
-            precedence_expo_times:   "1 * 2 ^ 3", "(* 1 (^ 2 3))"
-            precedence_time_expo:    "1 ^ 2 * 3", "(* (^ 1 2) 3)"
-            precedence_expo_exp:     "1 ^ 2 ^ 3", "(^ 1 (^ 2 3))"
-            parentheses_plus_times:  "(1+2) * 3", "(* (+ 1 2) 3)"
-            parentheses_time_plus:   "3 * (1+2)", "(* 3 (+ 1 2))"
-            praentheses_time_mod:    "3 * (2%2)", "(* 3 (% 2 2))"
-            parentheses_mod_time:    "(2%2) * 3", "(* (% 2 2) 3)"
-            parenthese_exp_time:     "2 ^ (3^4*5)", "(^ 2 (* (^ 3 4) 5))"
-            unary_minus:             "-2", "(- 2)" 
-            unary_expo:              "-2^3", "(- (^ 2 3))"
-            unary_quad:            "+-+-2", "(+ (- (+ (- 2))))"
+            addition:                "2 + 2",        "(+ 2 2)"
+            subtraction:             "2 - 2",        "(- 2 2)"
+            multiplication:          "2 * 2",        "(* 2 2)"
+            division:                "2 / 2",        "(/ 2 2)"
+            modulo:                  "2 % 5",        "(% 2 5)"
+            exponent:                "2 ^ 3",        "(^ 2 3)"
+            precedence_plus_times:   "1 + 2 * 3",    "(+ 1 (* 2 3))"
+            precedence_times_plus:   "1 * 2 + 3",    "(+ (* 1 2) 3)"
+            precedence_plus_div:     "1 + 2 / 3",    "(+ 1 (/ 2 3))"
+            precedence_div_plus:     "1 / 2 + 3",    "(+ (/ 1 2) 3)"
+            precedence_plus_mod:     "1 + 2 % 3",    "(+ 1 (% 2 3))"
+            precedence_mod_plus:     "1 % 2 + 3",    "(+ (% 1 2) 3)"
+            precedence_minus_times:  "1 - 2 * 3",    "(- 1 (* 2 3))"
+            precedence_times_minus:  "1 * 2 - 3",    "(- (* 1 2) 3)"
+            precedence_minus_div:    "1 - 2 / 3",    "(- 1 (/ 2 3))"
+            precedence_div_minus:    "1 / 2 - 3",    "(- (/ 1 2) 3)"
+            precedence_minus_mod:    "1 - 2 % 3",    "(- 1 (% 2 3))"
+            precedence_mod_minus:    "1 % 2 - 3",    "(- (% 1 2) 3)"
+            precedence_expo_plus:    "1 + 2 ^ 3",    "(+ 1 (^ 2 3))"
+            precedence_plus_exp:     "1 ^ 2 + 3",    "(+ (^ 1 2) 3)"
+            precedence_expo_times:   "1 * 2 ^ 3",    "(* 1 (^ 2 3))"
+            precedence_time_expo:    "1 ^ 2 * 3",    "(* (^ 1 2) 3)"
+            precedence_expo_exp:     "1 ^ 2 ^ 3",    "(^ 1 (^ 2 3))"
+            parentheses_plus_times:  "(1+2) * 3",    "(* (+ 1 2) 3)"
+            parentheses_time_plus:   "3 * (1+2)",    "(* 3 (+ 1 2))"
+            parentheses_time_mod:    "3 * (2%2)",    "(* 3 (% 2 2))"
+            parentheses_mod_time:    "(2%2) * 3",    "(* (% 2 2) 3)"
+            parentheses_exp_time:     "2 ^ (3^4*5)", "(^ 2 (* (^ 3 4) 5))"
+            parentheses_unary:       "-(2++-5)",     "(- (+ 2 (+ (- 5))))"
+            unary_minus:             "-2",           "(- 2)"
+            unary_expo:              "-2^3",         "(- (^ 2 3))"
+            unary_quad:              "+-+-2",        "(+ (- (+ (- 2))))"
+            assignment_op:           "a = 5",        "(= a 5)"
+            assignment_op_expr:      "ABc = 5+2^3",  "(= ABc (+ 5 (^ 2 3)))"
+            
         }
     }
 }

@@ -29,10 +29,9 @@ impl Scanner {
             ')' => TokenType::CloseParen,
             '[' => TokenType::OpenBracket,
             ']' => TokenType::CloseBracket,
-            _ => TokenType::Invalid(c.to_string()),
+            _ => TokenType::Invalid(c.to_string())
         };
-        let ret = Token { token_type: t };
-        return ret;
+        return Token{token_type: t};
     }
 
     // iterates through any digits to create a token of that value
@@ -66,6 +65,16 @@ impl Scanner {
         return (ret, i);
     }
 
+    fn iterate_var(&mut self, mut i: usize) -> (Token, usize)
+    {
+        let mut var_str = "".to_owned();
+        while i < self.input.len() && (self.input[i]).is_alphabetic() {
+            var_str.push(self.input[i]);
+            i += 1
+        }
+        return (Token {token_type: TokenType::Variable(var_str.into()) }, i);
+    }            
+
     pub fn scan(&mut self) {
         let mut i: usize = 0;
         // iterate through string
@@ -73,11 +82,17 @@ impl Scanner {
             // ignore whitespace
             if !((self.input[i]).is_whitespace()) {
                 // check for digit and call correct helper function
-                if (self.input[i]).is_digit(10) {
+                if self.input[i].is_digit(10) {
                     let (num, new_idx) = self.iterate_digit(i);
                     i = new_idx;
                     self.output.push(num);
-                } else {
+                } 
+                else if self.input[i].is_alphabetic() {
+                    let (var, new_idx) = self.iterate_var(i);
+                    i = new_idx;
+                    self.output.push(var);
+                }
+                else {
                     self.output
                         .push(Scanner::create_symbol_token(self.input[i]));
                     i += 1;
@@ -143,6 +158,9 @@ mod tests {
             multiple_numbers_mixed: "1 2.3 4", "1 2.3 4"
 
             expressions: "1 + 2 ^ 5", "1 + 2 ^ 5"
+
+            variables: "a = 5", "a = 5"
+            variables_cap: "ABcd = 5", "ABcd = 5"
         }
     }
 

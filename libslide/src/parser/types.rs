@@ -5,8 +5,8 @@ pub enum Expr {
     Float(f64),
     Int(i64),
     BinOp(BinOp),
-    // I added un op even though I havent implemented + or -
     UnaryOp(UnaryOp),
+    Variable(Variable),
 }
 
 impl fmt::Display for Expr {
@@ -20,6 +20,7 @@ impl fmt::Display for Expr {
                 Int(num) => num.to_string(),
                 BinOp(bin_op) => bin_op.to_string(),
                 UnaryOp(unary_op) => unary_op.to_string(),
+                Variable(variable) => variable.to_string(),
             }
         )
     }
@@ -54,6 +55,22 @@ impl fmt::Display for UnaryOp {
     }
 }
 
+pub struct Variable {
+    pub op: Token, 
+    pub lhs: Token,
+    pub rhs: Box<Expr>
+}
+
+impl fmt::Display for Variable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({} {} {})", 
+            self.op.to_string(),
+            self.lhs.to_string(),
+            self.rhs.to_string(),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     mod format {
@@ -84,6 +101,11 @@ mod tests {
                 op: Token {token_type: TokenType::Plus},
                 rhs: Box::new(Expr::Int(1))
             }), "(+ 1)"
+            variable : Expr::Variable(Variable {
+                op : Token {token_type: TokenType::Equal},
+                lhs: Token {token_type: TokenType::Variable("a".into())},
+                rhs: Box::new(Expr::Int(1))
+            }), "(= a 1)"
         }
     }
 }

@@ -24,11 +24,16 @@ impl<'a> Parser<'a> {
         self.done()
     }
 
+    fn check_end_paren(&mut self) -> bool{
+        return self.token().token_type == TokenType::CloseParen || 
+            self.token().token_type == TokenType::CloseBracket
+    }
+
     fn done(&self) -> bool {
         self.index >= self.input.len()
     }
 
-    pub fn expr(&mut self) -> Box<Expr> {
+    pub fn expr(&mut self) -> Box<Expr> { 
         return self.add_sub_term();
     }
 
@@ -44,6 +49,8 @@ impl<'a> Parser<'a> {
                     rhs: self.mul_divide_mod_term(),
                 }))
             }
+            TokenType::CloseParen => lhs,
+            TokenType::CloseBracket => lhs,
             TokenType::EOF => lhs,
             _ => unreachable!(),
         }
@@ -74,8 +81,6 @@ impl<'a> Parser<'a> {
                 // eat left paren
                 self.advance();
                 let node = self.expr();
-                // eat right paren
-                self.advance();
                 node
             }
             // TODO: check for bracket errors
@@ -83,8 +88,6 @@ impl<'a> Parser<'a> {
                 // eat left bracket
                 self.advance();
                 let node = self.expr();
-                // eat right bracket
-                self.advance();
                 node
             }
             _ => unreachable!(),
@@ -124,7 +127,7 @@ mod tests {
             multiplication:          "2 * 2",     "(* 2 2)"
             division:                "2 / 2",     "(/ 2 2)"
             modulo:                  "2 % 5",     "(% 2 5)"
-            precedence_plus_times:   "1 + 2 * 3", "(+ 1 (* 2 3))"
+            precedence_plus_times:   "1 + 2 * 3",   "(+ 1 (* 2 3))"
             precedence_times_plus:   "1 * 2 + 3", "(+ (* 1 2) 3)"
             precedence_plus_div:     "1 + 2 / 3", "(+ 1 (/ 2 3))"
             precedence_div_plus:     "1 / 2 + 3", "(+ (/ 1 2) 3)"
@@ -136,6 +139,10 @@ mod tests {
             precedence_div_minus:    "1 / 2 - 3", "(- (/ 1 2) 3)"
             precedence_minus_mod:    "1 - 2 % 3", "(- 1 (% 2 3))"
             precedence_mod_minus:    "1 % 2 - 3", "(- (% 1 2) 3)"
+            parentheses_plus_times:  "(1+2) * 3", "(* (+ 1 2) 3)"
+            parentheses_time_plus:   "3 * (1+2)", "(* 3 (+ 1 2))"
+            praentheses_time_mod:    "3 * (2%2)", "(* 3 (% 2 2))"
+            parentheses_mod_time:    "(2%2) * 3", "(* (% 2 2) 3)"
         }
     }
 }

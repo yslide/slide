@@ -1,0 +1,23 @@
+dist: bionic
+os: linux
+
+language: rust
+cache: cargo
+
+jobs:
+  fast_finish: true
+
+  include:
+    - name: "Stable"
+      rust: stable
+    - name: "Beta"
+      rust: beta
+    - name: "Nightly"
+      rust: nightly
+      
+script:
+  - cargo build --verbose --all
+  - cargo test --verbose --all
+
+  allow_failures:
+    - rust: nightly

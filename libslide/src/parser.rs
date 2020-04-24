@@ -125,18 +125,10 @@ impl<'a> Parser<'a> {
                 self.advance();
                 node
             }
-            TokenType::OpenParen => {
-                // eat left paren
-                self.advance();
+            TokenType::OpenParen | TokenType::OpenBracket => {
+                self.advance(); // eat left
                 let node = self.expr();
-                self.advance();
-                node
-            }
-            TokenType::OpenBracket => {
-                // eat left bracket
-                self.advance();
-                let node = self.expr();
-                self.advance();
+                self.advance(); // eat right
                 node
             }
             _ => unreachable!(),
@@ -199,13 +191,13 @@ mod tests {
             parentheses_exp_time:    "2 ^ (3 ^ 4 * 5)",     "(^ 2 (* (^ 3 4) 5))"
             parentheses_unary:       "-(2 + +-5)",          "(- (+ 2 (+ (- 5))))"
             nested_parentheses:      "((1 * (2 + 3)) ^ 4)", "(^ (* 1 (+ 2 3)) 4)"
-            brackets_plus_times:     "(1 + 2) * 3",         "(* (+ 1 2) 3)"
-            brackets_time_plus:      "3 * (1 + 2)",         "(* 3 (+ 1 2))"
-            brackets_time_mod:       "3 * (2 % 2)",         "(* 3 (% 2 2))"
-            brackets_mod_time:       "(2 % 2) * 3",         "(* (% 2 2) 3)"
-            brackets_exp_time:       "2 ^ (3 ^ 4 * 5)",     "(^ 2 (* (^ 3 4) 5))"
-            brackets_unary:          "-(2 + +-5)",          "(- (+ 2 (+ (- 5))))"
-            nested_brackets:         "((1 * (2 + 3)) ^ 4)", "(^ (* 1 (+ 2 3)) 4)"
+            brackets_plus_times:     "[1 + 2] * 3",         "(* (+ 1 2) 3)"
+            brackets_time_plus:      "3 * [1 + 2]",         "(* 3 (+ 1 2))"
+            brackets_time_mod:       "3 * [2 % 2]",         "(* 3 (% 2 2))"
+            brackets_mod_time:       "[2 % 2] * 3",         "(* (% 2 2) 3)"
+            brackets_exp_time:       "2 ^ [3 ^ 4 * 5]",     "(^ 2 (* (^ 3 4) 5))"
+            brackets_unary:          "-[2 + +-5]",          "(- (+ 2 (+ (- 5))))"
+            nested_brackets:         "[[1 * [2 + 3]] ^ 4]", "(^ (* 1 (+ 2 3)) 4)"
             unary_minus:             "-2",                  "(- 2)"
             unary_expo:              "-2 ^ 3",              "(- (^ 2 3))"
             unary_quad:              "+-+-2",               "(+ (- (+ (- 2))))"

@@ -46,8 +46,14 @@ pub enum TokenType {
     // close bracket ]
     CloseBracket,
 
+    // variable name
+    Variable(String),
+
     // invalid token
     Invalid(String),
+
+    // end of file
+    EOF,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -75,7 +81,9 @@ impl fmt::Display for Token {
                 CloseParen => ")".into(),
                 OpenBracket => "[".into(),
                 CloseBracket => "]".into(),
+                Variable(s) => format!("{}", s),
                 Invalid(s) => format!("Invalid({})", s),
+                EOF => format!("<EOF>"),
             }
         )
     }
@@ -113,6 +121,7 @@ mod tests {
             close_paren: CloseParen, ")"
             open_bracket: OpenBracket, "["
             close_bracket: CloseBracket, "]"
+            variable: Variable("ab".into()), "ab"
             invalid: Invalid("@&@".into()), "Invalid(@&@)"
         }
     }

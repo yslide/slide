@@ -29,9 +29,9 @@ impl Scanner {
             ')' => TokenType::CloseParen,
             '[' => TokenType::OpenBracket,
             ']' => TokenType::CloseBracket,
-            _ => TokenType::Invalid(c.to_string())
+            _ => TokenType::Invalid(c.to_string()),
         };
-        return Token{token_type: t};
+        return Token { token_type: t };
     }
 
     // iterates through any digits to create a token of that value
@@ -65,15 +65,17 @@ impl Scanner {
         return (ret, i);
     }
 
-    fn iterate_var(&mut self, mut i: usize) -> (Token, usize)
-    {
-        let mut var_str = "".to_owned();
-        while i < self.input.len() && (self.input[i]).is_alphabetic() {
+    fn iterate_var(&mut self, mut i: usize) -> (Token, usize) {
+        let mut var_str = String::new();
+        while i < self.input.len() && self.input[i].is_alphabetic() {
             var_str.push(self.input[i]);
             i += 1
         }
-        return (Token {token_type: TokenType::Variable(var_str.into()) }, i);
-    }            
+        let var = Token {
+            token_type: TokenType::Variable(var_str),
+        };
+        return (var, i);
+    }
 
     pub fn scan(&mut self) {
         let mut i: usize = 0;
@@ -86,13 +88,11 @@ impl Scanner {
                     let (num, new_idx) = self.iterate_digit(i);
                     i = new_idx;
                     self.output.push(num);
-                } 
-                else if self.input[i].is_alphabetic() {
+                } else if self.input[i].is_alphabetic() {
                     let (var, new_idx) = self.iterate_var(i);
                     i = new_idx;
                     self.output.push(var);
-                }
-                else {
+                } else {
                     self.output
                         .push(Scanner::create_symbol_token(self.input[i]));
                     i += 1;

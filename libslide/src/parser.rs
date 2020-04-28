@@ -1,9 +1,14 @@
-mod types;
-use crate::scanner::{Token, TokenType};
+pub mod types;
+use crate::scanner::types::{Token, TokenType};
 use core::convert::TryFrom;
-pub use types::*;
+use types::*;
 
-pub struct Parser {
+pub fn parse(input: Vec<Token>) -> Box<Stmt> {
+    let mut parser = Parser::new(input);
+    parser.parse()
+}
+
+struct Parser {
     input: Vec<Token>,
     index: usize,
 }
@@ -36,10 +41,7 @@ macro_rules! binary_expr_parser {
 
 impl Parser {
     pub fn new(input: Vec<Token>) -> Parser {
-        Parser {
-            input: input,
-            index: 0,
-        }
+        Parser { input, index: 0 }
     }
 
     fn token(&self) -> &Token {
@@ -89,7 +91,7 @@ impl Parser {
         }))
     }
 
-    pub fn expr(&mut self) -> Box<Expr> {
+    fn expr(&mut self) -> Box<Expr> {
         self.add_sub_term()
     }
 
@@ -97,10 +99,10 @@ impl Parser {
         self
 
         // Level 1: +, -
-        add_sub_term:        lhs = mul_divide_mod_term, rhs = mul_divide_mod_term, op = [Plus | Minus]
+        add_sub_term:        lhs = mul_divide_mod_term, rhs = add_sub_term,        op = [Plus | Minus]
 
         // Level 2: *, /, %
-        mul_divide_mod_term: lhs = exp_term,            rhs = exp_term,            op = [Mult | Div | Mod]
+        mul_divide_mod_term: lhs = exp_term,            rhs = mul_divide_mod_term, op = [Mult | Div | Mod]
 
         // Level 3: ^                                   right-associativity of ^
         exp_term:            lhs = num_term,            rhs = exp_term,            op = [Exp]
@@ -141,13 +143,12 @@ mod tests {
         $(
             #[test]
             fn $name() {
-                use crate::scanner::Scanner;
-                use crate::parser::Parser;
+                use crate::scanner::scan;
+                use crate::parser::parse;
 
-                let mut scanner = Scanner::new($program);
-                scanner.scan();
-                let mut parser = Parser::new(scanner.output);
-                assert_eq!(parser.parse().to_string(), $format_str);
+                let tokens = scan($program);
+                let parsed = parse(tokens);
+                assert_eq!(parsed.to_string(), $format_str);
             }
         )*
         }
@@ -156,11 +157,18 @@ mod tests {
     mod parse {
         parser_tests! {
             addition:                "2 + 2",               "(+ 2 2)"
+            addition_nested:         "1 + 2 + 3",           "(+ 1 (+ 2 3))"
             subtraction:             "2 - 2",               "(- 2 2)"
+            subtraction_nested:      "1 - 2 - 3",           "(- 1 (- 2 3))"
             multiplication:          "2 * 2",               "(* 2 2)"
+            multiplication_nested:   "1 * 2 * 3",           "(* 1 (* 2 3))"
             division:                "2 / 2",               "(/ 2 2)"
+            // TODO: I don't think this is correct, should be (/ (/ 1 2) 3)?
+            division_nested:         "1 / 2 / 3",           "(/ 1 (/ 2 3))"
             modulo:                  "2 % 5",               "(% 2 5)"
+            modulo_nested:           "1 % 2 % 3",           "(% 1 (% 2 3))"
             exponent:                "2 ^ 3",               "(^ 2 3)"
+            exponent_nested:         "1 ^ 2 ^ 3",           "(^ 1 (^ 2 3))"
             precedence_plus_times:   "1 + 2 * 3",           "(+ 1 (* 2 3))"
             precedence_times_plus:   "1 * 2 + 3",           "(+ (* 1 2) 3)"
             precedence_plus_div:     "1 + 2 / 3",           "(+ 1 (/ 2 3))"
@@ -177,7 +185,6 @@ mod tests {
             precedence_plus_exp:     "1 ^ 2 + 3",           "(+ (^ 1 2) 3)"
             precedence_expo_times:   "1 * 2 ^ 3",           "(* 1 (^ 2 3))"
             precedence_time_expo:    "1 ^ 2 * 3",           "(* (^ 1 2) 3)"
-            precedence_expo_exp:     "1 ^ 2 ^ 3",           "(^ 1 (^ 2 3))"
             parentheses_plus_times:  "(1 + 2) * 3",         "(* (+ 1 2) 3)"
             parentheses_time_plus:   "3 * (1 + 2)",         "(* 3 (+ 1 2))"
             parentheses_time_mod:    "3 * (2 % 2)",         "(* 3 (% 2 2))"
@@ -196,7 +203,8 @@ mod tests {
             unary_expo:              "-2 ^ 3",              "(- (^ 2 3))"
             unary_quad:              "+-+-2",               "(+ (- (+ (- 2))))"
             variable:                "a",                   "a"
-            variable_in_op:          "a + 1",               "(+ a 1)"
+            variable_in_op_left:     "a + 1",               "(+ a 1)"
+            variable_in_op_right:    "1 + a",               "(+ 1 a)"
             assignment_op:           "a = 5",               "(= a 5)"
             assignment_op_expr:      "a = 5 + 2 ^ 3",       "(= a (+ 5 (^ 2 3)))"
         }

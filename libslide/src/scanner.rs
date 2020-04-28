@@ -1,7 +1,13 @@
 pub mod types;
-pub use types::*;
+use types::*;
 
-pub struct Scanner {
+pub fn scan<T: Into<String>>(input: T) -> Vec<Token> {
+    let mut scanner = Scanner::new(input);
+    scanner.scan();
+    scanner.output
+}
+
+struct Scanner {
     input: Vec<char>,
     pub output: Vec<Token>,
 }
@@ -116,12 +122,9 @@ mod tests {
         $(
             #[test]
             fn $name() {
-                use crate::scanner::Scanner;
+                use crate::scanner::scan;
 
-                let mut scanner = Scanner::new($program);
-                scanner.scan();
-                let mut tokens = scanner
-                    .output
+                let mut tokens = scan($program)
                     .into_iter()
                     .map(|tok| tok.to_string())
                     .collect::<Vec<_>>();

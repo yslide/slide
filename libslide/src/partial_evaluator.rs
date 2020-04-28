@@ -98,8 +98,8 @@ mod tests {
             div_var:                 "a / b",               "(/ a b)"
             mod_var:                 "a % b",               "(% a b)"
             exp_var:                 "a ^ b",               "(^ a b)"
-            pe_left:                 "1 + 2 + a",           "(+ 1 (+ 2 a))"
-            pe_right:                "a + 1 + 2",           "(+ a 3)"
+            pe_left:                 "1 + 2 + a",           "(+ 3 a)"
+            pe_right:                "a + 1 + 2",           "(+ (+ a 1) 2)"
         }
     }
 }

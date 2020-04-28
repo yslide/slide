@@ -7,7 +7,6 @@ pub fn parse(input: Vec<Token>) -> Box<Stmt> {
     let mut parser = Parser::new(input);
     parser.parse()
 }
-
 struct Parser {
     input: Vec<Token>,
     index: usize,
@@ -19,18 +18,19 @@ macro_rules! binary_expr_parser {
         fn $name(&mut $self) -> Box<Expr> {
             use BinaryOperator::*;
 
-            let lhs = $self.$lhs_term();
-            if let Ok(op) = BinaryOperator::try_from($self.token()) {
-                return match op {
-                    $($matching_op)+ => {
-                        $self.advance();
-                        Expr::BinaryExpr(BinaryExpr {
-                            op,
-                            lhs,
-                            rhs: $self.$rhs_term(),
-                        }).into()
+            let mut lhs = $self.$lhs_term();
+            if let Ok(mut op) = BinaryOperator::try_from($self.token()) {
+                while let $($matching_op)+ = op {
+                    $self.advance();
+                    lhs = Expr::BinaryExpr(BinaryExpr{
+                        op,
+                        lhs,
+                        rhs: $self.$rhs_term(),
+                    }).into();
+                    match BinaryOperator::try_from($self.token()){
+                        Ok(o) => op = o,
+                        Err(_) => break,
                     }
-                    _ => lhs,
                 }
             }
             lhs
@@ -43,11 +43,9 @@ impl Parser {
     pub fn new(input: Vec<Token>) -> Parser {
         Parser { input, index: 0 }
     }
-
     fn token(&self) -> &Token {
         &self.input[self.index]
     }
-
     /// Returns a slice of the next `n` tokens mapped over a function `f`.
     fn peek_map<R, F>(&self, n: usize, f: F) -> Vec<R>
     where
@@ -55,43 +53,33 @@ impl Parser {
     {
         self.input[self.index..].iter().take(n).map(f).collect()
     }
-
     fn advance(&mut self) {
         self.advance_n(1);
     }
-
     fn advance_n(&mut self, n: usize) {
         self.index += n;
     }
-
     fn done(&self) -> bool {
         self.token().ty == TokenType::EOF
     }
-
     pub fn parse(&mut self) -> Box<Stmt> {
         let next_2 = self.peek_map(2, |t| t.ty.clone());
         let parsed = match &next_2.as_slice() {
-            // Assignment: var = <expr>
             [TokenType::Variable(name), TokenType::Equal] => {
                 self.advance_n(2);
                 self.assignment(Var { name: name.clone() })
             }
-            // Otherwise, the program should be an expression.
-            _ => map_box(self.expr(), |e| e.into()),
+            _ => Box::new(Stmt::Expr(*self.expr())),
         };
-
         assert!(self.done());
         parsed
     }
-
     fn assignment(&mut self, var: Var) -> Box<Stmt> {
-        Stmt::Assignment(Assignment {
+        Box::new(Stmt::Assignment(Assignment {
             var,
             rhs: self.expr(),
-        })
-        .into()
+        }))
     }
-
     fn expr(&mut self) -> Box<Expr> {
         self.add_sub_term()
     }
@@ -100,10 +88,10 @@ impl Parser {
         self
 
         // Level 1: +, -
-        add_sub_term:        lhs = mul_divide_mod_term, rhs = add_sub_term,        op = [Plus | Minus]
+        add_sub_term:        lhs = mul_divide_mod_term, rhs = mul_divide_mod_term,        op = [Plus | Minus]
 
         // Level 2: *, /, %
-        mul_divide_mod_term: lhs = exp_term,            rhs = mul_divide_mod_term, op = [Mult | Div | Mod]
+        mul_divide_mod_term: lhs = exp_term,            rhs = exp_term, op = [Mult | Div | Mod]
 
         // Level 3: ^                                   right-associativity of ^
         exp_term:            lhs = num_term,            rhs = exp_term,            op = [Exp]
@@ -112,17 +100,15 @@ impl Parser {
     fn num_term(&mut self) -> Box<Expr> {
         if let Ok(op) = UnaryOperator::try_from(self.token()) {
             self.advance();
-            return Expr::UnaryExpr(UnaryExpr {
+            return Box::new(Expr::UnaryExpr(UnaryExpr {
                 op,
                 rhs: self.exp_term(),
-            })
-            .into();
+            }));
         }
-
         let node = match self.token().ty {
-            TokenType::Float(f) => Expr::Float(f).into(),
-            TokenType::Int(i) => Expr::Int(i).into(),
-            TokenType::Variable(ref name) => Expr::Var(Var { name: name.clone() }).into(),
+            TokenType::Float(f) => Box::new(Expr::Float(f)),
+            TokenType::Int(i) => Box::new(Expr::Int(i)),
+            TokenType::Variable(ref name) => Box::new(Expr::Var(Var { name: name.clone() })),
             TokenType::OpenParen => {
                 self.advance(); // eat left
                 Expr::Parend(self.expr()).into()
@@ -163,16 +149,15 @@ mod tests {
     mod parse {
         parser_tests! {
             addition:                "2 + 2",               "(+ 2 2)"
-            addition_nested:         "1 + 2 + 3",           "(+ 1 (+ 2 3))"
+            addition_nested:         "1 + 2 + 3",           "(+ (+ 1 2) 3)"
             subtraction:             "2 - 2",               "(- 2 2)"
-            subtraction_nested:      "1 - 2 - 3",           "(- 1 (- 2 3))"
+            subtraction_nested:      "1 - 2 - 3",           "(- (- 1 2) 3)"
             multiplication:          "2 * 2",               "(* 2 2)"
-            multiplication_nested:   "1 * 2 * 3",           "(* 1 (* 2 3))"
+            multiplication_nested:   "1 * 2 * 3",           "(* (* 1 2) 3)"
             division:                "2 / 2",               "(/ 2 2)"
-            // TODO: I don't think this is correct, should be (/ (/ 1 2) 3)?
-            division_nested:         "1 / 2 / 3",           "(/ 1 (/ 2 3))"
+            division_nested:         "1 / 2 / 3",           "(/ (/ 1 2) 3)"
             modulo:                  "2 % 5",               "(% 2 5)"
-            modulo_nested:           "1 % 2 % 3",           "(% 1 (% 2 3))"
+            modulo_nested:           "1 % 2 % 3",           "(% (% 1 2) 3)"
             exponent:                "2 ^ 3",               "(^ 2 3)"
             exponent_nested:         "1 ^ 2 ^ 3",           "(^ 1 (^ 2 3))"
             precedence_plus_times:   "1 + 2 * 3",           "(+ 1 (* 2 3))"

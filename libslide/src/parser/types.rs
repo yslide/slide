@@ -1,12 +1,42 @@
-use crate::scanner::Token;
+use crate::scanner::types::{Token, TokenType};
+use core::convert::TryFrom;
 use core::fmt;
+
+pub enum Stmt {
+    Expr(Expr),
+    Assignment(Assignment),
+}
+
+impl fmt::Display for Stmt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Stmt::*;
+        write!(
+            f,
+            "{}",
+            match self {
+                Expr(expr) => expr.to_string(),
+                Assignment(asgn) => asgn.to_string(),
+            }
+        )
+    }
+}
+
+pub struct Assignment {
+    pub var: String,
+    pub rhs: Box<Expr>,
+}
+
+impl fmt::Display for Assignment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "(= {} {})", self.var, self.rhs)
+    }
+}
 
 pub enum Expr {
     Float(f64),
     Int(i64),
-    BinOp(BinOp),
-    UnaryOp(UnaryOp),
-    Variable(Variable),
+    BinaryExpr(BinaryExpr),
+    UnaryExpr(UnaryExpr),
 }
 
 impl fmt::Display for Expr {
@@ -15,24 +45,67 @@ impl fmt::Display for Expr {
         write!(
             f,
             "{}",
-            match &self {
+            match self {
                 Float(num) => num.to_string(),
                 Int(num) => num.to_string(),
-                BinOp(bin_op) => bin_op.to_string(),
-                UnaryOp(unary_op) => unary_op.to_string(),
-                Variable(variable) => variable.to_string(),
+                BinaryExpr(binary_expr) => binary_expr.to_string(),
+                UnaryExpr(unary_expr) => unary_expr.to_string(),
             }
         )
     }
 }
 
-pub struct BinOp {
-    pub op: Token,
+pub enum BinaryOperator {
+    Plus,
+    Minus,
+    Mult,
+    Div,
+    Mod,
+    Exp,
+}
+
+impl TryFrom<&Token> for BinaryOperator {
+    type Error = ();
+
+    fn try_from(token: &Token) -> Result<Self, Self::Error> {
+        use BinaryOperator::*;
+        match token.token_type {
+            TokenType::Plus => Ok(Plus),
+            TokenType::Minus => Ok(Minus),
+            TokenType::Mult => Ok(Mult),
+            TokenType::Div => Ok(Div),
+            TokenType::Mod => Ok(Mod),
+            TokenType::Exp => Ok(Exp),
+            _ => Err(()),
+        }
+    }
+}
+
+impl fmt::Display for BinaryOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use BinaryOperator::*;
+        write!(
+            f,
+            "{}",
+            match self {
+                Plus => "+",
+                Minus => "-",
+                Mult => "*",
+                Div => "/",
+                Mod => "%",
+                Exp => "^",
+            }
+        )
+    }
+}
+
+pub struct BinaryExpr {
+    pub op: BinaryOperator,
     pub lhs: Box<Expr>,
     pub rhs: Box<Expr>,
 }
 
-impl fmt::Display for BinOp {
+impl fmt::Display for BinaryExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -44,68 +117,45 @@ impl fmt::Display for BinOp {
     }
 }
 
-pub struct UnaryOp {
-    pub op: Token,
-    pub rhs: Box<Expr>,
+pub enum UnaryOperator {
+    SignPositive,
+    SignNegative,
 }
 
-impl fmt::Display for UnaryOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({} {})", self.op.to_string(), self.rhs.to_string(),)
+impl TryFrom<&Token> for UnaryOperator {
+    type Error = ();
+
+    fn try_from(token: &Token) -> Result<Self, Self::Error> {
+        use UnaryOperator::*;
+        match token.token_type {
+            TokenType::Plus => Ok(SignPositive),
+            TokenType::Minus => Ok(SignNegative),
+            _ => Err(()),
+        }
     }
 }
 
-pub struct Variable {
-    pub op: Token, 
-    pub lhs: Token,
-    pub rhs: Box<Expr>
-}
-
-impl fmt::Display for Variable {
+impl fmt::Display for UnaryOperator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({} {} {})", 
-            self.op.to_string(),
-            self.lhs.to_string(),
-            self.rhs.to_string(),
+        use UnaryOperator::*;
+        write!(
+            f,
+            "{}",
+            match self {
+                SignPositive => "+",
+                SignNegative => "-",
+            }
         )
     }
 }
 
-#[cfg(test)]
-mod tests {
-    mod format {
-        use crate::scanner::types::*;
+pub struct UnaryExpr {
+    pub op: UnaryOperator,
+    pub rhs: Box<Expr>,
+}
 
-        macro_rules! format_tests {
-            ($($name:ident: $expr:expr, $format_str:expr)*) => {
-            $(
-                #[test]
-                fn $name() {
-                    use crate::parser::types::*;
-                    let expr = $expr;
-                    assert_eq!(expr.to_string(), $format_str);
-                }
-            )*
-            }
-        }
-
-        format_tests! {
-            float: Expr::Float(1.3), "1.3"
-            int: Expr::Int(10), "10"
-            binary_op: Expr::BinOp(BinOp {
-                op: Token {token_type: TokenType::Plus},
-                lhs: Box::new(Expr::Int(1)),
-                rhs: Box::new(Expr::Int(2))
-            }), "(+ 1 2)"
-            unary_op: Expr::UnaryOp(UnaryOp {
-                op: Token {token_type: TokenType::Plus},
-                rhs: Box::new(Expr::Int(1))
-            }), "(+ 1)"
-            variable : Expr::Variable(Variable {
-                op : Token {token_type: TokenType::Equal},
-                lhs: Token {token_type: TokenType::Variable("a".into())},
-                rhs: Box::new(Expr::Int(1))
-            }), "(= a 1)"
-        }
+impl fmt::Display for UnaryExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({} {})", self.op.to_string(), self.rhs.to_string(),)
     }
 }

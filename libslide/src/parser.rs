@@ -1,16 +1,43 @@
 mod types;
 use crate::scanner::{Token, TokenType};
+use core::convert::TryFrom;
 pub use types::*;
 
-pub struct Parser<'a> {
-    input: &'a Vec<Token>,
+pub struct Parser {
+    input: Vec<Token>,
     index: usize,
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(input: &Vec<Token>) -> Parser {
+macro_rules! binary_expr_parser {
+    ($self:ident $($name:ident: lhs=$lhs_term:ident, rhs=$rhs_term:ident, op=[$($matching_op:tt)+])*) => {
+        $(
+        fn $name(&mut $self) -> Box<Expr> {
+            use BinaryOperator::*;
+
+            let lhs = $self.$lhs_term();
+            if let Ok(op) = BinaryOperator::try_from($self.token()) {
+                return match op {
+                    $($matching_op)+ => {
+                        $self.advance();
+                        Box::new(Expr::BinaryExpr(BinaryExpr {
+                            op,
+                            lhs,
+                            rhs: $self.$rhs_term(),
+                        }))
+                    }
+                    _ => lhs,
+                }
+            }
+            lhs
+        }
+        )*
+    };
+}
+
+impl Parser {
+    pub fn new(input: Vec<Token>) -> Parser {
         Parser {
-            input: input.into(),
+            input: input,
             index: 0,
         }
     }
@@ -27,25 +54,22 @@ impl<'a> Parser<'a> {
         self.token().token_type == TokenType::EOF
     }
 
-    pub fn parse(&mut self) -> Box<Expr> {
-        let parsed = match self.token().token_type {
-            TokenType::Variable(_) => self.assignment(),
-            _ => self.add_sub_term(),
+    pub fn parse(&mut self) -> Box<Stmt> {
+        let parsed = match self.token().token_type.clone() {
+            TokenType::Variable(name) => self.assignment(name),
+            _ => Box::new(Stmt::Expr(*self.expr())),
         };
         assert!(self.done());
         parsed
     }
 
-    fn assignment(&mut self) -> Box<Expr> {
-        let lhs = self.token().clone();
+    fn assignment(&mut self, var: String) -> Box<Stmt> {
         self.advance();
         match self.token().token_type {
             TokenType::Equal => {
-                let operand = self.token().clone();
                 self.advance();
-                Box::new(Expr::Variable(Variable {
-                    op: operand,
-                    lhs: lhs,
+                Box::new(Stmt::Assignment(Assignment {
+                    var,
                     rhs: self.expr(),
                 }))
             }
@@ -57,82 +81,39 @@ impl<'a> Parser<'a> {
         self.add_sub_term()
     }
 
-    fn add_sub_term(&mut self) -> Box<Expr> {
-        let lhs = self.mul_divide_mod_term();
-        match self.token().token_type {
-            TokenType::Plus | TokenType::Minus => {
-                let op = self.token().clone();
-                self.advance();
-                Box::new(Expr::BinOp(BinOp {
-                    op,
-                    lhs,
-                    rhs: self.mul_divide_mod_term(),
-                }))
-            }
-            _ => lhs,
-        }
-    }
+    binary_expr_parser!(
+        self
 
-    fn mul_divide_mod_term(&mut self) -> Box<Expr> {
-        let lhs = self.exponent_term();
-        match self.token().token_type {
-            TokenType::Mult | TokenType::Div | TokenType::Mod => {
-                let op = self.token().clone();
-                self.advance();
-                Box::new(Expr::BinOp(BinOp {
-                    op,
-                    lhs,
-                    rhs: self.exponent_term(),
-                }))
-            }
-            _ => lhs,
-        }
-    }
+        // Level 1: +, -
+        add_sub_term:        lhs = mul_divide_mod_term, rhs = mul_divide_mod_term, op = [Plus | Minus]
 
-    fn exponent_term(&mut self) -> Box<Expr> {
-        let lhs = self.num_term();
-        match self.token().token_type {
-            TokenType::Exp => {
-                let op = self.token().clone();
-                self.advance();
-                Box::new(Expr::BinOp(BinOp {
-                    op,
-                    lhs,
-                    rhs: self.exponent_term(),
-                }))
-            }
-            _ => lhs,
-        }
-    }
+        // Level 2: *, /, %
+        mul_divide_mod_term: lhs = exp_term,            rhs = exp_term,            op = [Mult | Div | Mod]
+
+        // Level 3: ^                                   right-associativity of ^
+        exp_term:            lhs = num_term,            rhs = exp_term,            op = [Exp]
+    );
 
     fn num_term(&mut self) -> Box<Expr> {
-        match self.token().token_type {
-            TokenType::Plus | TokenType::Minus => {
-                let op = self.token().clone();
-                self.advance();
-                Box::new(Expr::UnaryOp(UnaryOp {
-                    op,
-                    rhs: self.exponent_term(),
-                }))
-            }
-            TokenType::Float(f) => {
-                let node = Box::new(Expr::Float(f));
-                self.advance();
-                node
-            }
-            TokenType::Int(i) => {
-                let node = Box::new(Expr::Int(i));
-                self.advance();
-                node
-            }
+        if let Ok(op) = UnaryOperator::try_from(self.token()) {
+            self.advance();
+            return Box::new(Expr::UnaryExpr(UnaryExpr {
+                op,
+                rhs: self.exp_term(),
+            }));
+        }
+
+        let node = match self.token().token_type {
+            TokenType::Float(f) => Box::new(Expr::Float(f)),
+            TokenType::Int(i) => Box::new(Expr::Int(i)),
             TokenType::OpenParen | TokenType::OpenBracket => {
                 self.advance(); // eat left
-                let node = self.expr();
-                self.advance(); // eat right
-                node
+                self.expr()
             }
             _ => unreachable!(),
-        }
+        };
+        self.advance();
+        node
     }
 }
 
@@ -152,7 +133,7 @@ mod tests {
 
                 let mut scanner = Scanner::new($program);
                 scanner.scan();
-                let mut parser = Parser::new(&scanner.output);
+                let mut parser = Parser::new(scanner.output);
                 assert_eq!(parser.parse().to_string(), $format_str);
             }
         )*

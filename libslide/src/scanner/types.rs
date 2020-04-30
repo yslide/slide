@@ -58,7 +58,7 @@ pub enum TokenType {
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct Token {
-    pub token_type: TokenType,
+    pub ty: TokenType,
 }
 
 impl fmt::Display for Token {
@@ -67,7 +67,7 @@ impl fmt::Display for Token {
         write!(
             f,
             "{}",
-            match &self.token_type {
+            match &self.ty {
                 Float(num) => num.to_string(),
                 Int(num) => num.to_string(),
                 Plus => "+".into(),
@@ -95,12 +95,12 @@ mod tests {
         use crate::scanner::types::*;
 
         macro_rules! format_tests {
-        ($($name:ident: $token_type:expr, $format_str:expr)*) => {
+        ($($name:ident: $ty:expr, $format_str:expr)*) => {
         $(
             #[test]
             fn $name() {
                 use TokenType::*;
-                let tok = Token {token_type: $token_type};
+                let tok = Token {ty: $ty};
                 assert_eq!(tok.to_string(), $format_str);
             }
         )*

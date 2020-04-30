@@ -31,7 +31,7 @@ impl Scanner {
             ']' => TokenType::CloseBracket,
             _ => TokenType::Invalid(c.to_string()),
         };
-        return Token { token_type: t };
+        return Token { ty: t };
     }
 
     // iterates through any digits to create a token of that value
@@ -54,12 +54,12 @@ impl Scanner {
             int_str.push_str(&dec_str);
             // turn integer and decmial strings into token
             ret = Token {
-                token_type: TokenType::Float(int_str.parse::<f64>().unwrap()),
+                ty: TokenType::Float(int_str.parse::<f64>().unwrap()),
             }
         } else {
             // turn integer string into token and default the float
             ret = Token {
-                token_type: TokenType::Int(int_str.parse::<i64>().unwrap()),
+                ty: TokenType::Int(int_str.parse::<i64>().unwrap()),
             }
         }
         return (ret, i);
@@ -72,7 +72,7 @@ impl Scanner {
             i += 1
         }
         let var = Token {
-            token_type: TokenType::Variable(var_str),
+            ty: TokenType::Variable(var_str),
         };
         return (var, i);
     }
@@ -102,9 +102,7 @@ impl Scanner {
             }
         }
 
-        self.output.push(Token {
-            token_type: TokenType::EOF,
-        });
+        self.output.push(Token { ty: TokenType::EOF });
     }
 }
 

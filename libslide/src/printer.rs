@@ -35,6 +35,14 @@ impl Visitor for Printer {
     fn visit_unary_expr(&mut self, item: UnaryExpr) -> Self::Result {
         format!("{}{}", item.op.to_string(), self.visit_expr(*item.rhs))
     }
+
+    fn visit_parend(&mut self, item: Expr) -> Self::Result {
+        format!("({})", self.visit_expr(item))
+    }
+
+    fn visit_braced(&mut self, item: Expr) -> Self::Result {
+        format!("[{}]", self.visit_expr(item))
+    }
 }
 
 #[cfg(test)]
@@ -73,6 +81,8 @@ mod tests {
         exponent:        "1 ^ 2"
         sign_positive:   "+1"
         sign_negative:   "-1"
+        parenthesized:   "(1 + 2)"
+        braced:          "[1 + 2]"
 
         nested_binary:   "1 + 2 * 3 + 4"
     }

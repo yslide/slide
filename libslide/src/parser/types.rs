@@ -22,7 +22,7 @@ impl fmt::Display for Stmt {
 }
 
 pub struct Assignment {
-    pub var: String,
+    pub var: Var,
     pub rhs: Box<Expr>,
 }
 
@@ -35,6 +35,7 @@ impl fmt::Display for Assignment {
 pub enum Expr {
     Float(f64),
     Int(i64),
+    Var(Var),
     BinaryExpr(BinaryExpr),
     UnaryExpr(UnaryExpr),
 }
@@ -48,10 +49,21 @@ impl fmt::Display for Expr {
             match self {
                 Float(num) => num.to_string(),
                 Int(num) => num.to_string(),
+                Var(var) => var.to_string(),
                 BinaryExpr(binary_expr) => binary_expr.to_string(),
                 UnaryExpr(unary_expr) => unary_expr.to_string(),
             }
         )
+    }
+}
+
+pub struct Var {
+    pub name: String,
+}
+
+impl fmt::Display for Var {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name,)
     }
 }
 
@@ -69,7 +81,7 @@ impl TryFrom<&Token> for BinaryOperator {
 
     fn try_from(token: &Token) -> Result<Self, Self::Error> {
         use BinaryOperator::*;
-        match token.token_type {
+        match token.ty {
             TokenType::Plus => Ok(Plus),
             TokenType::Minus => Ok(Minus),
             TokenType::Mult => Ok(Mult),
@@ -127,7 +139,7 @@ impl TryFrom<&Token> for UnaryOperator {
 
     fn try_from(token: &Token) -> Result<Self, Self::Error> {
         use UnaryOperator::*;
-        match token.token_type {
+        match token.ty {
             TokenType::Plus => Ok(SignPositive),
             TokenType::Minus => Ok(SignNegative),
             _ => Err(()),

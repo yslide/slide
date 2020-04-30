@@ -46,35 +46,47 @@ impl Parser {
         &self.input[self.index]
     }
 
+    /// Returns a slice of the next `n` tokens mapped over a function `f`.
+    fn peek_map<R, F>(&self, n: usize, f: F) -> Vec<R>
+    where
+        F: FnMut(&Token) -> R,
+    {
+        self.input[self.index..].iter().take(n).map(f).collect()
+    }
+
     fn advance(&mut self) {
-        self.index += 1;
+        self.advance_n(1);
+    }
+
+    fn advance_n(&mut self, n: usize) {
+        self.index += n;
     }
 
     fn done(&self) -> bool {
-        self.token().token_type == TokenType::EOF
+        self.token().ty == TokenType::EOF
     }
 
     pub fn parse(&mut self) -> Box<Stmt> {
-        let parsed = match self.token().token_type.clone() {
-            TokenType::Variable(name) => self.assignment(name),
+        let next_2 = self.peek_map(2, |t| t.ty.clone());
+        let parsed = match &next_2.as_slice() {
+            // Assignment: var = <expr>
+            [TokenType::Variable(name), TokenType::Equal] => {
+                self.advance_n(2);
+                self.assignment(Var { name: name.clone() })
+            }
+            // Otherwise, the program should be an expression.
             _ => Box::new(Stmt::Expr(*self.expr())),
         };
+
         assert!(self.done());
         parsed
     }
 
-    fn assignment(&mut self, var: String) -> Box<Stmt> {
-        self.advance();
-        match self.token().token_type {
-            TokenType::Equal => {
-                self.advance();
-                Box::new(Stmt::Assignment(Assignment {
-                    var,
-                    rhs: self.expr(),
-                }))
-            }
-            _ => unreachable!(),
-        }
+    fn assignment(&mut self, var: Var) -> Box<Stmt> {
+        Box::new(Stmt::Assignment(Assignment {
+            var,
+            rhs: self.expr(),
+        }))
     }
 
     pub fn expr(&mut self) -> Box<Expr> {
@@ -103,9 +115,10 @@ impl Parser {
             }));
         }
 
-        let node = match self.token().token_type {
+        let node = match self.token().ty {
             TokenType::Float(f) => Box::new(Expr::Float(f)),
             TokenType::Int(i) => Box::new(Expr::Int(i)),
+            TokenType::Variable(ref name) => Box::new(Expr::Var(Var { name: name.clone() })),
             TokenType::OpenParen | TokenType::OpenBracket => {
                 self.advance(); // eat left
                 self.expr()
@@ -182,6 +195,8 @@ mod tests {
             unary_minus:             "-2",                  "(- 2)"
             unary_expo:              "-2 ^ 3",              "(- (^ 2 3))"
             unary_quad:              "+-+-2",               "(+ (- (+ (- 2))))"
+            variable:                "a",                   "a"
+            variable_in_op:          "a + 1",               "(+ a 1)"
             assignment_op:           "a = 5",               "(= a 5)"
             assignment_op_expr:      "a = 5 + 2 ^ 3",       "(= a (+ 5 (^ 2 3)))"
         }

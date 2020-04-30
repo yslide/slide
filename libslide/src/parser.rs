@@ -123,9 +123,13 @@ impl Parser {
             TokenType::Float(f) => Expr::Float(f).into(),
             TokenType::Int(i) => Expr::Int(i).into(),
             TokenType::Variable(ref name) => Expr::Var(Var { name: name.clone() }).into(),
-            TokenType::OpenParen | TokenType::OpenBracket => {
+            TokenType::OpenParen => {
                 self.advance(); // eat left
-                self.expr()
+                Expr::Parend(self.expr()).into()
+            }
+            TokenType::OpenBracket => {
+                self.advance(); // eat left
+                Expr::Braced(self.expr()).into()
             }
             _ => unreachable!(),
         };

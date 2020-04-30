@@ -50,6 +50,10 @@ pub enum Expr {
     Var(Var),
     BinaryExpr(BinaryExpr),
     UnaryExpr(UnaryExpr),
+    /// An expression wrapped in parentheses
+    Parend(Box<Expr>),
+    /// An expression wrapped in braces
+    Braced(Box<Expr>),
 }
 
 impl From<f64> for Expr {
@@ -94,6 +98,7 @@ impl fmt::Display for Expr {
                 Var(var) => var.to_string(),
                 BinaryExpr(binary_expr) => binary_expr.to_string(),
                 UnaryExpr(unary_expr) => unary_expr.to_string(),
+                Parend(expr) | Braced(expr) => expr.to_string(),
             }
         )
     }

@@ -1,8 +1,16 @@
-pub mod scanner;
+mod scanner;
+pub use scanner::scan;
 
-pub mod parser;
+mod parser;
+pub use parser::parse;
 
-pub mod partial_evaluator;
-pub mod visitor;
+mod partial_evaluator;
+pub use partial_evaluator::evaluate;
 
-pub mod printer;
+mod printer;
+pub use printer::print;
+
+mod grammar;
+mod visitor;
+
+mod utils;

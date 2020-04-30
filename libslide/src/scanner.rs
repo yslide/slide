@@ -23,7 +23,7 @@ impl Scanner {
 
     // matches token with symbol and creates it: private helper function
     fn create_symbol_token(c: char) -> Token {
-        let t = match c {
+        let ty = match c {
             '+' => TokenType::Plus,
             '-' => TokenType::Minus,
             '*' => TokenType::Mult,
@@ -37,7 +37,7 @@ impl Scanner {
             ']' => TokenType::CloseBracket,
             _ => TokenType::Invalid(c.to_string()),
         };
-        return Token { ty: t };
+        Token { ty }
     }
 
     // iterates through any digits to create a token of that value
@@ -68,7 +68,7 @@ impl Scanner {
                 ty: TokenType::Int(int_str.parse::<i64>().unwrap()),
             }
         }
-        return (ret, i);
+        (ret, i)
     }
 
     fn iterate_var(&mut self, mut i: usize) -> (Token, usize) {
@@ -80,7 +80,7 @@ impl Scanner {
         let var = Token {
             ty: TokenType::Variable(var_str),
         };
-        return (var, i);
+        (var, i)
     }
 
     pub fn scan(&mut self) {

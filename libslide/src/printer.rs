@@ -1,4 +1,4 @@
-use crate::parser::types::{BinaryExpr, Expr, UnaryExpr, Var};
+use crate::grammar::{BinaryExpr, Expr, UnaryExpr, Var};
 use crate::visitor::Visitor;
 
 pub fn print(expr: Expr) -> String {
@@ -44,9 +44,9 @@ mod tests {
         $(
             #[test]
             fn $name() {
+                use crate::grammar::Stmt;
                 use crate::scanner::scan;
                 use crate::parser::parse;
-                use crate::parser::types::Stmt;
                 use crate::printer::print;
 
                 let tokens = scan($program);

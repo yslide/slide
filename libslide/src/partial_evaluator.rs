@@ -1,4 +1,4 @@
-use crate::parser::types::{BinaryExpr, Expr, UnaryExpr, Var};
+use crate::grammar::*;
 use crate::visitor::Visitor;
 pub mod types;
 use types::PEResult;
@@ -22,7 +22,7 @@ impl Visitor for PartialEvaluator {
     }
 
     fn visit_var(&mut self, item: Var) -> Self::Result {
-        PEResult::Unevaluated(Box::new(Expr::Var(item)))
+        Expr::Var(item).into()
     }
 
     fn visit_binary_expr(&mut self, item: BinaryExpr) -> Self::Result {
@@ -46,7 +46,7 @@ mod tests {
             fn $name() {
                 use crate::scanner::scan;
                 use crate::parser::parse;
-                use crate::parser::types::Stmt;
+                use crate::grammar::Stmt;
                 use crate::partial_evaluator::{evaluate, PEResult::*};
 
                 let tokens = scan($program);

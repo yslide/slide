@@ -1,4 +1,4 @@
-use crate::parser::types::*;
+use crate::grammar::*;
 
 /// An expression visitor.
 /// This visitor takes ownership of the expressions it visits.

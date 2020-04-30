@@ -1,7 +1,7 @@
-pub mod types;
+use crate::grammar::*;
 use crate::scanner::types::{Token, TokenType};
+use crate::utils::map_box;
 use core::convert::TryFrom;
-use types::*;
 
 pub fn parse(input: Vec<Token>) -> Box<Stmt> {
     let mut parser = Parser::new(input);
@@ -24,11 +24,11 @@ macro_rules! binary_expr_parser {
                 return match op {
                     $($matching_op)+ => {
                         $self.advance();
-                        Box::new(Expr::BinaryExpr(BinaryExpr {
+                        Expr::BinaryExpr(BinaryExpr {
                             op,
                             lhs,
                             rhs: $self.$rhs_term(),
-                        }))
+                        }).into()
                     }
                     _ => lhs,
                 }
@@ -77,7 +77,7 @@ impl Parser {
                 self.assignment(Var { name: name.clone() })
             }
             // Otherwise, the program should be an expression.
-            _ => Box::new(Stmt::Expr(*self.expr())),
+            _ => map_box(self.expr(), |e| e.into()),
         };
 
         assert!(self.done());
@@ -85,10 +85,11 @@ impl Parser {
     }
 
     fn assignment(&mut self, var: Var) -> Box<Stmt> {
-        Box::new(Stmt::Assignment(Assignment {
+        Stmt::Assignment(Assignment {
             var,
             rhs: self.expr(),
-        }))
+        })
+        .into()
     }
 
     fn expr(&mut self) -> Box<Expr> {
@@ -111,16 +112,17 @@ impl Parser {
     fn num_term(&mut self) -> Box<Expr> {
         if let Ok(op) = UnaryOperator::try_from(self.token()) {
             self.advance();
-            return Box::new(Expr::UnaryExpr(UnaryExpr {
+            return Expr::UnaryExpr(UnaryExpr {
                 op,
                 rhs: self.exp_term(),
-            }));
+            })
+            .into();
         }
 
         let node = match self.token().ty {
-            TokenType::Float(f) => Box::new(Expr::Float(f)),
-            TokenType::Int(i) => Box::new(Expr::Int(i)),
-            TokenType::Variable(ref name) => Box::new(Expr::Var(Var { name: name.clone() })),
+            TokenType::Float(f) => Expr::Float(f).into(),
+            TokenType::Int(i) => Expr::Int(i).into(),
+            TokenType::Variable(ref name) => Expr::Var(Var { name: name.clone() }).into(),
             TokenType::OpenParen | TokenType::OpenBracket => {
                 self.advance(); // eat left
                 self.expr()

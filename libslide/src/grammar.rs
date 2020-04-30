@@ -7,6 +7,18 @@ pub enum Stmt {
     Assignment(Assignment),
 }
 
+impl From<Expr> for Stmt {
+    fn from(expr: Expr) -> Self {
+        Stmt::Expr(expr)
+    }
+}
+
+impl From<Assignment> for Stmt {
+    fn from(asgn: Assignment) -> Self {
+        Stmt::Assignment(asgn)
+    }
+}
+
 impl fmt::Display for Stmt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Stmt::*;
@@ -38,6 +50,36 @@ pub enum Expr {
     Var(Var),
     BinaryExpr(BinaryExpr),
     UnaryExpr(UnaryExpr),
+}
+
+impl From<f64> for Expr {
+    fn from(f: f64) -> Self {
+        Self::Float(f)
+    }
+}
+
+impl From<i64> for Expr {
+    fn from(i: i64) -> Self {
+        Self::Int(i)
+    }
+}
+
+impl From<Var> for Expr {
+    fn from(var: Var) -> Self {
+        Self::Var(var)
+    }
+}
+
+impl From<BinaryExpr> for Expr {
+    fn from(binary_expr: BinaryExpr) -> Self {
+        Self::BinaryExpr(binary_expr)
+    }
+}
+
+impl From<UnaryExpr> for Expr {
+    fn from(unary_expr: UnaryExpr) -> Self {
+        Self::UnaryExpr(unary_expr)
+    }
 }
 
 impl fmt::Display for Expr {

@@ -1,4 +1,4 @@
-use crate::parser::types::*;
+use crate::grammar::*;
 use core::fmt;
 
 pub enum PEResult {
@@ -6,22 +6,34 @@ pub enum PEResult {
     Unevaluated(Box<Expr>),
 }
 
-impl PEResult {
-    pub fn from_expr(expr: Expr) -> Self {
-        Self::Unevaluated(Box::new(expr))
+impl From<Expr> for PEResult {
+    fn from(unevaluated: Expr) -> Self {
+        Self::Unevaluated(Box::new(unevaluated))
     }
+}
 
-    pub fn fold_binary(lhs: PEResult, rhs: PEResult, op: BinaryOperator) -> PEResult {
+impl From<f64> for PEResult {
+    fn from(evaluated: f64) -> Self {
+        Self::Evaluated(evaluated)
+    }
+}
+
+impl PEResult {
+    pub fn fold_binary<T, U>(lhs: T, rhs: U, op: BinaryOperator) -> PEResult
+    where
+        T: Into<PEResult>,
+        U: Into<PEResult>,
+    {
         use PEResult::*;
         let binary_fn = binary_operator_table(&op);
-        match (lhs, rhs) {
-            (Evaluated(x), Evaluated(y)) => Evaluated(binary_fn(x, y)),
+        match (lhs.into(), rhs.into()) {
+            (Evaluated(x), Evaluated(y)) => binary_fn(x, y).into(),
             (Unevaluated(lhs), Unevaluated(rhs)) => {
-                PEResult::from_expr(Expr::BinaryExpr(BinaryExpr { op, lhs, rhs }))
+                Expr::BinaryExpr(BinaryExpr { op, lhs, rhs }).into()
             }
 
-            (Evaluated(x), y) => Self::fold_binary(PEResult::from_expr(Expr::Float(x)), y, op),
-            (x, Evaluated(y)) => Self::fold_binary(x, PEResult::from_expr(Expr::Float(y)), op),
+            (Evaluated(x), y) => Self::fold_binary(Expr::Float(x), y, op),
+            (x, Evaluated(y)) => Self::fold_binary(x, Expr::Float(y), op),
         }
     }
 
@@ -29,8 +41,8 @@ impl PEResult {
         use PEResult::*;
         let unary_fn = unary_operator_table(&op);
         match rhs {
-            Evaluated(x) => Evaluated(unary_fn(x)),
-            Unevaluated(rhs) => PEResult::from_expr(Expr::UnaryExpr(UnaryExpr { op, rhs })),
+            Evaluated(x) => unary_fn(x).into(),
+            Unevaluated(rhs) => Expr::UnaryExpr(UnaryExpr { op, rhs }).into(),
         }
     }
 }

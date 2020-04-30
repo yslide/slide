@@ -4,25 +4,14 @@ pub mod types;
 use types::PEResult;
 
 pub fn evaluate(expr: Expr) -> PEResult {
-    let mut partial_evaluator = PartialEvaluator {};
+    let mut partial_evaluator = PartialEvaluator;
     partial_evaluator.visit_expr(expr)
 }
 
-struct PartialEvaluator {}
+struct PartialEvaluator;
 
 impl Visitor for PartialEvaluator {
     type Result = PEResult;
-
-    fn visit_expr(&mut self, item: Expr) -> Self::Result {
-        use Expr::*;
-        match item {
-            Float(f) => self.visit_float(f),
-            Int(i) => self.visit_int(i),
-            Var(v) => self.visit_var(v),
-            BinaryExpr(binary_expr) => self.visit_binary_expr(binary_expr),
-            UnaryExpr(unary_expr) => self.visit_unary_expr(unary_expr),
-        }
-    }
 
     fn visit_float(&mut self, item: f64) -> Self::Result {
         PEResult::Evaluated(item)

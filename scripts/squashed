@@ -1,0 +1,36 @@
+#!/bin/bash
+#
+# Usage: scripts/squashed [--rebase]
+#
+# Verifies that a branch differs from master by at most one commit.
+# This intended to be used in validating that a branch can be
+# rebased onto master with a squash strategy.
+# 
+# By default, the current branch is compared against master.
+# To check a specific branch, set the `BRANCH` environment variable.
+#
+# Available options:
+#   --rebase   Rebase interactively on master
+set -e
+
+SQUASH_CHECK="https://github.com/ayazhafiz/slide"
+(git remote add squash_check "$SQUASH_CHECK" || git remote set-url squash_check "$SQUASH_CHECK") &>/dev/null
+git fetch squash_check &>/dev/null
+
+ACTION="${1:-}"
+BRANCH="${BRANCH:-$(git branch --show-current)}"
+case "$ACTION" in
+"")
+  COMMIT_DIFF=$(git rev-list --count squash_check/master.."$BRANCH")
+  if [ "$COMMIT_DIFF" -gt 1 ]; then
+    echo "Please squash branch to 1 commit before merging to master."
+    exit 1
+  fi
+  ;;
+--rebase)
+  git rebase -i --autosquash squash_check/master
+  ;;
+*)
+  echo "Invalid option"
+  exit 1
+esac

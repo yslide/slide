@@ -1,0 +1,5 @@
+"a:bin": slide/**/*
+"a:lib": libslide/**/*
+
+"t:github": .github/**/*
+"t:tools": scripts/*

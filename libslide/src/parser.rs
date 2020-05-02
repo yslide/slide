@@ -1,6 +1,5 @@
 use crate::grammar::*;
 use crate::scanner::types::{Token, TokenType};
-use crate::utils::map_box;
 use core::convert::TryFrom;
 
 pub fn parse(input: Vec<Token>) -> Box<Stmt> {
@@ -19,18 +18,17 @@ macro_rules! binary_expr_parser {
             use BinaryOperator::*;
 
             let mut lhs = $self.$lhs_term();
-            if let Ok(mut op) = BinaryOperator::try_from($self.token()) {
-                while let $($matching_op)+ = op {
-                    $self.advance();
-                    lhs = Expr::BinaryExpr(BinaryExpr{
-                        op,
-                        lhs,
-                        rhs: $self.$rhs_term(),
-                    }).into();
-                    match BinaryOperator::try_from($self.token()){
-                        Ok(o) => op = o,
-                        Err(_) => break,
+            while let Ok(op) = BinaryOperator::try_from($self.token()) {
+                match op {
+                    $($matching_op)+ => {
+                        $self.advance();
+                        lhs = Expr::BinaryExpr(BinaryExpr{
+                            op,
+                            lhs,
+                            rhs: $self.$rhs_term(),
+                        }).into();
                     }
+                    _ => break,
                 }
             }
             lhs
@@ -43,9 +41,11 @@ impl Parser {
     pub fn new(input: Vec<Token>) -> Parser {
         Parser { input, index: 0 }
     }
+
     fn token(&self) -> &Token {
         &self.input[self.index]
     }
+
     /// Returns a slice of the next `n` tokens mapped over a function `f`.
     fn peek_map<R, F>(&self, n: usize, f: F) -> Vec<R>
     where
@@ -53,15 +53,19 @@ impl Parser {
     {
         self.input[self.index..].iter().take(n).map(f).collect()
     }
+
     fn advance(&mut self) {
         self.advance_n(1);
     }
+
     fn advance_n(&mut self, n: usize) {
         self.index += n;
     }
+
     fn done(&self) -> bool {
         self.token().ty == TokenType::EOF
     }
+
     pub fn parse(&mut self) -> Box<Stmt> {
         let next_2 = self.peek_map(2, |t| t.ty.clone());
         let parsed = match &next_2.as_slice() {
@@ -74,12 +78,14 @@ impl Parser {
         assert!(self.done());
         parsed
     }
+
     fn assignment(&mut self, var: Var) -> Box<Stmt> {
         Box::new(Stmt::Assignment(Assignment {
             var,
             rhs: self.expr(),
         }))
     }
+
     fn expr(&mut self) -> Box<Expr> {
         self.add_sub_term()
     }
@@ -88,10 +94,10 @@ impl Parser {
         self
 
         // Level 1: +, -
-        add_sub_term:        lhs = mul_divide_mod_term, rhs = mul_divide_mod_term,        op = [Plus | Minus]
+        add_sub_term:        lhs = mul_divide_mod_term, rhs = mul_divide_mod_term, op = [Plus | Minus]
 
         // Level 2: *, /, %
-        mul_divide_mod_term: lhs = exp_term,            rhs = exp_term, op = [Mult | Div | Mod]
+        mul_divide_mod_term: lhs = exp_term,            rhs = exp_term,            op = [Mult | Div | Mod]
 
         // Level 3: ^                                   right-associativity of ^
         exp_term:            lhs = num_term,            rhs = exp_term,            op = [Exp]
@@ -119,7 +125,7 @@ impl Parser {
             }
             _ => unreachable!(),
         };
-        self.advance();
+        self.advance(); // eat rest of created expression
         node
     }
 }

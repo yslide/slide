@@ -89,16 +89,16 @@ mod tests {
     mod unevaluated {
         partial_evaluator_tests! {
             var:                     "a",                   "a"
-            sign_positive_var:       "+a",                  "(+ a)"
-            sign_negative_var:       "-a",                  "(- a)"
-            addition_var:            "a + b",               "(+ a b)"
-            substraction_var:        "a - b",               "(- a b)"
-            mult_var:                "a * b",               "(* a b)"
-            div_var:                 "a / b",               "(/ a b)"
-            mod_var:                 "a % b",               "(% a b)"
-            exp_var:                 "a ^ b",               "(^ a b)"
-            pe_left:                 "1 + 2 + a",           "(+ 3 a)"
-            pe_right:                "a + 1 + 2",           "(+ (+ a 1) 2)"
+            sign_positive_var:       "+a",                  "+a"
+            sign_negative_var:       "-a",                  "-a"
+            addition_var:            "a + b",               "a + b"
+            substraction_var:        "a - b",               "a - b"
+            mult_var:                "a * b",               "a * b"
+            div_var:                 "a / b",               "a / b"
+            mod_var:                 "a % b",               "a % b"
+            exp_var:                 "a ^ b",               "a ^ b"
+            pe_left:                 "1 + 2 + a",           "3 + a"
+            pe_right:                "a + 1 + 2",           "a + 1 + 2"
         }
     }
 }

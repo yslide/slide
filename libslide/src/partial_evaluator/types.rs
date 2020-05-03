@@ -1,19 +1,9 @@
 use crate::grammar::*;
-use crate::printer::Print;
 use core::fmt;
 
 pub enum PEResult {
     Evaluated(f64),
     Unevaluated(Box<Expr>),
-}
-
-impl Print for PEResult {
-    fn print(self) -> String {
-        match self {
-            Self::Evaluated(x) => x.to_string(),
-            Self::Unevaluated(expr) => expr.print(),
-        }
-    }
 }
 
 impl From<Expr> for PEResult {

@@ -1,4 +1,3 @@
-use crate::printer::Print;
 use crate::scanner::types::{Token, TokenType};
 use crate::visitor::Visitor;
 use core::convert::TryFrom;
@@ -42,7 +41,7 @@ pub struct Assignment {
 
 impl fmt::Display for Assignment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "(= {} {})", self.var, self.rhs)
+        write!(f, "{} = {}", self.var, self.rhs)
     }
 }
 
@@ -56,13 +55,6 @@ pub enum Expr {
     Parend(Box<Expr>),
     /// An expression wrapped in braces
     Braced(Box<Expr>),
-}
-
-impl Print for Expr {
-    fn print(self) -> String {
-        let mut printer = ExprPrinter;
-        printer.visit_expr(self)
-    }
 }
 
 struct ExprPrinter;
@@ -146,7 +138,8 @@ impl fmt::Display for Expr {
                 Var(var) => var.to_string(),
                 BinaryExpr(binary_expr) => binary_expr.to_string(),
                 UnaryExpr(unary_expr) => unary_expr.to_string(),
-                Parend(expr) | Braced(expr) => expr.to_string(),
+                Parend(expr) => format!("({})", expr.to_string()),
+                Braced(expr) => format!("[{}]", expr.to_string()),
             }
         )
     }
@@ -216,9 +209,9 @@ impl fmt::Display for BinaryExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "({} {} {})",
-            self.op.to_string(),
+            "{} {} {}",
             self.lhs.to_string(),
+            self.op.to_string(),
             self.rhs.to_string(),
         )
     }
@@ -263,49 +256,6 @@ pub struct UnaryExpr {
 
 impl fmt::Display for UnaryExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({} {})", self.op.to_string(), self.rhs.to_string(),)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    macro_rules! printer_tests {
-        ($($name:ident: $program:expr)*) => {
-        $(
-            #[test]
-            fn $name() {
-                use crate::grammar::Stmt;
-                use crate::scanner::scan;
-                use crate::parser::parse;
-                use crate::printer::Print;
-
-                let tokens = scan($program);
-                let parsed = match parse(tokens) {
-                    Stmt::Expr(expr) => expr,
-                    Stmt::Assignment(_) => unimplemented!(),
-                };
-
-                assert_eq!(parsed.print(), $program.to_string())
-            }
-        )*
-        }
-    }
-
-    printer_tests! {
-        int:             "1"
-        float:           "1.1"
-        var:             "a"
-        addition:        "1 + 2"
-        subtraction:     "1 - 2"
-        multiplication:  "1 * 2"
-        division:        "1 / 2"
-        modulo:          "1 % 2"
-        exponent:        "1 ^ 2"
-        sign_positive:   "+1"
-        sign_negative:   "-1"
-        parenthesized:   "(1 + 2)"
-        braced:          "[1 + 2]"
-
-        nested_binary:   "1 + 2 * 3 + 4"
+        write!(f, "{}{}", self.op.to_string(), self.rhs.to_string(),)
     }
 }

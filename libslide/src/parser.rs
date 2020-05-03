@@ -138,7 +138,7 @@ mod tests {
     // See [Expr]'s impl of Display for more details.
     // [Expr]: crate::parser::Expr
     macro_rules! parser_tests {
-        ($($name:ident: $program:expr, $format_str:expr)*) => {
+        ($($name:ident: $program:expr)*) => {
         $(
             #[test]
             fn $name() {
@@ -147,7 +147,7 @@ mod tests {
 
                 let tokens = scan($program);
                 let parsed = parse(tokens);
-                assert_eq!(parsed.to_string(), $format_str);
+                assert_eq!(parsed.to_string(), $program);
             }
         )*
         }
@@ -155,56 +155,56 @@ mod tests {
 
     mod parse {
         parser_tests! {
-            addition:                "2 + 2",               "(+ 2 2)"
-            addition_nested:         "1 + 2 + 3",           "(+ (+ 1 2) 3)"
-            subtraction:             "2 - 2",               "(- 2 2)"
-            subtraction_nested:      "1 - 2 - 3",           "(- (- 1 2) 3)"
-            multiplication:          "2 * 2",               "(* 2 2)"
-            multiplication_nested:   "1 * 2 * 3",           "(* (* 1 2) 3)"
-            division:                "2 / 2",               "(/ 2 2)"
-            division_nested:         "1 / 2 / 3",           "(/ (/ 1 2) 3)"
-            modulo:                  "2 % 5",               "(% 2 5)"
-            modulo_nested:           "1 % 2 % 3",           "(% (% 1 2) 3)"
-            exponent:                "2 ^ 3",               "(^ 2 3)"
-            exponent_nested:         "1 ^ 2 ^ 3",           "(^ 1 (^ 2 3))"
-            precedence_plus_times:   "1 + 2 * 3",           "(+ 1 (* 2 3))"
-            precedence_times_plus:   "1 * 2 + 3",           "(+ (* 1 2) 3)"
-            precedence_plus_div:     "1 + 2 / 3",           "(+ 1 (/ 2 3))"
-            precedence_div_plus:     "1 / 2 + 3",           "(+ (/ 1 2) 3)"
-            precedence_plus_mod:     "1 + 2 % 3",           "(+ 1 (% 2 3))"
-            precedence_mod_plus:     "1 % 2 + 3",           "(+ (% 1 2) 3)"
-            precedence_minus_times:  "1 - 2 * 3",           "(- 1 (* 2 3))"
-            precedence_times_minus:  "1 * 2 - 3",           "(- (* 1 2) 3)"
-            precedence_minus_div:    "1 - 2 / 3",           "(- 1 (/ 2 3))"
-            precedence_div_minus:    "1 / 2 - 3",           "(- (/ 1 2) 3)"
-            precedence_minus_mod:    "1 - 2 % 3",           "(- 1 (% 2 3))"
-            precedence_mod_minus:    "1 % 2 - 3",           "(- (% 1 2) 3)"
-            precedence_expo_plus:    "1 + 2 ^ 3",           "(+ 1 (^ 2 3))"
-            precedence_plus_exp:     "1 ^ 2 + 3",           "(+ (^ 1 2) 3)"
-            precedence_expo_times:   "1 * 2 ^ 3",           "(* 1 (^ 2 3))"
-            precedence_time_expo:    "1 ^ 2 * 3",           "(* (^ 1 2) 3)"
-            parentheses_plus_times:  "(1 + 2) * 3",         "(* (+ 1 2) 3)"
-            parentheses_time_plus:   "3 * (1 + 2)",         "(* 3 (+ 1 2))"
-            parentheses_time_mod:    "3 * (2 % 2)",         "(* 3 (% 2 2))"
-            parentheses_mod_time:    "(2 % 2) * 3",         "(* (% 2 2) 3)"
-            parentheses_exp_time:    "2 ^ (3 ^ 4 * 5)",     "(^ 2 (* (^ 3 4) 5))"
-            parentheses_unary:       "-(2 + +-5)",          "(- (+ 2 (+ (- 5))))"
-            nested_parentheses:      "((1 * (2 + 3)) ^ 4)", "(^ (* 1 (+ 2 3)) 4)"
-            brackets_plus_times:     "[1 + 2] * 3",         "(* (+ 1 2) 3)"
-            brackets_time_plus:      "3 * [1 + 2]",         "(* 3 (+ 1 2))"
-            brackets_time_mod:       "3 * [2 % 2]",         "(* 3 (% 2 2))"
-            brackets_mod_time:       "[2 % 2] * 3",         "(* (% 2 2) 3)"
-            brackets_exp_time:       "2 ^ [3 ^ 4 * 5]",     "(^ 2 (* (^ 3 4) 5))"
-            brackets_unary:          "-[2 + +-5]",          "(- (+ 2 (+ (- 5))))"
-            nested_brackets:         "[[1 * [2 + 3]] ^ 4]", "(^ (* 1 (+ 2 3)) 4)"
-            unary_minus:             "-2",                  "(- 2)"
-            unary_expo:              "-2 ^ 3",              "(- (^ 2 3))"
-            unary_quad:              "+-+-2",               "(+ (- (+ (- 2))))"
-            variable:                "a",                   "a"
-            variable_in_op_left:     "a + 1",               "(+ a 1)"
-            variable_in_op_right:    "1 + a",               "(+ 1 a)"
-            assignment_op:           "a = 5",               "(= a 5)"
-            assignment_op_expr:      "a = 5 + 2 ^ 3",       "(= a (+ 5 (^ 2 3)))"
+            addition:                "2 + 2"
+            addition_nested:         "1 + 2 + 3"
+            subtraction:             "2 - 2"
+            subtraction_nested:      "1 - 2 - 3"
+            multiplication:          "2 * 2"
+            multiplication_nested:   "1 * 2 * 3"
+            division:                "2 / 2"
+            division_nested:         "1 / 2 / 3"
+            modulo:                  "2 % 5"
+            modulo_nested:           "1 % 2 % 3"
+            exponent:                "2 ^ 3"
+            exponent_nested:         "1 ^ 2 ^ 3"
+            precedence_plus_times:   "1 + 2 * 3"
+            precedence_times_plus:   "1 * 2 + 3"
+            precedence_plus_div:     "1 + 2 / 3"
+            precedence_div_plus:     "1 / 2 + 3"
+            precedence_plus_mod:     "1 + 2 % 3"
+            precedence_mod_plus:     "1 % 2 + 3"
+            precedence_minus_times:  "1 - 2 * 3"
+            precedence_times_minus:  "1 * 2 - 3"
+            precedence_minus_div:    "1 - 2 / 3"
+            precedence_div_minus:    "1 / 2 - 3"
+            precedence_minus_mod:    "1 - 2 % 3"
+            precedence_mod_minus:    "1 % 2 - 3"
+            precedence_expo_plus:    "1 + 2 ^ 3"
+            precedence_plus_exp:     "1 ^ 2 + 3"
+            precedence_expo_times:   "1 * 2 ^ 3"
+            precedence_time_expo:    "1 ^ 2 * 3"
+            parentheses_plus_times:  "(1 + 2) * 3"
+            parentheses_time_plus:   "3 * (1 + 2)"
+            parentheses_time_mod:    "3 * (2 % 2)"
+            parentheses_mod_time:    "(2 % 2) * 3"
+            parentheses_exp_time:    "2 ^ (3 ^ 4 * 5)"
+            parentheses_unary:       "-(2 + +-5)"
+            nested_parentheses:      "((1 * (2 + 3)) ^ 4)"
+            brackets_plus_times:     "[1 + 2] * 3"
+            brackets_time_plus:      "3 * [1 + 2]"
+            brackets_time_mod:       "3 * [2 % 2]"
+            brackets_mod_time:       "[2 % 2] * 3"
+            brackets_exp_time:       "2 ^ [3 ^ 4 * 5]"
+            brackets_unary:          "-[2 + +-5]"
+            nested_brackets:         "[[1 * [2 + 3]] ^ 4]"
+            unary_minus:             "-2"
+            unary_expo:              "-2 ^ 3"
+            unary_quad:              "+-+-2"
+            variable:                "a"
+            variable_in_op_left:     "a + 1"
+            variable_in_op_right:    "1 + a"
+            assignment_op:           "a = 5"
+            assignment_op_expr:      "a = 5 + 2 ^ 3"
         }
     }
 }

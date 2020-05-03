@@ -3,9 +3,12 @@ use crate::visitor::Visitor;
 pub mod types;
 use types::PEResult;
 
-pub fn evaluate(expr: Expr) -> PEResult {
+pub fn evaluate(expr: Stmt) -> PEResult {
     let mut partial_evaluator = PartialEvaluator;
-    partial_evaluator.visit_expr(expr)
+    match expr {
+        Stmt::Expr(expr) => partial_evaluator.visit_expr(expr),
+        Stmt::Assignment(_) => todo!(),
+    }
 }
 
 struct PartialEvaluator;
@@ -46,14 +49,10 @@ mod tests {
             fn $name() {
                 use crate::scanner::scan;
                 use crate::parser::parse;
-                use crate::grammar::Stmt;
                 use crate::partial_evaluator::{evaluate, PEResult::*};
 
                 let tokens = scan($program);
-                let parsed = match *parse(tokens) {
-                    Stmt::Expr(expr) => expr,
-                    Stmt::Assignment(_) => unimplemented!(),
-                };
+                let parsed = parse(tokens);
                 let result = $result.to_string();
                 match evaluate(parsed) {
                     Evaluated(r) => assert_eq!(r, result.parse::<f64>().unwrap()),

@@ -12,5 +12,3 @@ pub use printer::print;
 
 mod grammar;
 mod visitor;
-
-mod utils;

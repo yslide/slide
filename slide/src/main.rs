@@ -1,4 +1,4 @@
-use libslide::{evaluate, parse, print, scan};
+use libslide::{evaluate, parse, scan};
 
 use std::env;
 
@@ -13,7 +13,7 @@ fn main() -> Result<(), &'static str> {
     let parse_tree = parse(scan(program));
     let simplified = evaluate(parse_tree);
 
-    println!("{}", print(simplified));
+    println!("{}", simplified.to_string());
 
     Ok(())
 }

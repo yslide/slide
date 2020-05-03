@@ -2,10 +2,11 @@ use crate::grammar::*;
 use crate::scanner::types::{Token, TokenType};
 use core::convert::TryFrom;
 
-pub fn parse(input: Vec<Token>) -> Box<Stmt> {
+pub fn parse(input: Vec<Token>) -> Stmt {
     let mut parser = Parser::new(input);
-    parser.parse()
+    *parser.parse()
 }
+
 struct Parser {
     input: Vec<Token>,
     index: usize,

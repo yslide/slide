@@ -55,7 +55,7 @@ mod tests {
                 let parsed = parse(tokens);
                 let result = $result.to_string();
                 match evaluate(parsed) {
-                    Evaluated(r) => assert_eq!(r, result.parse::<f64>().unwrap()),
+                    Evaluated(r) => assert_eq!(r.to_string(), result),
                     Unevaluated(r) => assert_eq!(r.to_string(), result),
                 }
             }

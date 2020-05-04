@@ -28,7 +28,11 @@ jobs:
       
 script:
   - cargo build --verbose --all
-  - cargo test --verbose --all
+  - scripts/check test
+  - rustup component add clippy || cargo install --git
+    https://github.com/rust-lang/rust-clippy/ --force clippy
+  - rustup component add rustfmt
+  - scripts/check lintformat
 
 allow_failures:
   - rust: nightly

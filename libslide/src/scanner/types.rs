@@ -81,9 +81,9 @@ impl fmt::Display for Token {
                 CloseParen => ")".into(),
                 OpenBracket => "[".into(),
                 CloseBracket => "]".into(),
-                Variable(s) => format!("{}", s),
+                Variable(s) => s.to_string(),
                 Invalid(s) => format!("Invalid({})", s),
-                EOF => format!("<EOF>"),
+                EOF => "<EOF>".into(),
             }
         )
     }

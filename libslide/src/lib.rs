@@ -1,3 +1,6 @@
+mod bignum;
+pub use bignum::Bignum;
+
 mod scanner;
 pub use scanner::scan;
 pub use scanner::ScannerOptions;

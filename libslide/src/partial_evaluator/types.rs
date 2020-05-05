@@ -32,8 +32,8 @@ impl PEResult {
                 Expr::BinaryExpr(BinaryExpr { op, lhs, rhs }).into()
             }
 
-            (Evaluated(x), y) => Self::fold_binary(Expr::Float(x), y, op),
-            (x, Evaluated(y)) => Self::fold_binary(x, Expr::Float(y), op),
+            (Evaluated(x), y) => Self::fold_binary(Expr::Const(x), y, op),
+            (x, Evaluated(y)) => Self::fold_binary(x, Expr::Const(y), op),
         }
     }
 

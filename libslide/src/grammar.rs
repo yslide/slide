@@ -1,5 +1,4 @@
 use crate::scanner::types::{Token, TokenType};
-use crate::visitor::Visitor;
 use core::convert::TryFrom;
 use core::fmt;
 
@@ -46,8 +45,7 @@ impl fmt::Display for Assignment {
 }
 
 pub enum Expr {
-    Float(f64),
-    Int(i64),
+    Const(f64),
     Var(Var),
     BinaryExpr(BinaryExpr),
     UnaryExpr(UnaryExpr),
@@ -57,54 +55,9 @@ pub enum Expr {
     Braced(Box<Expr>),
 }
 
-struct ExprPrinter;
-
-impl Visitor for ExprPrinter {
-    type Result = String;
-
-    fn visit_float(&mut self, item: f64) -> Self::Result {
-        item.to_string()
-    }
-
-    fn visit_int(&mut self, item: i64) -> Self::Result {
-        item.to_string()
-    }
-
-    fn visit_var(&mut self, item: Var) -> Self::Result {
-        item.name
-    }
-
-    fn visit_binary_expr(&mut self, item: BinaryExpr) -> Self::Result {
-        format!(
-            "{} {} {}",
-            self.visit_expr(*item.lhs),
-            item.op.to_string(),
-            self.visit_expr(*item.rhs)
-        )
-    }
-
-    fn visit_unary_expr(&mut self, item: UnaryExpr) -> Self::Result {
-        format!("{}{}", item.op.to_string(), self.visit_expr(*item.rhs))
-    }
-
-    fn visit_parend(&mut self, item: Expr) -> Self::Result {
-        format!("({})", self.visit_expr(item))
-    }
-
-    fn visit_braced(&mut self, item: Expr) -> Self::Result {
-        format!("[{}]", self.visit_expr(item))
-    }
-}
-
 impl From<f64> for Expr {
     fn from(f: f64) -> Self {
-        Self::Float(f)
-    }
-}
-
-impl From<i64> for Expr {
-    fn from(i: i64) -> Self {
-        Self::Int(i)
+        Self::Const(f)
     }
 }
 
@@ -133,8 +86,7 @@ impl fmt::Display for Expr {
             f,
             "{}",
             match self {
-                Float(num) => num.to_string(),
-                Int(num) => num.to_string(),
+                Const(num) => num.to_string(),
                 Var(var) => var.to_string(),
                 BinaryExpr(binary_expr) => binary_expr.to_string(),
                 UnaryExpr(unary_expr) => unary_expr.to_string(),

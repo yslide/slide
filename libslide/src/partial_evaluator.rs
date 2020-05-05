@@ -16,12 +16,8 @@ struct PartialEvaluator;
 impl Visitor for PartialEvaluator {
     type Result = PEResult;
 
-    fn visit_float(&mut self, item: f64) -> Self::Result {
-        PEResult::Evaluated(item)
-    }
-
-    fn visit_int(&mut self, item: i64) -> Self::Result {
-        PEResult::Evaluated(item as f64)
+    fn visit_const(&mut self, item: f64) -> Self::Result {
+        item.into()
     }
 
     fn visit_var(&mut self, item: Var) -> Self::Result {

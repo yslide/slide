@@ -42,33 +42,25 @@ impl Scanner {
 
     // iterates through any digits to create a token of that value
     fn iterate_digit(&mut self, mut i: usize) -> (Token, usize) {
-        let mut int_str = "".to_owned();
-        let mut dec_str = ".".to_owned();
-        let ret: Token;
+        let mut float_str = String::new();
         // iterate through integer part
         while i < self.input.len() && (self.input[i]).is_digit(10) {
-            int_str.push(self.input[i]);
+            float_str.push(self.input[i]);
             i += 1;
         }
         // iterate through decimal
         if i < self.input.len() && self.input[i] == '.' {
             i += 1;
+            float_str.push('.');
             while i < self.input.len() && (self.input[i]).is_digit(10) {
-                dec_str.push(self.input[i]);
+                float_str.push(self.input[i]);
                 i += 1;
             }
-            int_str.push_str(&dec_str);
-            // turn integer and decmial strings into token
-            ret = Token {
-                ty: TokenType::Float(int_str.parse::<f64>().unwrap()),
-            }
-        } else {
-            // turn integer string into token and default the float
-            ret = Token {
-                ty: TokenType::Int(int_str.parse::<i64>().unwrap()),
-            }
         }
-        (ret, i)
+        let num = Token {
+            ty: TokenType::Float(float_str.parse::<f64>().unwrap()),
+        };
+        (num, i)
     }
 
     fn iterate_var(&mut self, mut i: usize) -> (Token, usize) {

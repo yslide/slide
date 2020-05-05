@@ -113,8 +113,7 @@ impl Parser {
             }));
         }
         let node = match self.token().ty {
-            TokenType::Float(f) => Box::new(Expr::Float(f)),
-            TokenType::Int(i) => Box::new(Expr::Int(i)),
+            TokenType::Float(f) => Box::new(f.into()),
             TokenType::Variable(ref name) => Box::new(Expr::Var(Var { name: name.clone() })),
             TokenType::OpenParen => {
                 self.advance(); // eat left

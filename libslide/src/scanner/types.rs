@@ -10,9 +10,6 @@ pub enum TokenType {
     // Stores a floating point number as dp
     Float(f64),
 
-    // Stores an int - signed
-    Int(i64),
-
     // Identifies addition
     Plus,
 
@@ -69,7 +66,6 @@ impl fmt::Display for Token {
             "{}",
             match &self.ty {
                 Float(num) => num.to_string(),
-                Int(num) => num.to_string(),
                 Plus => "+".into(),
                 Minus => "-".into(),
                 Mult => "*".into(),
@@ -109,7 +105,6 @@ mod tests {
 
         format_tests! {
             float: Float(1.3), "1.3"
-            int: Int(10), "10"
             plus: Plus, "+"
             minus: Minus, "-"
             mult: Mult, "*"

@@ -13,17 +13,14 @@ impl ops::Add for Bignum {
         let mut carry: u8 = 0;
         let mut lhs_size: usize = self.dec.len();
         let mut rhs_size: usize = rhs.dec.len();
-        let mut lhs_vec: Vec<u8>;
 
         // make lhs smaller vector
         // lhs_size = self, rhs_self = rhs
-        let mut res_dec = if lhs_size > rhs_size {
+        let (mut res_dec, lhs_vec) = if lhs_size > rhs_size {
             mem::swap(&mut lhs_size, &mut rhs_size);
-            lhs_vec = rhs.dec;
-            self.dec
+            (self.dec, rhs.dec)
         } else {
-            lhs_vec = self.dec;
-            rhs.dec
+            (rhs.dec, self.dec)
         };
 
         for i in (0..lhs_size).rev() {
@@ -38,13 +35,11 @@ impl ops::Add for Bignum {
         rhs_size = rhs.int.len();
 
         // make lhs smaller vector
-        let mut res_int = if lhs_size > rhs_size {
+        let (mut res_int, lhs_vec) = if lhs_size > rhs_size {
             mem::swap(&mut lhs_size, &mut rhs_size);
-            lhs_vec = rhs.int;
-            self.int
+            (self.int, rhs.int)
         } else {
-            lhs_vec = self.int;
-            rhs.int
+            (rhs.int, self.int)
         };
 
         // compute addition with both ints

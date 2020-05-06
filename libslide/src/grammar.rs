@@ -1,3 +1,6 @@
+mod transformer;
+pub use transformer::Transformer;
+
 use crate::scanner::types::{Token, TokenType};
 use core::convert::TryFrom;
 use core::fmt;
@@ -44,6 +47,7 @@ impl fmt::Display for Assignment {
     }
 }
 
+#[derive(Clone)]
 pub enum Expr {
     Const(f64),
     Var(Var),
@@ -53,6 +57,32 @@ pub enum Expr {
     Parend(Box<Expr>),
     /// An expression wrapped in braces
     Braced(Box<Expr>),
+}
+
+// TODO: We can't derive this because `f64` doesn't implement `Eq`.
+// This should be fixed by moving to a arbitrary-precision numeric type.
+impl Eq for Expr {}
+impl PartialEq for Expr {
+    fn eq(&self, other: &Expr) -> bool {
+        use Expr::*;
+        match (self, other) {
+            (Const(x), Const(y)) => (x - y).abs() < std::f64::EPSILON,
+            (Var(x), Var(y)) => x == y,
+            (BinaryExpr(x), BinaryExpr(y)) => x == y,
+            (UnaryExpr(x), UnaryExpr(y)) => x == y,
+            (Parend(x), Parend(y)) => x == y,
+            (Braced(x), Braced(y)) => x == y,
+            _ => false,
+        }
+    }
+}
+
+// TODO: We can do better than hashing to a string as well, but we'll save that til we have an
+// arbitrary-precision numeric type.
+impl core::hash::Hash for Expr {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        state.write(self.to_string().as_bytes())
+    }
 }
 
 impl From<f64> for Expr {
@@ -97,8 +127,15 @@ impl fmt::Display for Expr {
     }
 }
 
+#[derive(Eq, PartialEq, Clone)]
 pub struct Var {
     pub name: String,
+}
+
+impl From<&str> for Var {
+    fn from(name: &str) -> Self {
+        Self { name: name.into() }
+    }
 }
 
 impl fmt::Display for Var {
@@ -107,6 +144,7 @@ impl fmt::Display for Var {
     }
 }
 
+#[derive(Eq, PartialEq, Clone)]
 pub enum BinaryOperator {
     Plus,
     Minus,
@@ -151,6 +189,7 @@ impl fmt::Display for BinaryOperator {
     }
 }
 
+#[derive(Eq, PartialEq, Clone)]
 pub struct BinaryExpr {
     pub op: BinaryOperator,
     pub lhs: Box<Expr>,
@@ -169,6 +208,7 @@ impl fmt::Display for BinaryExpr {
     }
 }
 
+#[derive(Eq, PartialEq, Clone)]
 pub enum UnaryOperator {
     SignPositive,
     SignNegative,
@@ -201,6 +241,7 @@ impl fmt::Display for UnaryOperator {
     }
 }
 
+#[derive(Eq, PartialEq, Clone)]
 pub struct UnaryExpr {
     pub op: UnaryOperator,
     pub rhs: Box<Expr>,

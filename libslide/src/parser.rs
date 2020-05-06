@@ -141,10 +141,10 @@ mod tests {
         $(
             #[test]
             fn $name() {
-                use crate::scanner::scan;
+                use crate::scanner::{scan, ScannerOptions};
                 use crate::parser::parse;
 
-                let tokens = scan($program);
+                let tokens = scan($program, ScannerOptions::default());
                 let parsed = parse(tokens);
                 assert_eq!(parsed.to_string(), $program);
             }

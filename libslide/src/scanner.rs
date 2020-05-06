@@ -1,22 +1,27 @@
+mod options;
 pub mod types;
+
+pub use options::ScannerOptions;
 use types::*;
 
-pub fn scan<T: Into<String>>(input: T) -> Vec<Token> {
-    let mut scanner = Scanner::new(input);
+pub fn scan<T: Into<String>>(input: T, scanner_options: ScannerOptions) -> Vec<Token> {
+    let mut scanner = Scanner::new(input, scanner_options);
     scanner.scan();
     scanner.output
 }
 
 struct Scanner {
     input: Vec<char>,
+    options: ScannerOptions,
     pub output: Vec<Token>,
 }
 
 impl Scanner {
     // instantiate a new scanner
-    pub fn new<T: Into<String>>(input: T) -> Scanner {
+    pub fn new<T: Into<String>>(input: T, options: ScannerOptions) -> Scanner {
         Scanner {
             input: input.into().chars().collect(),
+            options,
             output: Vec::new(),
         }
     }
@@ -65,7 +70,7 @@ impl Scanner {
 
     fn iterate_var(&mut self, mut i: usize) -> (Token, usize) {
         let mut var_str = String::new();
-        while i < self.input.len() && self.input[i].is_alphabetic() {
+        while i < self.input.len() && self.options.is_var_char(self.input[i]) {
             var_str.push(self.input[i]);
             i += 1
         }
@@ -86,7 +91,7 @@ impl Scanner {
                     let (num, new_idx) = self.iterate_digit(i);
                     i = new_idx;
                     self.output.push(num);
-                } else if self.input[i].is_alphabetic() {
+                } else if self.options.is_var_char(self.input[i]) {
                     let (var, new_idx) = self.iterate_var(i);
                     i = new_idx;
                     self.output.push(var);
@@ -115,8 +120,9 @@ mod tests {
             #[test]
             fn $name() {
                 use crate::scanner::scan;
+                use crate::scanner::ScannerOptions;
 
-                let mut tokens = scan($program)
+                let mut tokens = scan($program, ScannerOptions::default())
                     .into_iter()
                     .map(|tok| tok.to_string())
                     .collect::<Vec<_>>();

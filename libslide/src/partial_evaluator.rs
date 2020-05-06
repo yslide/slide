@@ -1,39 +1,39 @@
+use crate::evaluator_rules::*;
 use crate::grammar::*;
-use crate::visitor::Visitor;
-pub mod types;
-use types::PEResult;
 
-pub fn evaluate(expr: Stmt) -> PEResult {
-    let mut partial_evaluator = PartialEvaluator;
-    match expr {
-        Stmt::Expr(expr) => partial_evaluator.visit_expr(expr),
-        Stmt::Assignment(_) => todo!(),
+use core::hash::{Hash, Hasher};
+use std::collections::{hash_map::DefaultHasher, HashSet};
+
+/// Evaluates an expression to as simplified a form as possible.
+/// The evaluation may be partial, as some values (like variables) may be unknown.
+pub fn evaluate(expr: Stmt) -> Expr {
+    let rule_set = RuleSet::default();
+    let built_rules = rule_set.build();
+
+    let mut simplified_expr: Expr = match expr {
+        Stmt::Expr(expr) => expr,
+        _ => todo!("Evaluation currently only handles expressions"),
+    };
+
+    // Try simplifying the expression with a rule set until the same expression is seen again,
+    // meaning we can't simplify any further or are stuck in a cycle.
+    let mut expr_hash = hash_expr(&simplified_expr);
+    let mut seen: HashSet<u64> = HashSet::new();
+    while seen.insert(expr_hash) {
+        for rule in &built_rules {
+            simplified_expr = rule.try_apply(&simplified_expr).unwrap_or(simplified_expr);
+        }
+        expr_hash = hash_expr(&simplified_expr);
     }
+
+    simplified_expr
 }
 
-struct PartialEvaluator;
-
-impl Visitor for PartialEvaluator {
-    type Result = PEResult;
-
-    fn visit_const(&mut self, item: f64) -> Self::Result {
-        item.into()
-    }
-
-    fn visit_var(&mut self, item: Var) -> Self::Result {
-        Expr::Var(item).into()
-    }
-
-    fn visit_binary_expr(&mut self, item: BinaryExpr) -> Self::Result {
-        let lhs = self.visit_expr(*item.lhs);
-        let rhs = self.visit_expr(*item.rhs);
-        PEResult::fold_binary(lhs, rhs, item.op)
-    }
-
-    fn visit_unary_expr(&mut self, item: UnaryExpr) -> Self::Result {
-        let rhs = self.visit_expr(*item.rhs);
-        PEResult::fold_unary(rhs, item.op)
-    }
+fn hash_expr(expr: &Expr) -> u64 {
+    // There is no way to reset a hasher's state, so we create a new one each time.
+    let mut hasher = DefaultHasher::new();
+    expr.hash(&mut hasher);
+    hasher.finish()
 }
 
 #[cfg(test)]
@@ -43,58 +43,19 @@ mod tests {
         $(
             #[test]
             fn $name() {
-                use crate::scanner::scan;
-                use crate::parser::parse;
-                use crate::partial_evaluator::{evaluate, PEResult::*};
+                use crate::{parse, scan, ScannerOptions};
+                use super::evaluate;
 
-                let tokens = scan($program);
+                let tokens = scan($program, ScannerOptions::default());
                 let parsed = parse(tokens);
-                let result = $result.to_string();
-                match evaluate(parsed) {
-                    Evaluated(r) => assert_eq!(r.to_string(), result),
-                    Unevaluated(r) => assert_eq!(r.to_string(), result),
-                }
+                let evaluated = evaluate(parsed);
+                assert_eq!(evaluated.to_string(), $result.to_string());
             }
         )*
         }
     }
 
-    mod evaluated {
-        partial_evaluator_tests! {
-            int:                     "1",                   1
-            float:                   "1.1",                 1.1
-            sign_positive:           "+1",                  1
-            sign_positive_float:     "+1.1",                1.1
-            sign_negative:           "-1",                  -1
-            sign_negative_float:     "-1.1",                -1.1
-            addition:                "1 + 2",               3
-            addition_float:          "1.2 + 3.2",           4.4
-            subtraction:             "1 - 2",               -1
-            subtraction_float:       "1.1 - 2.2",           -1.1
-            multiplication:          "1 * 2",               2
-            multiplication_float:    "1.2 * 3.4",           4.08
-            division:                "1 / 2",               0.5
-            division_float:          "3.5 / 0.5",           7
-            modulo:                  "8 % 3",               2
-            modulo_float:            "3.75 % 0.5",          0.25
-            exponent:                "2 ^ 3",               8
-            exponent_float:          "6.25 ^ 0.5",          2.5
-        }
-    }
-
-    mod unevaluated {
-        partial_evaluator_tests! {
-            var:                     "a",                   "a"
-            sign_positive_var:       "+a",                  "+a"
-            sign_negative_var:       "-a",                  "-a"
-            addition_var:            "a + b",               "a + b"
-            substraction_var:        "a - b",               "a - b"
-            mult_var:                "a * b",               "a * b"
-            div_var:                 "a / b",               "a / b"
-            mod_var:                 "a % b",               "a % b"
-            exp_var:                 "a ^ b",               "a ^ b"
-            pe_left:                 "1 + 2 + a",           "3 + a"
-            pe_right:                "a + 1 + 2",           "a + 1 + 2"
-        }
+    partial_evaluator_tests! {
+        var_plus_zero: "a + 0", "a"
     }
 }

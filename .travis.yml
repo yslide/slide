@@ -25,6 +25,9 @@ jobs:
         - git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
         - git fetch origin
         - scripts/squashed
+
+  allow_failures:
+    - rust: nightly
       
 script:
   - cargo build --verbose --all
@@ -33,6 +36,3 @@ script:
     https://github.com/rust-lang/rust-clippy/ --force clippy
   - rustup component add rustfmt
   - scripts/check lintformat
-
-allow_failures:
-  - rust: nightly

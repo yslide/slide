@@ -96,12 +96,17 @@ impl From<&String> for BuiltRule {
     }
 }
 
-impl BuiltRule {
+impl Transformer for BuiltRule {
     /// Attempts to apply a rule on a target expression by
     ///
-    /// 1. Pattern matching the lhs of the rule with the target expression.
-    ///   - If pattern matching is unsuccessful, no application is done.
-    /// 2. Expanding the rhs of the rule using the results of the pattern matching.
+    /// 1. Applying the rule recursively on the target's subexpression to obtain a
+    ///    partially-transformed target expression.
+    ///
+    /// 2. Pattern matching the lhs of the rule with the partially-transformed target expression.
+    ///   - If pattern matching is unsuccessful, no application is done and the original expression
+    ///     is returned.
+    ///
+    /// 3. Expanding the rhs of the rule using the results of the pattern matching.
     ///
     /// Examples:
     ///
@@ -109,10 +114,17 @@ impl BuiltRule {
     ///   "$x + 0 -> $x".try_apply("x + 1")  // None
     ///   "$x + 0 -> $x".try_apply("x")      // None
     ///
-    pub fn try_apply(&self, target: &Expr) -> Option<Expr> {
-        let replacements = match_rule(self.from.clone(), target.clone())?;
-        let applied = replacements.transform_expr(self.to.clone());
-        Some(applied)
+    fn transform_expr(&self, target: Expr) -> Expr {
+        // First, apply the rule recursively on the target's subexpressions.
+        let partially_transformed = self.multiplex_transform_expr(target);
+
+        let replacements = match match_rule(self.from.clone(), partially_transformed.clone()) {
+            Some(repl) => repl,
+            // Could not match the rule on the top-level of the expression; return the partially
+            // transformed expression.
+            None => return partially_transformed,
+        };
+        replacements.transform_expr(self.to.clone())
     }
 }
 

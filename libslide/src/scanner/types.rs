@@ -41,10 +41,20 @@ pub enum TokenType {
     OpenBracket,
 
     // close bracket ]
+    //
     CloseBracket,
 
     // variable name
     Variable(String),
+
+    // a variable pattern, of form $name
+    VariablePattern(String),
+
+    // a constant pattern, of form #name
+    ConstPattern(String),
+
+    // an any pattern, of form #name
+    AnyPattern(String),
 
     // invalid token
     Invalid(String),
@@ -53,15 +63,15 @@ pub enum TokenType {
     EOF,
 }
 
+#[derive(PartialEq, Clone, Debug)]
+pub struct Token {
+    pub ty: TokenType,
+}
+
 impl Token {
     pub fn new(ty: TokenType) -> Self {
         Self { ty }
     }
-}
-
-#[derive(PartialEq, Clone, Debug)]
-pub struct Token {
-    pub ty: TokenType,
 }
 
 impl fmt::Display for Token {
@@ -84,6 +94,9 @@ impl fmt::Display for Token {
                 OpenBracket => "[".into(),
                 CloseBracket => "]".into(),
                 Variable(s) => s.to_string(),
+                VariablePattern(s) => s.to_string(),
+                ConstPattern(s) => s.to_string(),
+                AnyPattern(s) => s.to_string(),
                 Invalid(s) => format!("Invalid({})", s),
                 EOF => "<EOF>".into(),
             }

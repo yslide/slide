@@ -117,9 +117,9 @@ where
             .collect()
     }
 
-    /// Collects items in the iteration until `predicate` returns `False` on an item.
-    /// Only items that `predicate` returns `True` on are consumed by the collection.
-    pub fn collect_until<P, C>(&mut self, predicate: P) -> C
+    /// Collects items in the iteration while `predicate` returns `True` on an item.
+    /// Only collected items are consumed from the iteration.
+    pub fn collect_while<P, C>(&mut self, predicate: P) -> C
     where
         P: Fn(&T) -> bool,
         C: FromIterator<T>,

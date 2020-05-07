@@ -43,11 +43,11 @@ mod tests {
         $(
             #[test]
             fn $name() {
-                use crate::{parse, scan, ScannerOptions};
+                use crate::{parse, scan, ParsingStrategy};
                 use super::evaluate;
 
-                let tokens = scan($program, ScannerOptions::default());
-                let parsed = parse(tokens);
+                let tokens = scan($program);
+                let (parsed, _) = parse(tokens, ParsingStrategy::Expression);
                 let evaluated = evaluate(parsed);
                 assert_eq!(evaluated.to_string(), $result.to_string());
             }

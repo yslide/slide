@@ -2,9 +2,8 @@ mod pattern_matching;
 mod variables;
 
 use crate::grammar::*;
-use crate::{parse, scan, ScannerOptions};
+use crate::{parse, scan, ParsingStrategy};
 use pattern_matching::match_rule;
-use variables::*;
 
 use core::fmt;
 
@@ -32,7 +31,6 @@ static DEFAULT_RULESET: &[&str] = &[
 ///   | _<name> | Any expression |
 ///   | #<name> | A constant     |
 ///   | $<name> | A variable     |
-///   | <name>  | A variable     | TODO: remove support for this
 ///
 /// To apply a rule, the lhs of the rule is pattern matched on the target expression. If the
 /// matching is sucessful, the rhs of the rule is expanded with the results of the matching.
@@ -80,12 +78,11 @@ impl From<&String> for BuiltRule {
     /// [`RuleSet`]: crate::evaluator_rules::RuleSet
     fn from(rule: &String) -> Self {
         let split = rule.split(" -> ");
-        let scanner_options = ScannerOptions::default().set_is_var_char(is_var_char);
         let mut split = split
-            .map(|prog| scan(prog, scanner_options))
-            .map(parse)
+            .map(scan)
+            .map(|toks| parse(toks, ParsingStrategy::ExpressionPattern))
             .map(|stmt| match stmt {
-                Stmt::Expr(expr) => expr,
+                (Stmt::Expr(expr), _) => expr,
                 _ => todo!("Rules only handle expressions currently"),
             });
 

@@ -67,42 +67,6 @@ impl Transformer for Replacements {
         }
         self.multiplex_transform_expr(item)
     }
-
-    fn transform_const(&self, item: f64) -> Expr {
-        Expr::Const(item)
-    }
-
-    fn transform_var(&self, item: Var) -> Expr {
-        Expr::Var(item)
-    }
-
-    fn transform_binary_expr(&self, item: BinaryExpr) -> Expr {
-        let lhs = self.transform_expr(*item.lhs);
-        let rhs = self.transform_expr(*item.rhs);
-        BinaryExpr {
-            op: item.op,
-            lhs: lhs.into(),
-            rhs: rhs.into(),
-        }
-        .into()
-    }
-
-    fn transform_unary_expr(&self, item: UnaryExpr) -> Expr {
-        let rhs = self.transform_expr(*item.rhs);
-        UnaryExpr {
-            op: item.op,
-            rhs: rhs.into(),
-        }
-        .into()
-    }
-
-    fn transform_parend(&self, item: Expr) -> Expr {
-        Expr::Parend(self.transform_expr(item).into())
-    }
-
-    fn transform_braced(&self, item: Expr) -> Expr {
-        Expr::Braced(self.transform_expr(item).into())
-    }
 }
 
 impl Replacements {

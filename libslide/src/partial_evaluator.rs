@@ -21,7 +21,7 @@ pub fn evaluate(expr: Stmt) -> Expr {
     let mut seen: HashSet<u64> = HashSet::new();
     while seen.insert(expr_hash) {
         for rule in &built_rules {
-            simplified_expr = rule.try_apply(&simplified_expr).unwrap_or(simplified_expr);
+            simplified_expr = rule.transform_expr(simplified_expr);
         }
         expr_hash = hash_expr(&simplified_expr);
     }
@@ -57,5 +57,6 @@ mod tests {
 
     partial_evaluator_tests! {
         var_plus_zero: "a + 0", "a"
+        var_plus_zero_nested: "a + 0 + 0", "a"
     }
 }

@@ -1,36 +1,27 @@
-mod options;
 pub mod types;
 
-pub use crate::utils::PeekIter;
-pub use options::ScannerOptions;
+use crate::utils::PeekIter;
 use types::*;
 
-pub use std::vec::IntoIter;
-
-pub fn scan<T: Into<String>>(input: T, scanner_options: ScannerOptions) -> Vec<Token> {
-    let mut scanner = Scanner::new(input, scanner_options);
+pub fn scan<T: Into<String>>(input: T) -> Vec<Token> {
+    let mut scanner = Scanner::new(input);
     scanner.scan();
     scanner.output
 }
 
 struct Scanner {
     input: PeekIter<char>,
-    options: ScannerOptions,
     pub output: Vec<Token>,
 }
 
 impl Scanner {
     // instantiate a new scanner
-    pub fn new<T: Into<String>>(input: T, options: ScannerOptions) -> Scanner {
-        let program = input.into();
-        let chars: Vec<char> = program.chars().collect();
-        let mut output = Vec::new();
-        output.reserve(program.len() / 3);
+    pub fn new<T: Into<String>>(input: T) -> Scanner {
+        let chars: Vec<char> = input.into().chars().collect();
 
         Scanner {
             input: PeekIter::new(chars.into_iter()),
-            options,
-            output,
+            output: Vec::new(),
         }
     }
 
@@ -42,7 +33,10 @@ impl Scanner {
                     self.input.next();
                 }
                 _ if c.is_digit(10) => self.scan_num(),
-                _ if self.options.is_var_char(*c) => self.scan_var(),
+                '$' => self.scan_var_pattern(),
+                '#' => self.scan_const_pattern(),
+                '_' => self.scan_any_pattern(),
+                _ if c.is_alphabetic() => self.scan_var(),
                 _ => self.scan_symbol(),
             }
         }
@@ -72,21 +66,51 @@ impl Scanner {
 
     // iterates through any digits to create a token of that value
     fn scan_num(&mut self) {
-        let mut float_str: String = self.input.collect_until(|c| c.is_digit(10));
+        let mut float_str: String = self.input.collect_while(|c| c.is_digit(10));
         if let Some('.') = self.input.peek() {
             float_str.push('.');
             self.input.next();
-            float_str.push_str(&self.input.collect_until::<_, String>(|c| c.is_digit(10)));
+            float_str.push_str(&self.input.collect_while::<_, String>(|c| c.is_digit(10)));
         }
         let tok = Token::new(TokenType::Float(float_str.parse::<f64>().unwrap()));
         self.output.push(tok);
     }
 
+    fn scan_var_str(&mut self) -> String {
+        self.input.collect_while(|c| c.is_alphabetic())
+    }
+
     fn scan_var(&mut self) {
-        let options = self.options;
-        let var_str: String = self.input.collect_until(|c| options.is_var_char(*c));
-        let tok = Token::new(TokenType::Variable(var_str));
-        self.output.push(tok);
+        let var_name = self.scan_var_str();
+        self.output.push(Token::new(TokenType::Variable(var_name)));
+    }
+
+    fn scan_var_pattern(&mut self) {
+        let mut pat = match self.input.next() {
+            Some(c @ '$') => c.to_string(),
+            _ => unreachable!(),
+        };
+        pat.push_str(&self.scan_var_str());
+        self.output
+            .push(Token::new(TokenType::VariablePattern(pat)));
+    }
+
+    fn scan_const_pattern(&mut self) {
+        let mut pat = match self.input.next() {
+            Some(c @ '#') => c.to_string(),
+            _ => unreachable!(),
+        };
+        pat.push_str(&self.scan_var_str());
+        self.output.push(Token::new(TokenType::ConstPattern(pat)));
+    }
+
+    fn scan_any_pattern(&mut self) {
+        let mut pat = match self.input.next() {
+            Some(c @ '_') => c.to_string(),
+            _ => unreachable!(),
+        };
+        pat.push_str(&self.scan_var_str());
+        self.output.push(Token::new(TokenType::AnyPattern(pat)));
     }
 }
 
@@ -101,9 +125,8 @@ mod tests {
             #[test]
             fn $name() {
                 use crate::scanner::scan;
-                use crate::scanner::ScannerOptions;
 
-                let mut tokens = scan($program, ScannerOptions::default())
+                let mut tokens = scan($program)
                     .into_iter()
                     .map(|tok| tok.to_string())
                     .collect::<Vec<_>>();
@@ -129,6 +152,9 @@ mod tests {
             close_paren: ")", ")"
             open_bracket: "[", "["
             close_bracket: "]", "]"
+            variable_pattern: "$a", "$a"
+            const_pattern: "#a", "#a"
+            any_pattern: "_a", "_a"
 
             empty_string: "", ""
             skip_whitespace: "  =  ", "="

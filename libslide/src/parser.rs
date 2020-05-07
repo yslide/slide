@@ -1,17 +1,40 @@
+#[macro_use]
+pub mod test_utils; // this **must** be first since macro import order matters!
+
+mod expression_parser;
+mod expression_pattern_parser;
+
+use expression_parser::ExpressionParser;
+use expression_pattern_parser::ExpressionPatternParser;
+
 use crate::grammar::*;
 use crate::scanner::types::{Token, TokenType};
 use crate::utils::PeekIter;
 
 use core::convert::TryFrom;
-pub use std::vec::IntoIter;
+use core::fmt::Display;
 
-pub fn parse(input: Vec<Token>) -> Stmt {
-    let mut parser = Parser::new(input);
-    *parser.parse()
+pub fn parse(input: Vec<Token>, strategy: ParsingStrategy) -> (Stmt, Vec<String>) {
+    use ParsingStrategy::*;
+    match strategy {
+        Expression => {
+            let mut parser = ExpressionParser::new(input);
+            let parsed = parser.parse();
+            let errors = parser.errors().iter().map(|e| e.to_string()).collect();
+            (*parsed, errors)
+        }
+        ExpressionPattern => {
+            let mut parser = ExpressionPatternParser::new(input);
+            let parsed = parser.parse();
+            let errors = parser.errors().iter().map(|e| e.to_string()).collect();
+            (*parsed, errors)
+        }
+    }
 }
 
-struct Parser {
-    input: PeekIter<Token>,
+pub enum ParsingStrategy {
+    Expression,
+    ExpressionPattern,
 }
 
 macro_rules! binary_expr_parser {
@@ -22,13 +45,13 @@ macro_rules! binary_expr_parser {
 
             let mut lhs = $self.$lhs_term();
             while let Ok(op) = $self
-                .input
+                .input()
                 .peek()
                 .map_or_else(|| Err(()), BinaryOperator::try_from)
             {
                 match op {
                     $($matching_op)+ => {
-                        $self.input.next();
+                        $self.input().next();
                         lhs = Expr::BinaryExpr(BinaryExpr{
                             op,
                             lhs,
@@ -44,30 +67,38 @@ macro_rules! binary_expr_parser {
     };
 }
 
-impl Parser {
-    pub fn new(input: Vec<Token>) -> Parser {
-        Parser {
-            input: PeekIter::new(input.into_iter()),
-        }
-    }
+trait Parser
+where
+    Self::Error: Display,
+{
+    type Error;
 
-    fn done(&mut self) -> bool {
-        self.input.peek().map(|t| &t.ty) == Some(&TokenType::EOF)
-    }
+    fn new(input: Vec<Token>) -> Self;
+    fn errors(&self) -> &Vec<Self::Error>;
+    fn input(&mut self) -> &mut PeekIter<Token>;
+    fn parse_variable(&mut self, name: String) -> Expr;
+    fn parse_pattern(&mut self, name: String) -> Expr;
 
-    pub fn parse(&mut self) -> Box<Stmt> {
-        eprintln!("here",);
-        let mut next_2 = self.input.peek_map_n(2, |tok| tok.ty.clone());
+    // Default parsing implementations.
+    // TODO: increase modularity of this parser
+
+    /// Default parser - parses a statement.
+    fn parse(&mut self) -> Box<Stmt> {
+        let mut next_2 = self.input().peek_map_n(2, |tok| tok.ty.clone());
         let parsed = match (next_2.pop_front(), next_2.pop_front()) {
             (Some(TokenType::Variable(name)), Some(TokenType::Equal)) => {
-                self.input.next();
-                self.input.next();
+                self.input().next();
+                self.input().next();
                 self.assignment(Var { name })
             }
             _ => Box::new(Stmt::Expr(*self.expr())),
         };
         assert!(self.done());
         parsed
+    }
+
+    fn done(&mut self) -> bool {
+        self.input().peek().map(|t| &t.ty) == Some(&TokenType::EOF)
     }
 
     fn assignment(&mut self, var: Var) -> Box<Stmt> {
@@ -95,105 +126,87 @@ impl Parser {
     );
 
     fn num_term(&mut self) -> Box<Expr> {
-        if let Some(Ok(op)) = self.input.peek().map(UnaryOperator::try_from) {
-            self.input.next();
+        if let Some(Ok(op)) = self.input().peek().map(UnaryOperator::try_from) {
+            self.input().next();
             return Box::new(Expr::UnaryExpr(UnaryExpr {
                 op,
                 rhs: self.exp_term(),
             }));
         }
-        let node = match self.input.peek().map(|t| &t.ty) {
-            Some(TokenType::Float(f)) => Box::new(Expr::Const(*f)),
-            Some(TokenType::Variable(name)) => Box::new(Expr::Var(Var { name: name.clone() })),
+
+        let node = match self.input().peek().map(|t| t.ty.clone()) {
+            Some(TokenType::Float(f)) => Box::new(Expr::Const(f)),
+            Some(TokenType::Variable(name)) => self.parse_variable(name).into(),
+
+            // TODO: Currently patterns as all parsed as variables. Maybe there is a nice way to
+            // store pattern information during parsing, but this would require some extension of
+            // the grammar.
+            Some(TokenType::VariablePattern(name))
+            | Some(TokenType::ConstPattern(name))
+            | Some(TokenType::AnyPattern(name)) => self.parse_pattern(name).into(),
+
             Some(TokenType::OpenParen) => {
-                self.input.next(); // eat left
+                self.input().next(); // eat left
                 Expr::Parend(self.expr()).into()
             }
             Some(TokenType::OpenBracket) => {
-                self.input.next(); // eat left
+                self.input().next(); // eat left
                 Expr::Braced(self.expr()).into()
             }
             _ => unreachable!(),
         };
-        self.input.next(); // eat rest of created expression
+        self.input().next(); // eat rest of created expression
         node
     }
 }
 
 #[cfg(test)]
 mod tests {
-    // Tests the Parser's output against a humanized string representation of the expected
-    // expressions.
-    // See [Expr]'s impl of Display for more details.
-    // [Expr]: crate::parser::Expr
-    macro_rules! parser_tests {
-        ($($name:ident: $program:expr)*) => {
-        $(
-            #[test]
-            fn $name() {
-                use crate::scanner::{scan, ScannerOptions};
-                use crate::parser::parse;
-
-                let tokens = scan($program, ScannerOptions::default());
-                let parsed = parse(tokens);
-                assert_eq!(parsed.to_string(), $program);
-            }
-        )*
-        }
-    }
-
-    mod parse {
-        parser_tests! {
-            addition:                "2 + 2"
-            addition_nested:         "1 + 2 + 3"
-            subtraction:             "2 - 2"
-            subtraction_nested:      "1 - 2 - 3"
-            multiplication:          "2 * 2"
-            multiplication_nested:   "1 * 2 * 3"
-            division:                "2 / 2"
-            division_nested:         "1 / 2 / 3"
-            modulo:                  "2 % 5"
-            modulo_nested:           "1 % 2 % 3"
-            exponent:                "2 ^ 3"
-            exponent_nested:         "1 ^ 2 ^ 3"
-            precedence_plus_times:   "1 + 2 * 3"
-            precedence_times_plus:   "1 * 2 + 3"
-            precedence_plus_div:     "1 + 2 / 3"
-            precedence_div_plus:     "1 / 2 + 3"
-            precedence_plus_mod:     "1 + 2 % 3"
-            precedence_mod_plus:     "1 % 2 + 3"
-            precedence_minus_times:  "1 - 2 * 3"
-            precedence_times_minus:  "1 * 2 - 3"
-            precedence_minus_div:    "1 - 2 / 3"
-            precedence_div_minus:    "1 / 2 - 3"
-            precedence_minus_mod:    "1 - 2 % 3"
-            precedence_mod_minus:    "1 % 2 - 3"
-            precedence_expo_plus:    "1 + 2 ^ 3"
-            precedence_plus_exp:     "1 ^ 2 + 3"
-            precedence_expo_times:   "1 * 2 ^ 3"
-            precedence_time_expo:    "1 ^ 2 * 3"
-            parentheses_plus_times:  "(1 + 2) * 3"
-            parentheses_time_plus:   "3 * (1 + 2)"
-            parentheses_time_mod:    "3 * (2 % 2)"
-            parentheses_mod_time:    "(2 % 2) * 3"
-            parentheses_exp_time:    "2 ^ (3 ^ 4 * 5)"
-            parentheses_unary:       "-(2 + +-5)"
-            nested_parentheses:      "((1 * (2 + 3)) ^ 4)"
-            brackets_plus_times:     "[1 + 2] * 3"
-            brackets_time_plus:      "3 * [1 + 2]"
-            brackets_time_mod:       "3 * [2 % 2]"
-            brackets_mod_time:       "[2 % 2] * 3"
-            brackets_exp_time:       "2 ^ [3 ^ 4 * 5]"
-            brackets_unary:          "-[2 + +-5]"
-            nested_brackets:         "[[1 * [2 + 3]] ^ 4]"
-            unary_minus:             "-2"
-            unary_expo:              "-2 ^ 3"
-            unary_quad:              "+-+-2"
-            variable:                "a"
-            variable_in_op_left:     "a + 1"
-            variable_in_op_right:    "1 + a"
-            assignment_op:           "a = 5"
-            assignment_op_expr:      "a = 5 + 2 ^ 3"
-        }
+    common_parser_tests! {
+        addition:                "2 + 2"
+        addition_nested:         "1 + 2 + 3"
+        subtraction:             "2 - 2"
+        subtraction_nested:      "1 - 2 - 3"
+        multiplication:          "2 * 2"
+        multiplication_nested:   "1 * 2 * 3"
+        division:                "2 / 2"
+        division_nested:         "1 / 2 / 3"
+        modulo:                  "2 % 5"
+        modulo_nested:           "1 % 2 % 3"
+        exponent:                "2 ^ 3"
+        exponent_nested:         "1 ^ 2 ^ 3"
+        precedence_plus_times:   "1 + 2 * 3"
+        precedence_times_plus:   "1 * 2 + 3"
+        precedence_plus_div:     "1 + 2 / 3"
+        precedence_div_plus:     "1 / 2 + 3"
+        precedence_plus_mod:     "1 + 2 % 3"
+        precedence_mod_plus:     "1 % 2 + 3"
+        precedence_minus_times:  "1 - 2 * 3"
+        precedence_times_minus:  "1 * 2 - 3"
+        precedence_minus_div:    "1 - 2 / 3"
+        precedence_div_minus:    "1 / 2 - 3"
+        precedence_minus_mod:    "1 - 2 % 3"
+        precedence_mod_minus:    "1 % 2 - 3"
+        precedence_expo_plus:    "1 + 2 ^ 3"
+        precedence_plus_exp:     "1 ^ 2 + 3"
+        precedence_expo_times:   "1 * 2 ^ 3"
+        precedence_time_expo:    "1 ^ 2 * 3"
+        parentheses_plus_times:  "(1 + 2) * 3"
+        parentheses_time_plus:   "3 * (1 + 2)"
+        parentheses_time_mod:    "3 * (2 % 2)"
+        parentheses_mod_time:    "(2 % 2) * 3"
+        parentheses_exp_time:    "2 ^ (3 ^ 4 * 5)"
+        parentheses_unary:       "-(2 + +-5)"
+        nested_parentheses:      "((1 * (2 + 3)) ^ 4)"
+        brackets_plus_times:     "[1 + 2] * 3"
+        brackets_time_plus:      "3 * [1 + 2]"
+        brackets_time_mod:       "3 * [2 % 2]"
+        brackets_mod_time:       "[2 % 2] * 3"
+        brackets_exp_time:       "2 ^ [3 ^ 4 * 5]"
+        brackets_unary:          "-[2 + +-5]"
+        nested_brackets:         "[[1 * [2 + 3]] ^ 4]"
+        unary_minus:             "-2"
+        unary_expo:              "-2 ^ 3"
+        unary_quad:              "+-+-2"
     }
 }

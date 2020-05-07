@@ -2,16 +2,6 @@ use std::fmt;
 mod add;
 
 // this probably can go in utils but I put it in here for now
-trait StringUtils {
-    fn substring(&self, start: usize, len: usize) -> Self;
-}
-
-impl StringUtils for String {
-    fn substring(&self, start: usize, len: usize) -> Self {
-        self.chars().skip(start).take(len).collect()
-    }
-}
-
 fn to_u8(c: char) -> u8 {
     c.to_digit(10).unwrap() as u8
 }

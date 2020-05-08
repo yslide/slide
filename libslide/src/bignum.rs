@@ -22,10 +22,9 @@ fn to_char(n: u8) -> char {
 
 pub struct Bignum {
     is_neg: bool,
-    // we use vector since it will allow faster computation time
-    // for smaller numbers
-    int: Vec<u8>,
-    dec: Vec<u8>,
+    // we use vector since it will allow faster computation time for smaller numbers.
+    int: Vec<u8>, // integer part with LSB first, e.g. int of 123.456 is 321.
+    dec: Vec<u8>, // decimal part with MSB first, e.g. dec of 123.456 is 456.
 }
 
 impl Bignum {
@@ -59,7 +58,7 @@ impl Bignum {
         }
         Bignum {
             is_neg,
-            int: int.iter().rev().cloned().collect(),
+            int: int.into_iter().rev().collect(),
             dec,
         }
     }

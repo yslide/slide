@@ -1,6 +1,9 @@
 use crate::grammar::*;
 use crate::scanner::types::{Token, TokenType};
+use crate::utils::PeekIter;
+
 use core::convert::TryFrom;
+pub use std::vec::IntoIter;
 
 pub fn parse(input: Vec<Token>) -> Stmt {
     let mut parser = Parser::new(input);
@@ -8,8 +11,7 @@ pub fn parse(input: Vec<Token>) -> Stmt {
 }
 
 struct Parser {
-    input: Vec<Token>,
-    index: usize,
+    input: PeekIter<Token>,
 }
 
 macro_rules! binary_expr_parser {
@@ -19,10 +21,14 @@ macro_rules! binary_expr_parser {
             use BinaryOperator::*;
 
             let mut lhs = $self.$lhs_term();
-            while let Ok(op) = BinaryOperator::try_from($self.token()) {
+            while let Ok(op) = $self
+                .input
+                .peek()
+                .map_or_else(|| Err(()), BinaryOperator::try_from)
+            {
                 match op {
                     $($matching_op)+ => {
-                        $self.advance();
+                        $self.input.next();
                         lhs = Expr::BinaryExpr(BinaryExpr{
                             op,
                             lhs,
@@ -40,39 +46,23 @@ macro_rules! binary_expr_parser {
 
 impl Parser {
     pub fn new(input: Vec<Token>) -> Parser {
-        Parser { input, index: 0 }
+        Parser {
+            input: PeekIter::new(input.into_iter()),
+        }
     }
 
-    fn token(&self) -> &Token {
-        &self.input[self.index]
-    }
-
-    /// Returns a slice of the next `n` tokens mapped over a function `f`.
-    fn peek_map<R, F>(&self, n: usize, f: F) -> Vec<R>
-    where
-        F: FnMut(&Token) -> R,
-    {
-        self.input[self.index..].iter().take(n).map(f).collect()
-    }
-
-    fn advance(&mut self) {
-        self.advance_n(1);
-    }
-
-    fn advance_n(&mut self, n: usize) {
-        self.index += n;
-    }
-
-    fn done(&self) -> bool {
-        self.token().ty == TokenType::EOF
+    fn done(&mut self) -> bool {
+        self.input.peek().map(|t| &t.ty) == Some(&TokenType::EOF)
     }
 
     pub fn parse(&mut self) -> Box<Stmt> {
-        let next_2 = self.peek_map(2, |t| t.ty.clone());
-        let parsed = match &next_2.as_slice() {
-            [TokenType::Variable(name), TokenType::Equal] => {
-                self.advance_n(2);
-                self.assignment(Var { name: name.clone() })
+        eprintln!("here",);
+        let mut next_2 = self.input.peek_map_n(2, |tok| tok.ty.clone());
+        let parsed = match (next_2.pop_front(), next_2.pop_front()) {
+            (Some(TokenType::Variable(name)), Some(TokenType::Equal)) => {
+                self.input.next();
+                self.input.next();
+                self.assignment(Var { name })
             }
             _ => Box::new(Stmt::Expr(*self.expr())),
         };
@@ -105,27 +95,27 @@ impl Parser {
     );
 
     fn num_term(&mut self) -> Box<Expr> {
-        if let Ok(op) = UnaryOperator::try_from(self.token()) {
-            self.advance();
+        if let Some(Ok(op)) = self.input.peek().map(UnaryOperator::try_from) {
+            self.input.next();
             return Box::new(Expr::UnaryExpr(UnaryExpr {
                 op,
                 rhs: self.exp_term(),
             }));
         }
-        let node = match self.token().ty {
-            TokenType::Float(f) => Box::new(f.into()),
-            TokenType::Variable(ref name) => Box::new(Expr::Var(Var { name: name.clone() })),
-            TokenType::OpenParen => {
-                self.advance(); // eat left
+        let node = match self.input.peek().map(|t| &t.ty) {
+            Some(TokenType::Float(f)) => Box::new(Expr::Const(*f)),
+            Some(TokenType::Variable(name)) => Box::new(Expr::Var(Var { name: name.clone() })),
+            Some(TokenType::OpenParen) => {
+                self.input.next(); // eat left
                 Expr::Parend(self.expr()).into()
             }
-            TokenType::OpenBracket => {
-                self.advance(); // eat left
+            Some(TokenType::OpenBracket) => {
+                self.input.next(); // eat left
                 Expr::Braced(self.expr()).into()
             }
             _ => unreachable!(),
         };
-        self.advance(); // eat rest of created expression
+        self.input.next(); // eat rest of created expression
         node
     }
 }

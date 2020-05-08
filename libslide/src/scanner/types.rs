@@ -53,6 +53,12 @@ pub enum TokenType {
     EOF,
 }
 
+impl Token {
+    pub fn new(ty: TokenType) -> Self {
+        Self { ty }
+    }
+}
+
 #[derive(PartialEq, Clone, Debug)]
 pub struct Token {
     pub ty: TokenType,

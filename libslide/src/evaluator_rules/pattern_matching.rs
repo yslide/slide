@@ -22,13 +22,30 @@ pub fn match_rule(rule: Expr, target: Expr) -> Option<Replacements> {
             // Constant values are... constant, so there is no need to replace them.
             Some(Replacements::default())
         }
-        (Var(var), var_e @ Var(_)) => {
-            if VariablePattern::from_name(&var.name) & VariablePattern::Variable == 0 {
-                // Variable pattern does not match a variable; rule can't be applied.
-                return None;
+        (Var(var), expr) => {
+            let pat = VariablePattern::from_name(&var.name);
+            use VariablePattern as Pat;
+            match &expr {
+                Const(_) => {
+                    if pat & Pat::Const != Pat::Const {
+                        return None;
+                    }
+                }
+                Var(_) => {
+                    if pat & Pat::Variable != Pat::Variable {
+                        return None;
+                    }
+                }
+                _ => {
+                    // Only an Any pattern can match an expression that is not a const or var.
+                    if pat & Pat::Any != Pat::Any {
+                        return None;
+                    }
+                }
             }
+
             let mut replacements = Replacements::default();
-            replacements.insert(Var(var), var_e);
+            replacements.insert(Var(var), expr);
             Some(replacements)
         }
         (BinaryExpr(rule), BinaryExpr(expr)) => {
@@ -41,6 +58,16 @@ pub fn match_rule(rule: Expr, target: Expr) -> Option<Replacements> {
             let replacements_rhs: Replacements = match_rule(*rule.rhs, *expr.rhs)?;
             Replacements::try_merge(replacements_lhs, replacements_rhs)
         }
+        (UnaryExpr(rule), UnaryExpr(expr)) => {
+            if rule.op != expr.op {
+                return None;
+            }
+            // Expressions are of the same type; match the rest of the expression by recursing on
+            // the argument.
+            match_rule(*rule.rhs, *expr.rhs)
+        }
+        (Parend(rule), Parend(expr)) => match_rule(*rule, *expr),
+        (Braced(rule), Braced(expr)) => match_rule(*rule, *expr),
         _ => None,
     }
 }
@@ -138,42 +165,93 @@ mod tests {
 
     mod match_rule {
         use super::*;
+        use crate::{parse, scan, ScannerOptions};
 
-        fn var(s: &str) -> Expr {
-            Expr::Var(Var {
-                name: s.to_string(),
-            })
+        macro_rules! match_rule_tests {
+            ($($name:ident: $rule:expr => $target:expr => $expected_repls:expr)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    let parse = |prog: &str, is_rule: bool| -> Expr {
+                        let mut scanner_options = ScannerOptions::default();
+                        if is_rule {
+                            scanner_options = scanner_options.set_is_var_char(|c| {
+                                c.is_alphabetic() || c == '$' || c == '#' || c == '_'
+                            });
+                        }
+                        match parse(scan(prog, scanner_options)) {
+                            Stmt::Expr(expr) => expr,
+                            _ => unreachable!(),
+                        }
+                    };
+
+                    let parsed_rule = parse($rule, true);
+                    let parsed_target = parse($target, false);
+
+                    let repls = match_rule(parsed_rule, parsed_target);
+                    let (repls, expected_repls): (Replacements, Vec<&str>) =
+                        match (repls, $expected_repls) {
+                            (None, expected_matches) => {
+                                assert!(expected_matches.is_none());
+                                return;
+                            }
+                            (Some(repl), expected_matches) => {
+                                assert!(expected_matches.is_some());
+                                (repl, expected_matches.unwrap())
+                            }
+                        };
+
+                    let expected_repls = expected_repls
+                        .into_iter()
+                        .map(|m| m.split(": "))
+                        .map(|mut i| (i.next().unwrap(), i.next().unwrap()))
+                        .map(|(r, t)| (parse(r, true), parse(t, false)));
+
+                    assert_eq!(expected_repls.len(), repls.map.len());
+
+                    for (expected_pattern, expected_repl) in expected_repls {
+                        assert_eq!(
+                            expected_repl.to_string(),
+                            repls.map.get(&expected_pattern).unwrap().to_string()
+                        );
+                    }
+                }
+            )*
+            }
         }
-        fn const_e(n: f64) -> Expr {
-            Expr::Const(n)
-        }
 
-        // TODO: more tests?
-        #[test]
-        fn match_rule_has_match() {
-            let replacements = match_rule(
-                Expr::BinaryExpr(BinaryExpr {
-                    op: BinaryOperator::Plus,
-                    lhs: var("$a").into(),
-                    rhs: const_e(0.).into(),
-                }),
-                Expr::BinaryExpr(BinaryExpr {
-                    op: BinaryOperator::Plus,
-                    lhs: var("x").into(),
-                    rhs: const_e(0.).into(),
-                }),
-            )
-            .unwrap();
+        match_rule_tests! {
+            consts:                     "0" => "0" => Some(vec![])
+            consts_unmatched:           "0" => "1" => None
 
-            assert_eq!(replacements.map.len(), 1);
-            assert_eq!(replacements.map.get(&var("$a")).unwrap().to_string(), "x");
-        }
+            variable_pattern:           "$a" => "x"     => Some(vec!["$a: x"])
+            variable_pattern_on_const:  "$a" => "0"     => None
+            variable_pattern_on_binary: "$a" => "x + 0" => None
+            variable_pattern_on_unary:  "$a" => "+x"    => None
 
-        #[test]
-        fn match_rule_no_match() {
-            let replacements = match_rule(const_e(0.), const_e(1.));
+            const_pattern:              "#a" => "1"     => Some(vec!["#a: 1"])
+            const_pattern_on_var:       "#a" => "x"     => None
+            const_pattern_on_binary:    "#a" => "1 + x" => None
+            const_pattern_on_unary:     "#a" => "+1"    => None
 
-            assert!(replacements.is_none());
+            any_pattern_on_variable:    "_a" => "x"     => Some(vec!["_a: x"])
+            any_pattern_on_const:       "_a" => "1"     => Some(vec!["_a: 1"])
+            any_pattern_on_binary:      "_a" => "1 + x" => Some(vec!["_a: 1 + x"])
+            any_pattern_on_unary:       "_a" => "+(2)"  => Some(vec!["_a: +(2)"])
+
+            binary_pattern:             "$a + #b" => "x + 0" => Some(vec!["$a: x", "#b: 0"])
+            binary_pattern_wrong_op:    "$a + #b" => "x - 0" => None
+            binary_pattern_partial:     "$a + #b" => "x + y" => None
+
+            unary_pattern:              "+$a" => "+x" => Some(vec!["$a: x"])
+            unary_pattern_wrong_op:     "+$a" => "-x" => None
+            unary_pattern_partial:      "+$a" => "+1" => None
+
+            parend:                     "($a + #b)" => "(x + 0)" => Some(vec!["$a: x", "#b: 0"])
+            parend_on_braced:           "($a + #b)" => "[x + 0]" => None
+
+            braced:                     "[$a + #b]" => "[x + 0]" => Some(vec!["$a: x", "#b: 0"])
+            braced_on_parend:           "[$a + #b]" => "(x + 0)" => None
         }
     }
 }

@@ -13,6 +13,7 @@ pub fn is_var_char(c: char) -> bool {
 /// ```
 ///
 pub enum VariablePattern {
+    None = 0,
     Variable = 0b01,
     Const = 0b10,
     Any = 0b11,
@@ -29,10 +30,23 @@ impl VariablePattern {
 }
 
 impl std::ops::BitAnd for VariablePattern {
-    type Output = u8;
+    type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        self as u8 & rhs as u8
+        (self as u8 & rhs as u8).into()
+    }
+}
+
+impl From<u8> for VariablePattern {
+    fn from(n: u8) -> Self {
+        use VariablePattern::*;
+        match n {
+            _ if n == None as u8 => None,
+            _ if n == Variable as u8 => Variable,
+            _ if n == Const as u8 => Const,
+            _ if n == Any as u8 => Any,
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -58,18 +72,18 @@ mod tests {
     fn bitxor() {
         use VariablePattern::*;
         let cases = vec![
-            (Const, Const, false),
-            (Const, Variable, true),
-            (Const, Any, false),
-            (Variable, Const, true),
-            (Variable, Variable, false),
-            (Variable, Any, false),
-            (Any, Const, false),
-            (Any, Variable, false),
-            (Any, Any, false),
+            (Const, Const, Const),
+            (Const, Variable, None),
+            (Const, Any, Const),
+            (Variable, Const, None),
+            (Variable, Variable, Variable),
+            (Variable, Any, Variable),
+            (Any, Const, Const),
+            (Any, Variable, Variable),
+            (Any, Any, Any),
         ];
-        for (l, r, expectation) in cases.into_iter() {
-            assert_eq!(l & r == 0, expectation)
+        for (l, r, res) in cases.into_iter() {
+            assert!(l & r == res)
         }
     }
 }

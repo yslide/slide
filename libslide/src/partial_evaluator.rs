@@ -39,7 +39,7 @@ fn hash_expr(expr: &Expr) -> u64 {
 #[cfg(test)]
 mod tests {
     macro_rules! partial_evaluator_tests {
-        ($($name:ident: $program:expr, $result:expr)*) => {
+        ($($name:ident: $program:expr => $result:expr)*) => {
         $(
             #[test]
             fn $name() {
@@ -56,7 +56,12 @@ mod tests {
     }
 
     partial_evaluator_tests! {
-        var_plus_zero: "a + 0", "a"
-        var_plus_zero_nested: "a + 0 + 0", "a"
+        additive_identity_var:          "a + 0"       => "a"
+        additive_identity_const:        "1 + 0"       => "1"
+        additive_identity_any:          "(a * b) + 0" => "(a * b)"
+        additive_identity_nested:       "(a + 0) + 0" => "(a)"
+        additive_identity_with_reorder: "0 + a + 0"   => "a"
+
+        reorder_constants:              "1 + a" => "a + 1"
     }
 }

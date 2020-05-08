@@ -10,11 +10,13 @@ use core::fmt;
 
 // TODO: will uncomment in a future iteration when we support removing rules.
 // pub enum RuleName {
-//     VariablePlusZero = 0,
+//     AdditiveIdentity = 0,
+//     ReorderConstants = 1,
 // }
 
 static DEFAULT_RULESET: &[&str] = &[
-    "$a + 0 -> $a", // VariablePlusZero
+    "_a + 0 -> _a",       // AdditiveIdentity
+    "#a + $b -> $b + #a", // ReorderConstants
 ];
 
 /// A set of expression-mapping rules.
@@ -144,6 +146,6 @@ mod tests {
         let built_rules = rule_set.build();
         let var_plus_zero = &built_rules[0];
 
-        assert_eq!(var_plus_zero.to_string(), "$a + 0 -> $a");
+        assert_eq!(var_plus_zero.to_string(), "_a + 0 -> _a");
     }
 }

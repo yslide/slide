@@ -1,20 +1,22 @@
 #![allow(unused_macros)]
+macro_rules! __parse {
+    ($parser:ident, $program:expr) => {
+        let tokens = scan($program);
+        let (parsed, _) = $parser(tokens);
+        assert_eq!(parsed.to_string(), $program);
+    };
+}
+
 macro_rules! common_parser_tests {
     ($($name:ident: $program:expr)*) => {
     $(
         #[test]
         fn $name() {
             use crate::scanner::{scan};
-            use crate::parser::{parse, ParsingStrategy};
-            use ParsingStrategy::*;
+            use crate::parser::{parse_expression, parse_expression_pattern};
 
-            let stategies = vec![Expression, ExpressionPattern];
-
-            for strategy in stategies.into_iter() {
-                let tokens = scan($program);
-                let (parsed, _) = parse(tokens, strategy);
-                assert_eq!(parsed.to_string(), $program);
-            }
+            __parse!(parse_expression, $program);
+            __parse!(parse_expression_pattern, $program);
         }
     )*
     }
@@ -26,12 +28,9 @@ macro_rules! parser_tests {
         #[test]
         fn $name() {
             use crate::scanner::{scan};
-            use crate::parser::{parse, ParsingStrategy};
-            use ParsingStrategy::*;
+            use crate::parser::{$parser};
 
-            let tokens = scan($program);
-            let (parsed, _) = parse(tokens, $parser);
-            assert_eq!(parsed.to_string(), $program);
+            __parse!($parser, $program);
         }
     )*
     }
@@ -43,11 +42,10 @@ macro_rules! parser_error_tests {
         #[test]
         fn $name() {
             use crate::scanner::{scan};
-            use crate::parser::{parse, ParsingStrategy};
-            use ParsingStrategy::*;
+            use crate::parser::{$parser};
 
             let tokens = scan($program);
-            let (_, errors) = parse(tokens, $parser);
+            let (_, errors) = $parser(tokens);
             assert_eq!(errors.join("\n"), $error);
         }
     )*

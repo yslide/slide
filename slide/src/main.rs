@@ -1,4 +1,4 @@
-use libslide::{evaluate, parse, scan, ParsingStrategy};
+use libslide::{evaluate, parse_expression, scan};
 
 use std::env;
 
@@ -11,7 +11,7 @@ fn main() -> Result<(), String> {
     };
 
     let tokens = scan(program);
-    let (parse_tree, errors) = parse(tokens, ParsingStrategy::Expression);
+    let (parse_tree, errors) = parse_expression(tokens);
     if !errors.is_empty() {
         return Err(errors.join("\n"));
     }

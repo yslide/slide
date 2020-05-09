@@ -1,14 +1,25 @@
+mod pattern;
 mod transformer;
-pub use transformer::Transformer;
+pub use pattern::*;
+pub use transformer::*;
 
 use crate::scanner::types::{Token, TokenType};
 use core::convert::TryFrom;
 use core::fmt;
 
+pub trait Grammar {}
+pub trait Expression
+where
+    Self: fmt::Display + From<BinaryExpr<Self>> + From<UnaryExpr<Self>>,
+{
+}
+
 pub enum Stmt {
     Expr(Expr),
     Assignment(Assignment),
 }
+
+impl Grammar for Stmt {}
 
 impl From<Expr> for Stmt {
     fn from(expr: Expr) -> Self {
@@ -37,7 +48,7 @@ impl fmt::Display for Stmt {
 }
 
 pub struct Assignment {
-    pub var: Var,
+    pub var: String,
     pub rhs: Box<Expr>,
 }
 
@@ -47,43 +58,29 @@ impl fmt::Display for Assignment {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Expr {
     Const(f64),
-    Var(Var),
-    BinaryExpr(BinaryExpr),
-    UnaryExpr(UnaryExpr),
+    Var(String),
+    BinaryExpr(BinaryExpr<Self>),
+    UnaryExpr(UnaryExpr<Self>),
     /// An expression wrapped in parentheses
-    Parend(Box<Expr>),
+    Parend(Box<Self>),
     /// An expression wrapped in braces
-    Braced(Box<Expr>),
-}
-
-// TODO: We can't derive this because `f64` doesn't implement `Eq`.
-// This should be fixed by moving to a arbitrary-precision numeric type.
-impl Eq for Expr {}
-impl PartialEq for Expr {
-    fn eq(&self, other: &Expr) -> bool {
-        use Expr::*;
-        match (self, other) {
-            (Const(x), Const(y)) => (x - y).abs() < std::f64::EPSILON,
-            (Var(x), Var(y)) => x == y,
-            (BinaryExpr(x), BinaryExpr(y)) => x == y,
-            (UnaryExpr(x), UnaryExpr(y)) => x == y,
-            (Parend(x), Parend(y)) => x == y,
-            (Braced(x), Braced(y)) => x == y,
-            _ => false,
-        }
-    }
+    Braced(Box<Self>),
 }
 
 // TODO: We can do better than hashing to a string as well, but we'll save that til we have an
 // arbitrary-precision numeric type.
+#[allow(clippy::derive_hash_xor_eq)]
 impl core::hash::Hash for Expr {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         state.write(self.to_string().as_bytes())
     }
 }
+
+impl Grammar for Expr {}
+impl Expression for Expr {}
 
 impl From<f64> for Expr {
     fn from(f: f64) -> Self {
@@ -91,20 +88,14 @@ impl From<f64> for Expr {
     }
 }
 
-impl From<Var> for Expr {
-    fn from(var: Var) -> Self {
-        Self::Var(var)
-    }
-}
-
-impl From<BinaryExpr> for Expr {
-    fn from(binary_expr: BinaryExpr) -> Self {
+impl From<BinaryExpr<Self>> for Expr {
+    fn from(binary_expr: BinaryExpr<Self>) -> Self {
         Self::BinaryExpr(binary_expr)
     }
 }
 
-impl From<UnaryExpr> for Expr {
-    fn from(unary_expr: UnaryExpr) -> Self {
+impl From<UnaryExpr<Self>> for Expr {
+    fn from(unary_expr: UnaryExpr<Self>) -> Self {
         Self::UnaryExpr(unary_expr)
     }
 }
@@ -127,24 +118,7 @@ impl fmt::Display for Expr {
     }
 }
 
-#[derive(Eq, PartialEq, Clone)]
-pub struct Var {
-    pub name: String,
-}
-
-impl From<&str> for Var {
-    fn from(name: &str) -> Self {
-        Self { name: name.into() }
-    }
-}
-
-impl fmt::Display for Var {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name,)
-    }
-}
-
-#[derive(Eq, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub enum BinaryOperator {
     Plus,
     Minus,
@@ -189,14 +163,14 @@ impl fmt::Display for BinaryOperator {
     }
 }
 
-#[derive(Eq, PartialEq, Clone)]
-pub struct BinaryExpr {
+#[derive(PartialEq, Clone)]
+pub struct BinaryExpr<E: Expression> {
     pub op: BinaryOperator,
-    pub lhs: Box<Expr>,
-    pub rhs: Box<Expr>,
+    pub lhs: Box<E>,
+    pub rhs: Box<E>,
 }
 
-impl fmt::Display for BinaryExpr {
+impl<E: Expression> fmt::Display for BinaryExpr<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -208,7 +182,7 @@ impl fmt::Display for BinaryExpr {
     }
 }
 
-#[derive(Eq, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub enum UnaryOperator {
     SignPositive,
     SignNegative,
@@ -241,13 +215,13 @@ impl fmt::Display for UnaryOperator {
     }
 }
 
-#[derive(Eq, PartialEq, Clone)]
-pub struct UnaryExpr {
+#[derive(PartialEq, Clone)]
+pub struct UnaryExpr<E: Expression> {
     pub op: UnaryOperator,
-    pub rhs: Box<Expr>,
+    pub rhs: Box<E>,
 }
 
-impl fmt::Display for UnaryExpr {
+impl<E: Expression> fmt::Display for UnaryExpr<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}", self.op.to_string(), self.rhs.to_string(),)
     }

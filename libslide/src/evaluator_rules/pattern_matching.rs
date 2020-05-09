@@ -1,4 +1,3 @@
-use super::variables::VariablePattern;
 use crate::grammar::*;
 use std::collections::HashMap;
 
@@ -10,11 +9,18 @@ use std::collections::HashMap;
 ///
 /// [mapping]: crate::evaluator_rules::pattern_matching::Replacements
 /// [`RuleSet`]: crate::evaluator_rules::RuleSet
-pub fn match_rule(rule: Expr, target: Expr) -> Option<Replacements> {
+pub fn match_rule(rule: ExprPat, target: Expr) -> Option<Replacements> {
     // TODO: Could we pass rule and target by reference?
-    use Expr::*;
     match (rule, target) {
-        (Const(a), Const(b)) => {
+        // The happiest path -- if a pattern matches an expression, return replacements for it!
+        (pat @ ExprPat::VarPat(_), expr @ Expr::Var(_))
+        | (pat @ ExprPat::ConstPat(_), expr @ Expr::Const(_))
+        | (pat @ ExprPat::AnyPat(_), expr) => {
+            let mut replacements = Replacements::default();
+            replacements.insert(pat, expr);
+            Some(replacements)
+        }
+        (ExprPat::Const(a), Expr::Const(b)) => {
             if (a - b).abs() > std::f64::EPSILON {
                 // Constants don't match; rule can't be applied.
                 return None;
@@ -22,33 +28,7 @@ pub fn match_rule(rule: Expr, target: Expr) -> Option<Replacements> {
             // Constant values are... constant, so there is no need to replace them.
             Some(Replacements::default())
         }
-        (Var(var), expr) => {
-            let pat = VariablePattern::from_name(&var.name);
-            use VariablePattern as Pat;
-            match &expr {
-                Const(_) => {
-                    if pat & Pat::Const != Pat::Const {
-                        return None;
-                    }
-                }
-                Var(_) => {
-                    if pat & Pat::Variable != Pat::Variable {
-                        return None;
-                    }
-                }
-                _ => {
-                    // Only an Any pattern can match an expression that is not a const or var.
-                    if pat & Pat::Any != Pat::Any {
-                        return None;
-                    }
-                }
-            }
-
-            let mut replacements = Replacements::default();
-            replacements.insert(Var(var), expr);
-            Some(replacements)
-        }
-        (BinaryExpr(rule), BinaryExpr(expr)) => {
+        (ExprPat::BinaryExpr(rule), Expr::BinaryExpr(expr)) => {
             if rule.op != expr.op {
                 return None;
             }
@@ -58,7 +38,7 @@ pub fn match_rule(rule: Expr, target: Expr) -> Option<Replacements> {
             let replacements_rhs: Replacements = match_rule(*rule.rhs, *expr.rhs)?;
             Replacements::try_merge(replacements_lhs, replacements_rhs)
         }
-        (UnaryExpr(rule), UnaryExpr(expr)) => {
+        (ExprPat::UnaryExpr(rule), Expr::UnaryExpr(expr)) => {
             if rule.op != expr.op {
                 return None;
             }
@@ -66,8 +46,8 @@ pub fn match_rule(rule: Expr, target: Expr) -> Option<Replacements> {
             // the argument.
             match_rule(*rule.rhs, *expr.rhs)
         }
-        (Parend(rule), Parend(expr)) => match_rule(*rule, *expr),
-        (Braced(rule), Braced(expr)) => match_rule(*rule, *expr),
+        (ExprPat::Parend(rule), Expr::Parend(expr)) => match_rule(*rule, *expr),
+        (ExprPat::Braced(rule), Expr::Braced(expr)) => match_rule(*rule, *expr),
         _ => None,
     }
 }
@@ -79,20 +59,47 @@ pub fn match_rule(rule: Expr, target: Expr) -> Option<Replacements> {
 /// rule applied on a target expression.
 pub struct Replacements {
     map: HashMap<
-        Expr, // rule expr,   like #a
-        Expr, // target expr, like 10
+        ExprPat, // rule pattern, like #a
+        Expr,    // target expr,  like 10
     >,
 }
 
-impl Transformer for Replacements {
-    /// Transforms an expressions by replacing matching subexpressions with target expressions
-    /// known by the `Replacements`.
-    fn transform_expr(&self, item: Expr) -> Expr {
-        // TODO: handle bad rule (item is a expression pattern but not in Replacements)
-        if let Some(transformed) = self.map.get(&item) {
-            return transformed.clone();
+impl Transformer<ExprPat, Expr> for Replacements {
+    /// Transforms a pattern expression into an expression by replacing patterns with target
+    /// expressions known by the [`Replacements`].
+    ///
+    /// This transformation can be used to apply a rule on an expression by transforming the RHS
+    /// using patterns matched between the LHS of the rule and the target expression.
+    ///
+    /// [`Replacements`]: Replacements
+    fn transform(&self, item: ExprPat) -> Expr {
+        match item {
+            ExprPat::VarPat(_) | ExprPat::ConstPat(_) | ExprPat::AnyPat(_) => {
+                match self.map.get(&item) {
+                    // We know about this pattern, replace it with its target expression.
+                    Some(transformed) => transformed.clone(),
+
+                    // A pattern can never be transformed to an expression if it is not replaced!
+                    // TODO: Return an error rather than panicking
+                    None => unreachable!(),
+                }
+            }
+
+            ExprPat::Const(f) => Expr::Const(f),
+            ExprPat::BinaryExpr(binary_expr) => BinaryExpr {
+                op: binary_expr.op,
+                lhs: self.transform(*binary_expr.lhs).into(),
+                rhs: self.transform(*binary_expr.rhs).into(),
+            }
+            .into(),
+            ExprPat::UnaryExpr(unary_expr) => UnaryExpr {
+                op: unary_expr.op,
+                rhs: self.transform(*unary_expr.rhs).into(),
+            }
+            .into(),
+            ExprPat::Parend(expr) => Expr::Parend(self.transform(*expr).into()),
+            ExprPat::Braced(expr) => Expr::Braced(self.transform(*expr).into()),
         }
-        self.multiplex_transform_expr(item)
     }
 }
 
@@ -115,7 +122,7 @@ impl Replacements {
         Some(replacements)
     }
 
-    fn insert(&mut self, k: Expr, v: Expr) -> Option<Expr> {
+    fn insert(&mut self, k: ExprPat, v: Expr) -> Option<Expr> {
         self.map.insert(k, v)
     }
 }
@@ -129,34 +136,34 @@ mod tests {
 
         #[test]
         fn try_merge() {
-            let var_a = Expr::Var("a".into());
-            let var_b = Expr::Var("b".into());
-            let var_c = Expr::Var("c".into());
+            let a = ExprPat::VarPat("a".into());
+            let b = ExprPat::VarPat("b".into());
+            let c = ExprPat::VarPat("c".into());
 
             let mut left = Replacements::default();
-            left.insert(var_a.clone(), Expr::Const(1.));
-            left.insert(var_b.clone(), Expr::Const(2.));
+            left.insert(a.clone(), Expr::Const(1.));
+            left.insert(b.clone(), Expr::Const(2.));
 
             let mut right = Replacements::default();
-            right.insert(var_b.clone(), Expr::Const(2.));
-            right.insert(var_c.clone(), Expr::Const(3.));
+            right.insert(b.clone(), Expr::Const(2.));
+            right.insert(c.clone(), Expr::Const(3.));
 
             let merged = Replacements::try_merge(left, right).unwrap();
             assert_eq!(merged.map.len(), 3);
-            assert_eq!(merged.map.get(&var_a).unwrap().to_string(), "1");
-            assert_eq!(merged.map.get(&var_b).unwrap().to_string(), "2");
-            assert_eq!(merged.map.get(&var_c).unwrap().to_string(), "3");
+            assert_eq!(merged.map.get(&a).unwrap().to_string(), "1");
+            assert_eq!(merged.map.get(&b).unwrap().to_string(), "2");
+            assert_eq!(merged.map.get(&c).unwrap().to_string(), "3");
         }
 
         #[test]
         fn try_merge_overlapping_non_matching() {
-            let var_a = Expr::Var("a".into());
+            let a = ExprPat::VarPat("a".into());
 
             let mut left = Replacements::default();
-            left.insert(var_a.clone(), Expr::Const(1.));
+            left.insert(a.clone(), Expr::Const(1.));
 
             let mut right = Replacements::default();
-            right.insert(var_a, Expr::Const(2.));
+            right.insert(a, Expr::Const(2.));
 
             let merged = Replacements::try_merge(left, right);
             assert!(merged.is_none());
@@ -165,28 +172,26 @@ mod tests {
 
     mod match_rule {
         use super::*;
-        use crate::{parse, scan, ScannerOptions};
+        use crate::{parse_expression, parse_expression_pattern, scan};
 
         macro_rules! match_rule_tests {
             ($($name:ident: $rule:expr => $target:expr => $expected_repls:expr)*) => {
             $(
                 #[test]
                 fn $name() {
-                    let parse = |prog: &str, is_rule: bool| -> Expr {
-                        let mut scanner_options = ScannerOptions::default();
-                        if is_rule {
-                            scanner_options = scanner_options.set_is_var_char(|c| {
-                                c.is_alphabetic() || c == '$' || c == '#' || c == '_'
-                            });
-                        }
-                        match parse(scan(prog, scanner_options)) {
-                            Stmt::Expr(expr) => expr,
+                    let parse_rule = |prog: &str| -> ExprPat {
+                        let (expr, _) = parse_expression_pattern(scan(prog));
+                        expr
+                    };
+                    let parse_expr = |prog: &str| -> Expr {
+                        match parse_expression(scan(prog)) {
+                            (Stmt::Expr(expr), _) => expr,
                             _ => unreachable!(),
                         }
                     };
 
-                    let parsed_rule = parse($rule, true);
-                    let parsed_target = parse($target, false);
+                    let parsed_rule = parse_rule($rule);
+                    let parsed_target = parse_expr($target);
 
                     let repls = match_rule(parsed_rule, parsed_target);
                     let (repls, expected_repls): (Replacements, Vec<&str>) =
@@ -205,7 +210,7 @@ mod tests {
                         .into_iter()
                         .map(|m| m.split(": "))
                         .map(|mut i| (i.next().unwrap(), i.next().unwrap()))
-                        .map(|(r, t)| (parse(r, true), parse(t, false)));
+                        .map(|(r, t)| (parse_rule(r), parse_expr(t)));
 
                     assert_eq!(expected_repls.len(), repls.map.len());
 

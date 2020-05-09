@@ -5,8 +5,8 @@ mod scanner;
 pub use scanner::scan;
 
 mod parser;
-pub use parser::parse;
-pub use parser::ParsingStrategy;
+pub use parser::parse_expression;
+pub use parser::parse_expression_pattern;
 
 mod partial_evaluator;
 pub use partial_evaluator::evaluate;

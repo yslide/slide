@@ -1,8 +1,7 @@
 mod pattern_matching;
-mod variables;
 
 use crate::grammar::*;
-use crate::{parse, scan, ParsingStrategy};
+use crate::{parse_expression_pattern, scan};
 use pattern_matching::match_rule;
 
 use core::fmt;
@@ -67,8 +66,8 @@ impl RuleSet {
 
 /// Parsed form of a rule. Used for pattern matching.
 pub struct BuiltRule {
-    from: Expr,
-    to: Expr,
+    from: ExprPat,
+    to: ExprPat,
 }
 
 impl From<&String> for BuiltRule {
@@ -82,11 +81,8 @@ impl From<&String> for BuiltRule {
         let split = rule.split(" -> ");
         let mut split = split
             .map(scan)
-            .map(|toks| parse(toks, ParsingStrategy::ExpressionPattern))
-            .map(|stmt| match stmt {
-                (Stmt::Expr(expr), _) => expr,
-                _ => todo!("Rules only handle expressions currently"),
-            });
+            .map(parse_expression_pattern)
+            .map(|(expr, _)| expr);
 
         // Unofficially, rustc's expression evaluation order is L2R, but officially it is undefined.
         let from = split.next().unwrap();
@@ -95,7 +91,7 @@ impl From<&String> for BuiltRule {
     }
 }
 
-impl Transformer for BuiltRule {
+impl Transformer<Expr, Expr> for BuiltRule {
     /// Attempts to apply a rule on a target expression by
     ///
     /// 1. Applying the rule recursively on the target's subexpression to obtain a
@@ -113,9 +109,25 @@ impl Transformer for BuiltRule {
     ///   "$x + 0 -> $x".try_apply("x + 1")  // None
     ///   "$x + 0 -> $x".try_apply("x")      // None
     ///
-    fn transform_expr(&self, target: Expr) -> Expr {
+    fn transform(&self, target: Expr) -> Expr {
         // First, apply the rule recursively on the target's subexpressions.
-        let partially_transformed = self.multiplex_transform_expr(target);
+        let partially_transformed = match target {
+            expr @ Expr::Const(_) => expr,
+            var @ Expr::Var(_) => var,
+            Expr::BinaryExpr(binary_expr) => BinaryExpr {
+                op: binary_expr.op,
+                lhs: self.transform(*binary_expr.lhs).into(),
+                rhs: self.transform(*binary_expr.rhs).into(),
+            }
+            .into(),
+            Expr::UnaryExpr(unary_expr) => UnaryExpr {
+                op: unary_expr.op,
+                rhs: self.transform(*unary_expr.rhs).into(),
+            }
+            .into(),
+            Expr::Parend(expr) => Expr::Parend(self.transform(*expr).into()),
+            Expr::Braced(expr) => Expr::Braced(self.transform(*expr).into()),
+        };
 
         let replacements = match match_rule(self.from.clone(), partially_transformed.clone()) {
             Some(repl) => repl,
@@ -123,7 +135,10 @@ impl Transformer for BuiltRule {
             // transformed expression.
             None => return partially_transformed,
         };
-        replacements.transform_expr(self.to.clone())
+
+        // If the rule was matched on the expression, we have replacements for rule patterns ->
+        // target subexpressions. Apply the rule by transforming the rule's RHS with the replacements.
+        replacements.transform(self.to.clone())
     }
 }
 

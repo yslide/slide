@@ -4,8 +4,8 @@ pub mod test_utils; // this **must** be first since macro import order matters!
 mod expression_parser;
 mod expression_pattern_parser;
 
-use expression_parser::ExpressionParser;
-use expression_pattern_parser::ExpressionPatternParser;
+pub use expression_parser::parse as parse_expression;
+pub use expression_pattern_parser::parse as parse_expression_pattern;
 
 use crate::grammar::*;
 use crate::scanner::types::{Token, TokenType};
@@ -14,33 +14,10 @@ use crate::utils::PeekIter;
 use core::convert::TryFrom;
 use core::fmt::Display;
 
-pub fn parse(input: Vec<Token>, strategy: ParsingStrategy) -> (Stmt, Vec<String>) {
-    use ParsingStrategy::*;
-    match strategy {
-        Expression => {
-            let mut parser = ExpressionParser::new(input);
-            let parsed = parser.parse();
-            let errors = parser.errors().iter().map(|e| e.to_string()).collect();
-            (*parsed, errors)
-        }
-        ExpressionPattern => {
-            let mut parser = ExpressionPatternParser::new(input);
-            let parsed = parser.parse();
-            let errors = parser.errors().iter().map(|e| e.to_string()).collect();
-            (*parsed, errors)
-        }
-    }
-}
-
-pub enum ParsingStrategy {
-    Expression,
-    ExpressionPattern,
-}
-
 macro_rules! binary_expr_parser {
     ($self:ident $($name:ident: lhs=$lhs_term:ident, rhs=$rhs_term:ident, op=[$($matching_op:tt)+])*) => {
         $(
-        fn $name(&mut $self) -> Box<Expr> {
+        fn $name(&mut $self) -> Box<Self::Expr> {
             use BinaryOperator::*;
 
             let mut lhs = $self.$lhs_term();
@@ -52,11 +29,11 @@ macro_rules! binary_expr_parser {
                 match op {
                     $($matching_op)+ => {
                         $self.input().next();
-                        lhs = Expr::BinaryExpr(BinaryExpr{
+                        lhs = Box::new(BinaryExpr{
                             op,
                             lhs,
                             rhs: $self.$rhs_term(),
-                        }).into();
+                        }.into());
                     }
                     _ => break,
                 }
@@ -67,48 +44,35 @@ macro_rules! binary_expr_parser {
     };
 }
 
-trait Parser
+trait Parser<T>
 where
+    T: Grammar,
+    Self::Expr: Expression,
     Self::Error: Display,
 {
+    type Expr;
     type Error;
 
     fn new(input: Vec<Token>) -> Self;
+    fn parse(&mut self) -> Box<T>;
     fn errors(&self) -> &Vec<Self::Error>;
     fn input(&mut self) -> &mut PeekIter<Token>;
-    fn parse_variable(&mut self, name: String) -> Expr;
-    fn parse_pattern(&mut self, name: String) -> Expr;
+    fn parse_float(&mut self, f: f64) -> Self::Expr;
+    fn parse_variable(&mut self, name: String) -> Self::Expr;
+    fn parse_var_pattern(&mut self, name: String) -> Self::Expr;
+    fn parse_const_pattern(&mut self, name: String) -> Self::Expr;
+    fn parse_any_pattern(&mut self, name: String) -> Self::Expr;
+    fn parse_open_paren(&mut self) -> Self::Expr;
+    fn parse_open_brace(&mut self) -> Self::Expr;
 
     // Default parsing implementations.
     // TODO: increase modularity of this parser
-
-    /// Default parser - parses a statement.
-    fn parse(&mut self) -> Box<Stmt> {
-        let mut next_2 = self.input().peek_map_n(2, |tok| tok.ty.clone());
-        let parsed = match (next_2.pop_front(), next_2.pop_front()) {
-            (Some(TokenType::Variable(name)), Some(TokenType::Equal)) => {
-                self.input().next();
-                self.input().next();
-                self.assignment(Var { name })
-            }
-            _ => Box::new(Stmt::Expr(*self.expr())),
-        };
-        assert!(self.done());
-        parsed
-    }
 
     fn done(&mut self) -> bool {
         self.input().peek().map(|t| &t.ty) == Some(&TokenType::EOF)
     }
 
-    fn assignment(&mut self, var: Var) -> Box<Stmt> {
-        Box::new(Stmt::Assignment(Assignment {
-            var,
-            rhs: self.expr(),
-        }))
-    }
-
-    fn expr(&mut self) -> Box<Expr> {
+    fn expr(&mut self) -> Box<Self::Expr> {
         self.add_sub_term()
     }
 
@@ -125,34 +89,31 @@ where
         exp_term:            lhs = num_term,            rhs = exp_term,            op = [Exp]
     );
 
-    fn num_term(&mut self) -> Box<Expr> {
+    fn num_term(&mut self) -> Box<Self::Expr> {
         if let Some(Ok(op)) = self.input().peek().map(UnaryOperator::try_from) {
             self.input().next();
-            return Box::new(Expr::UnaryExpr(UnaryExpr {
-                op,
-                rhs: self.exp_term(),
-            }));
+            return Box::new(
+                UnaryExpr {
+                    op,
+                    rhs: self.exp_term(),
+                }
+                .into(),
+            );
         }
 
         let node = match self.input().peek().map(|t| t.ty.clone()) {
-            Some(TokenType::Float(f)) => Box::new(Expr::Const(f)),
+            Some(TokenType::Float(f)) => self.parse_float(f).into(),
             Some(TokenType::Variable(name)) => self.parse_variable(name).into(),
 
             // TODO: Currently patterns as all parsed as variables. Maybe there is a nice way to
             // store pattern information during parsing, but this would require some extension of
             // the grammar.
-            Some(TokenType::VariablePattern(name))
-            | Some(TokenType::ConstPattern(name))
-            | Some(TokenType::AnyPattern(name)) => self.parse_pattern(name).into(),
+            Some(TokenType::VariablePattern(name)) => self.parse_var_pattern(name).into(),
+            Some(TokenType::ConstPattern(name)) => self.parse_const_pattern(name).into(),
+            Some(TokenType::AnyPattern(name)) => self.parse_any_pattern(name).into(),
 
-            Some(TokenType::OpenParen) => {
-                self.input().next(); // eat left
-                Expr::Parend(self.expr()).into()
-            }
-            Some(TokenType::OpenBracket) => {
-                self.input().next(); // eat left
-                Expr::Braced(self.expr()).into()
-            }
+            Some(TokenType::OpenParen) => self.parse_open_paren().into(),
+            Some(TokenType::OpenBracket) => self.parse_open_brace().into(),
             _ => unreachable!(),
         };
         self.input().next(); // eat rest of created expression

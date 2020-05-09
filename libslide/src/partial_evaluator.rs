@@ -21,7 +21,7 @@ pub fn evaluate(expr: Stmt) -> Expr {
     let mut seen: HashSet<u64> = HashSet::new();
     while seen.insert(expr_hash) {
         for rule in &built_rules {
-            simplified_expr = rule.transform_expr(simplified_expr);
+            simplified_expr = rule.transform(simplified_expr);
         }
         expr_hash = hash_expr(&simplified_expr);
     }
@@ -43,11 +43,11 @@ mod tests {
         $(
             #[test]
             fn $name() {
-                use crate::{parse, scan, ParsingStrategy};
+                use crate::{parse_expression, scan};
                 use super::evaluate;
 
                 let tokens = scan($program);
-                let (parsed, _) = parse(tokens, ParsingStrategy::Expression);
+                let (parsed, _) = parse_expression(tokens);
                 let evaluated = evaluate(parsed);
                 assert_eq!(evaluated.to_string(), $result.to_string());
             }

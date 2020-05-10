@@ -1,4 +1,5 @@
 #![allow(clippy::suspicious_arithmetic_impl)]
+use crate::bignum::utils::abs;
 use crate::bignum::Bignum;
 use std::mem;
 use std::ops;
@@ -7,7 +8,14 @@ impl ops::Add for Bignum {
     type Output = Bignum;
 
     fn add(self, rhs: Bignum) -> Bignum {
-        let is_neg: bool = rhs.is_neg && self.is_neg;
+        let mut is_neg: bool = false;
+        if self.is_neg && rhs.is_neg {
+            is_neg = true;
+        } else if self.is_neg && !rhs.is_neg {
+            return rhs - abs(&self);
+        } else if !self.is_neg && rhs.is_neg {
+            return self - abs(&rhs);
+        }
 
         // this assumes the signs are both positive for now
         let mut carry: u8 = 0;
@@ -23,6 +31,7 @@ impl ops::Add for Bignum {
             (rhs.dec, self.dec)
         };
 
+        // 1. Handle Decimal
         for i in (0..lhs_size).rev() {
             res_dec[i] += lhs_vec[i] + carry;
             carry = (res_dec[i] > 9) as u8;
@@ -81,8 +90,8 @@ mod tests {
             #[test]
             fn $name() {
                 use crate::bignum::Bignum;
-                let lhs = Bignum::new($lhs.to_string());
-                let rhs = Bignum::new($rhs.to_string());
+                let lhs = Bignum::new($lhs.to_string()).unwrap();
+                let rhs = Bignum::new($rhs.to_string()).unwrap();
                 let result = $program.to_string();
                 assert_eq!((lhs+rhs).to_string(), result);
             }
@@ -109,6 +118,18 @@ mod tests {
             mixed: "1.1", "1.1", "2.2"
             mixed2: "1.9999999", "9999.99999", "10001.9999899"
             mixed3: "99999999999999.999999999999", "99999999999.99999", "100099999999999.999989999999"
+            negative_int1: "-5", "5", "0"
+            negative_int2: "-10", "5", "-5"
+            negative_int3: "5", "-10", "-5"
+            negative_int4: "-555555", "999999", "444444"
+            negative_int5: "-10", "-10", "-20"
+            negative_float1: "-0.1", "0.1", "0"
+            negative_float2: "-0.2", "0.1", "-0.1"
+            negative_float3: "-0.1", "0.2", "0.1"
+            negative_float4: "-0.1", "-0.1", "-0.2"
+            negative_mixed: "-12332.55", "1.0", "-12331.55"
+            negative_mixed1: "-12332.55", "-1.0", "-12333.55"
+            negative_mixed2: "1.0", "-12332.55", "-12331.55"
         }
     }
 }

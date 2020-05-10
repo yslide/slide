@@ -1,5 +1,9 @@
 use std::fmt;
 mod add;
+mod compare;
+mod negate;
+mod sub;
+mod utils;
 
 // this probably can go in utils but I put it in here for now
 fn to_u8(c: char) -> u8 {
@@ -17,13 +21,20 @@ pub struct Bignum {
     dec: Vec<u8>, // decimal part with MSB first, e.g. dec of 123.456 is 456.
 }
 
+static INPUT_ERR_MSG: &str = "Input is not valid";
+
 impl Bignum {
-    pub fn new(input: String) -> Bignum {
+    pub fn new(input: String) -> Result<Bignum, &'static str> {
         let mut chars = input.chars();
         let mut is_neg: bool = false;
         let mut has_decimal = false;
         let mut int = Vec::new();
         let mut dec = Vec::new();
+
+        if input.is_empty() {
+            return Err(INPUT_ERR_MSG);
+        }
+
         match chars.next() {
             Some('-') => is_neg = true,
             Some('.') => has_decimal = true,
@@ -40,17 +51,17 @@ impl Bignum {
             } else if c == '.' {
                 has_decimal = !has_decimal;
                 if !has_decimal {
-                    panic!("Number cannot have two decimal values");
+                    return Err(INPUT_ERR_MSG);
                 }
             } else {
-                panic!("Cannot parse string as number");
+                return Err(INPUT_ERR_MSG);
             }
         }
-        Bignum {
+        Ok(Bignum {
             is_neg,
             int: int.into_iter().rev().collect(),
             dec,
-        }
+        })
     }
 }
 
@@ -60,8 +71,12 @@ impl fmt::Display for Bignum {
         if self.is_neg {
             result.push('-');
         }
-        for n in self.int.iter().rev() {
-            result.push(to_char(*n));
+        if self.int.is_empty() {
+            result.push('0');
+        } else {
+            for n in self.int.iter().rev() {
+                result.push(to_char(*n));
+            }
         }
         if !self.dec.is_empty() {
             result.push('.');
@@ -83,7 +98,7 @@ mod tests {
                 use crate::bignum::Bignum;
                 let result = $program.to_string();
                 let bg = Bignum::new(result.clone());
-                assert_eq!(bg.to_string(), result);
+                assert_eq!(bg.unwrap().to_string(), result);
             }
         )*
         }
@@ -96,8 +111,8 @@ mod tests {
             negative_float: "-5.5"
             bigger_int: "1002039444884993020"
             bigger_float: "102399959939999.393993"
-            decimal: ".3"
-            negative_decimal: "-.3"
+            decimal: "0.3"
+            negative_decimal: "-0.3"
         }
     }
 }

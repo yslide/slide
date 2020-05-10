@@ -49,7 +49,7 @@ impl Bignum {
         Bignum {
             is_neg,
             int: int.into_iter().rev().collect(),
-            dec,
+            dec: dec.into_iter().rev().collect(),
         }
     }
 }
@@ -65,7 +65,7 @@ impl fmt::Display for Bignum {
         }
         if !self.dec.is_empty() {
             result.push('.');
-            for n in self.dec.iter() {
+            for n in self.dec.iter().rev() {
                 result.push(to_char(*n));
             }
         }

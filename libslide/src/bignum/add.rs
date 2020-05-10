@@ -23,10 +23,12 @@ impl ops::Add for Bignum {
             (rhs.dec, self.dec)
         };
 
-        for i in (0..lhs_size).rev() {
-            res_dec[i] += lhs_vec[i] + carry;
-            carry = (res_dec[i] > 9) as u8;
-            res_dec[i] %= 10;
+        let diff = res_dec.len() - lhs_vec.len();
+
+        for i in 0..lhs_size {
+            res_dec[i+diff] += lhs_vec[i] + carry;
+            carry = (res_dec[i+diff] > 9) as u8;
+            res_dec[i+diff] %= 10;
         }
 
         // 2. Handle Integer

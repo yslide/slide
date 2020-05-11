@@ -4,8 +4,10 @@ pub use pattern::*;
 pub use transformer::*;
 
 use crate::scanner::types::{Token, TokenType};
+
 use core::convert::TryFrom;
 use core::fmt;
+use std::rc::Rc;
 
 pub trait Grammar {}
 pub trait Expression
@@ -49,7 +51,7 @@ impl fmt::Display for Stmt {
 
 pub struct Assignment {
     pub var: String,
-    pub rhs: Box<Expr>,
+    pub rhs: Rc<Expr>,
 }
 
 impl fmt::Display for Assignment {
@@ -65,11 +67,15 @@ pub enum Expr {
     BinaryExpr(BinaryExpr<Self>),
     UnaryExpr(UnaryExpr<Self>),
     /// An expression wrapped in parentheses
-    Parend(Box<Self>),
+    Parend(Rc<Self>),
     /// An expression wrapped in braces
-    Braced(Box<Self>),
+    Braced(Rc<Self>),
 }
 
+impl Eq for Expr {}
+
+// TODO: We can do better than hashing to a string as well, but we'll save that til we have an
+// arbitrary-precision numeric type.
 #[allow(clippy::derive_hash_xor_eq)]
 impl core::hash::Hash for Expr {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
@@ -81,13 +87,14 @@ impl core::hash::Hash for Expr {
             Var(v) => v.hash(state),
             BinaryExpr(e) => e.hash(state),
             UnaryExpr(e) => e.hash(state),
-            Parend(e) => e.hash(state),
-            Braced(e) => e.hash(state),
+            e @ Parend(_) => e.to_string().hash(state),
+            e @ Braced(_) => e.to_string().hash(state),
         }
     }
 }
 
 impl Grammar for Expr {}
+impl Grammar for Rc<Expr> {}
 impl Expression for Expr {}
 
 impl From<f64> for Expr {
@@ -126,7 +133,7 @@ impl fmt::Display for Expr {
     }
 }
 
-#[derive(PartialEq, Clone, Hash)]
+#[derive(PartialEq, Clone, Copy, Hash)]
 pub enum BinaryOperator {
     Plus,
     Minus,
@@ -174,8 +181,8 @@ impl fmt::Display for BinaryOperator {
 #[derive(PartialEq, Clone, Hash)]
 pub struct BinaryExpr<E: Expression> {
     pub op: BinaryOperator,
-    pub lhs: Box<E>,
-    pub rhs: Box<E>,
+    pub lhs: Rc<E>,
+    pub rhs: Rc<E>,
 }
 
 impl<E: Expression> fmt::Display for BinaryExpr<E> {
@@ -190,7 +197,7 @@ impl<E: Expression> fmt::Display for BinaryExpr<E> {
     }
 }
 
-#[derive(PartialEq, Clone, Hash)]
+#[derive(PartialEq, Clone, Copy, Hash)]
 pub enum UnaryOperator {
     SignPositive,
     SignNegative,
@@ -226,7 +233,7 @@ impl fmt::Display for UnaryOperator {
 #[derive(PartialEq, Clone, Hash)]
 pub struct UnaryExpr<E: Expression> {
     pub op: UnaryOperator,
-    pub rhs: Box<E>,
+    pub rhs: Rc<E>,
 }
 
 impl<E: Expression> fmt::Display for UnaryExpr<E> {

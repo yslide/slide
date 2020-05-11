@@ -1,5 +1,8 @@
 use crate::grammar::*;
+use crate::utils::hash;
+
 use std::collections::HashMap;
+use std::rc::Rc;
 
 /// Pattern matches a rule template against an expression. If successful, the results of the
 /// matching are returned as a mapping of rule to target expressions replacements.
@@ -9,15 +12,14 @@ use std::collections::HashMap;
 ///
 /// [mapping]: crate::evaluator_rules::pattern_matching::Replacements
 /// [`RuleSet`]: crate::evaluator_rules::RuleSet
-pub fn match_rule(rule: ExprPat, target: Expr) -> Option<Replacements> {
-    // TODO: Could we pass rule and target by reference?
-    match (rule, target) {
+pub fn match_rule(rule: Rc<ExprPat>, target: Rc<Expr>) -> Option<Replacements> {
+    match (rule.as_ref(), target.as_ref()) {
         // The happiest path -- if a pattern matches an expression, return replacements for it!
-        (pat @ ExprPat::VarPat(_), expr @ Expr::Var(_))
-        | (pat @ ExprPat::ConstPat(_), expr @ Expr::Const(_))
-        | (pat @ ExprPat::AnyPat(_), expr) => {
+        (ExprPat::VarPat(_), Expr::Var(_))
+        | (ExprPat::ConstPat(_), Expr::Const(_))
+        | (ExprPat::AnyPat(_), _) => {
             let mut replacements = Replacements::default();
-            replacements.insert(pat, expr);
+            replacements.insert(&rule, target);
             Some(replacements)
         }
         (ExprPat::Const(a), Expr::Const(b)) => {
@@ -34,8 +36,10 @@ pub fn match_rule(rule: ExprPat, target: Expr) -> Option<Replacements> {
             }
             // Expressions are of the same type; match the rest of the expression by recursing on
             // the arguments.
-            let replacements_lhs: Replacements = match_rule(*rule.lhs, *expr.lhs)?;
-            let replacements_rhs: Replacements = match_rule(*rule.rhs, *expr.rhs)?;
+            let replacements_lhs: Replacements =
+                match_rule(Rc::clone(&rule.lhs), Rc::clone(&expr.lhs))?;
+            let replacements_rhs: Replacements =
+                match_rule(Rc::clone(&rule.rhs), Rc::clone(&expr.rhs))?;
             Replacements::try_merge(replacements_lhs, replacements_rhs)
         }
         (ExprPat::UnaryExpr(rule), Expr::UnaryExpr(expr)) => {
@@ -44,10 +48,10 @@ pub fn match_rule(rule: ExprPat, target: Expr) -> Option<Replacements> {
             }
             // Expressions are of the same type; match the rest of the expression by recursing on
             // the argument.
-            match_rule(*rule.rhs, *expr.rhs)
+            match_rule(Rc::clone(&rule.rhs), Rc::clone(&expr.rhs))
         }
-        (ExprPat::Parend(rule), Expr::Parend(expr)) => match_rule(*rule, *expr),
-        (ExprPat::Braced(rule), Expr::Braced(expr)) => match_rule(*rule, *expr),
+        (ExprPat::Parend(rule), Expr::Parend(expr)) => match_rule(Rc::clone(rule), Rc::clone(expr)),
+        (ExprPat::Braced(rule), Expr::Braced(expr)) => match_rule(Rc::clone(rule), Rc::clone(expr)),
         _ => None,
     }
 }
@@ -59,12 +63,12 @@ pub fn match_rule(rule: ExprPat, target: Expr) -> Option<Replacements> {
 /// rule applied on a target expression.
 pub struct Replacements {
     map: HashMap<
-        ExprPat, // rule pattern, like #a
-        Expr,    // target expr,  like 10
+        u64,      // pointer to rule pattern, like #a
+        Rc<Expr>, // target expr,             like 10
     >,
 }
 
-impl Transformer<ExprPat, Expr> for Replacements {
+impl Transformer<Rc<ExprPat>, Rc<Expr>> for Replacements {
     /// Transforms a pattern expression into an expression by replacing patterns with target
     /// expressions known by the [`Replacements`].
     ///
@@ -72,34 +76,61 @@ impl Transformer<ExprPat, Expr> for Replacements {
     /// using patterns matched between the LHS of the rule and the target expression.
     ///
     /// [`Replacements`]: Replacements
-    fn transform(&self, item: ExprPat) -> Expr {
-        match item {
-            ExprPat::VarPat(_) | ExprPat::ConstPat(_) | ExprPat::AnyPat(_) => {
-                match self.map.get(&item) {
-                    // We know about this pattern, replace it with its target expression.
-                    Some(transformed) => transformed.clone(),
+    fn transform(&self, item: Rc<ExprPat>) -> Rc<Expr> {
+        fn transform(
+            repls: &Replacements,
+            item: Rc<ExprPat>,
+            cache: &mut HashMap<u64, Rc<Expr>>,
+        ) -> Rc<Expr> {
+            if let Some(result) = cache.get(&hash(item.as_ref())) {
+                return Rc::clone(result);
+            }
 
-                    // A pattern can never be transformed to an expression if it is not replaced!
-                    // TODO: Return an error rather than panicking
-                    None => unreachable!(),
+            let transformed = match item.as_ref() {
+                ExprPat::VarPat(_) | ExprPat::ConstPat(_) | ExprPat::AnyPat(_) => {
+                    match repls.map.get(&hash(&item)) {
+                        Some(transformed) => Rc::clone(transformed),
+
+                        // A pattern can only be transformed into an expression if it has an
+                        // expression replacement.
+                        // TODO: Return an error rather than panicking
+                        None => unreachable!(),
+                    }
                 }
-            }
 
-            ExprPat::Const(f) => Expr::Const(f),
-            ExprPat::BinaryExpr(binary_expr) => BinaryExpr {
-                op: binary_expr.op,
-                lhs: self.transform(*binary_expr.lhs).into(),
-                rhs: self.transform(*binary_expr.rhs).into(),
-            }
-            .into(),
-            ExprPat::UnaryExpr(unary_expr) => UnaryExpr {
-                op: unary_expr.op,
-                rhs: self.transform(*unary_expr.rhs).into(),
-            }
-            .into(),
-            ExprPat::Parend(expr) => Expr::Parend(self.transform(*expr).into()),
-            ExprPat::Braced(expr) => Expr::Braced(self.transform(*expr).into()),
+                ExprPat::Const(f) => Expr::Const(*f).into(),
+                ExprPat::BinaryExpr(binary_expr) => Expr::BinaryExpr(BinaryExpr {
+                    op: binary_expr.op,
+                    lhs: transform(repls, Rc::clone(&binary_expr.lhs), cache),
+                    rhs: transform(repls, Rc::clone(&binary_expr.rhs), cache),
+                })
+                .into(),
+                ExprPat::UnaryExpr(unary_expr) => Expr::UnaryExpr(UnaryExpr {
+                    op: unary_expr.op,
+                    rhs: transform(repls, Rc::clone(&unary_expr.rhs), cache),
+                })
+                .into(),
+                ExprPat::Parend(expr) => {
+                    let inner = transform(repls, Rc::clone(expr), cache);
+                    Expr::Parend(inner).into()
+                }
+                ExprPat::Braced(expr) => {
+                    let inner = transform(repls, Rc::clone(expr), cache);
+                    Expr::Braced(inner).into()
+                }
+            };
+
+            let result = cache
+                .entry(hash(item.as_ref()))
+                .or_insert_with(|| transformed);
+            Rc::clone(result)
         }
+
+        // Expr pointer -> transformed expression. Assumes that transient expressions of the same
+        // value are reference counters pointing to the same underlying expression. This is done
+        // via common subexpression elimination during parsing.
+        let mut cache = HashMap::new();
+        transform(self, item, &mut cache)
     }
 }
 
@@ -122,78 +153,108 @@ impl Replacements {
         Some(replacements)
     }
 
-    fn insert(&mut self, k: ExprPat, v: Expr) -> Option<Expr> {
-        self.map.insert(k, v)
+    fn insert(&mut self, k: &Rc<ExprPat>, v: Rc<Expr>) -> Option<Rc<Expr>> {
+        self.map.insert(hash(k.as_ref()), v)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{parse_expression, parse_expression_pattern, scan};
+
+    fn parse_rule(prog: &str) -> ExprPat {
+        let (expr, _) = parse_expression_pattern(scan(prog));
+        expr
+    }
+
+    fn parse_expr(prog: &str) -> Expr {
+        match parse_expression(scan(prog)) {
+            (Stmt::Expr(expr), _) => expr,
+            _ => unreachable!(),
+        }
+    }
 
     mod replacements {
         use super::*;
 
         #[test]
         fn try_merge() {
-            let a = ExprPat::VarPat("a".into());
-            let b = ExprPat::VarPat("b".into());
-            let c = ExprPat::VarPat("c".into());
+            let a = Rc::new(ExprPat::VarPat("a".into()));
+            let b = Rc::new(ExprPat::VarPat("b".into()));
+            let c = Rc::new(ExprPat::VarPat("c".into()));
 
             let mut left = Replacements::default();
-            left.insert(a.clone(), Expr::Const(1.));
-            left.insert(b.clone(), Expr::Const(2.));
+            left.insert(&a, Expr::Const(1.).into());
+            left.insert(&b, Expr::Const(2.).into());
 
             let mut right = Replacements::default();
-            right.insert(b.clone(), Expr::Const(2.));
-            right.insert(c.clone(), Expr::Const(3.));
+            right.insert(&b, Expr::Const(2.).into());
+            right.insert(&c, Expr::Const(3.).into());
 
             let merged = Replacements::try_merge(left, right).unwrap();
             assert_eq!(merged.map.len(), 3);
-            assert_eq!(merged.map.get(&a).unwrap().to_string(), "1");
-            assert_eq!(merged.map.get(&b).unwrap().to_string(), "2");
-            assert_eq!(merged.map.get(&c).unwrap().to_string(), "3");
+            assert_eq!(merged.map.get(&hash(&a)).unwrap().to_string(), "1");
+            assert_eq!(merged.map.get(&hash(&b)).unwrap().to_string(), "2");
+            assert_eq!(merged.map.get(&hash(&c)).unwrap().to_string(), "3");
         }
 
         #[test]
         fn try_merge_overlapping_non_matching() {
-            let a = ExprPat::VarPat("a".into());
+            let a = Rc::new(ExprPat::VarPat("a".into()));
 
             let mut left = Replacements::default();
-            left.insert(a.clone(), Expr::Const(1.));
+            left.insert(&a, Expr::Const(1.).into());
 
             let mut right = Replacements::default();
-            right.insert(a, Expr::Const(2.));
+            right.insert(&a, Expr::Const(2.).into());
 
             let merged = Replacements::try_merge(left, right);
             assert!(merged.is_none());
+        }
+
+        #[test]
+        fn transform_common_subexpression_elimination() {
+            let parsed_rule = Rc::new(parse_rule("#a * _b + #a * _b"));
+            let parsed_target = Rc::new(parse_expr("0 * 0 + 0 * 0"));
+
+            let repls = match_rule(Rc::clone(&parsed_rule), Rc::clone(&parsed_target)).unwrap();
+            let transformed = repls.transform(Rc::clone(&parsed_rule));
+            let (l, r) = match transformed.as_ref() {
+                Expr::BinaryExpr(BinaryExpr { lhs, rhs, .. }) => (lhs, rhs),
+                _ => unreachable!(),
+            };
+            assert!(std::ptr::eq(l.as_ref(), r.as_ref())); // #a * _b
+
+            let (ll, lr, rl, rr) = match (l.as_ref(), r.as_ref()) {
+                (
+                    Expr::BinaryExpr(BinaryExpr {
+                        lhs: ll, rhs: lr, ..
+                    }),
+                    Expr::BinaryExpr(BinaryExpr {
+                        lhs: rl, rhs: rr, ..
+                    }),
+                ) => (ll, lr, rl, rr),
+                _ => unreachable!(),
+            };
+            assert!(std::ptr::eq(ll.as_ref(), lr.as_ref())); // check 0s
+            assert!(std::ptr::eq(lr.as_ref(), rl.as_ref()));
+            assert!(std::ptr::eq(rl.as_ref(), rr.as_ref()));
         }
     }
 
     mod match_rule {
         use super::*;
-        use crate::{parse_expression, parse_expression_pattern, scan};
 
         macro_rules! match_rule_tests {
             ($($name:ident: $rule:expr => $target:expr => $expected_repls:expr)*) => {
             $(
                 #[test]
                 fn $name() {
-                    let parse_rule = |prog: &str| -> ExprPat {
-                        let (expr, _) = parse_expression_pattern(scan(prog));
-                        expr
-                    };
-                    let parse_expr = |prog: &str| -> Expr {
-                        match parse_expression(scan(prog)) {
-                            (Stmt::Expr(expr), _) => expr,
-                            _ => unreachable!(),
-                        }
-                    };
-
                     let parsed_rule = parse_rule($rule);
                     let parsed_target = parse_expr($target);
 
-                    let repls = match_rule(parsed_rule, parsed_target);
+                    let repls = match_rule(parsed_rule.into(), parsed_target.into());
                     let (repls, expected_repls): (Replacements, Vec<&str>) =
                         match (repls, $expected_repls) {
                             (None, expected_matches) => {
@@ -217,7 +278,7 @@ mod tests {
                     for (expected_pattern, expected_repl) in expected_repls {
                         assert_eq!(
                             expected_repl.to_string(),
-                            repls.map.get(&expected_pattern).unwrap().to_string()
+                            repls.map.get(&hash(&expected_pattern)).unwrap().to_string()
                         );
                     }
                 }
@@ -257,6 +318,27 @@ mod tests {
 
             braced:                     "[$a + #b]" => "[x + 0]" => Some(vec!["$a: x", "#b: 0"])
             braced_on_parend:           "[$a + #b]" => "(x + 0)" => None
+        }
+
+        #[test]
+        fn common_subexpression_elimination() {
+            let parsed_rule = parse_rule("#a * _b + _c * #d");
+            let parsed_target = parse_expr("0 * 0 + 0 * 0");
+            let l = match &parsed_target {
+                Expr::BinaryExpr(BinaryExpr { lhs, .. }) => Rc::clone(lhs),
+                _ => unreachable!(),
+            };
+            let ll = match l.as_ref() {
+                Expr::BinaryExpr(BinaryExpr { lhs, .. }) => lhs,
+                _ => unreachable!(),
+            };
+
+            let repls = match_rule(Rc::new(parsed_rule), Rc::new(parsed_target)).unwrap();
+            let zeros = repls.map.values().collect::<Vec<_>>();
+            assert!(std::ptr::eq(ll.as_ref(), zeros[0].as_ref()));
+            assert!(std::ptr::eq(zeros[0].as_ref(), zeros[1].as_ref()));
+            assert!(std::ptr::eq(zeros[1].as_ref(), zeros[2].as_ref()));
+            assert!(std::ptr::eq(zeros[2].as_ref(), zeros[3].as_ref()));
         }
     }
 }

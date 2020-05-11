@@ -1,4 +1,4 @@
-use crate::evaluator_rules::*;
+use crate::evaluator_rules::RuleSet;
 use crate::grammar::*;
 
 use core::hash::{Hash, Hasher};
@@ -56,12 +56,56 @@ mod tests {
     }
 
     partial_evaluator_tests! {
+        add:                            "1 + 2"     => "3"
+        add_nested_left:                "1 + 2 + a" => "a + 3"
+        // TODO: This doesn't work yet... we need to be smarter, maybe by rewritting associativity
+        // or flipping constants between passes.
+        // add_nested_right:               "a + 1 + 2" => "a + 3"
+        // add_nested_with_reorder:        "1 + a + 2" => "a + 3"
+
+        sub:                            "1 - 2"     => "-1"
+        sub_nested_left:                "1 - 2 - a" => "-1 - a"
+
+        mult:                           "2 * 3"     => "6"
+        mult_nested_left:               "2 * 3 * a" => "6 * a"
+
+        div:                            "6 / 2"     => "3"
+        div_nested_left:                "6 / 2 / a" => "3 / a"
+        div_associated:                 "6 / 2 / 3" => "1"
+
+        modulo:                         "6 % 4"     => "2"
+        modulo_nested_left:             "6 % 4 % a" => "2 % a"
+        modulo_associated:              "9 % 5 % 5" => "4" // (9 % 5) % 5
+
+        exp:                            "2 ^ 3"     => "8"
+        exp_nested_left:                "2 ^ 3 ^ a" => "2 ^ 3 ^ a"
+        exp_associated:                 "2 ^ 3 ^ 2" => "512"
+
+        posate:                         "+1"           => "1"
+        // TODO: unwrap parantheses further
+        posate_nested_1:                "+(b + c)" => "(b + c)"
+        posate_nested:                  "a + +(b + c)" => "a + (b + c)"
+
+        negate:                         "-1"     => "-1"
+        negate_nested:                  "1 + -2" => "-1"
+
         additive_identity_var:          "a + 0"       => "a"
         additive_identity_const:        "1 + 0"       => "1"
         additive_identity_any:          "(a * b) + 0" => "(a * b)"
-        additive_identity_nested:       "(a + 0) + 0" => "(a)"
+        additive_identity_nested:       "(a + 0) + 0" => "a"
         additive_identity_with_reorder: "0 + a + 0"   => "a"
 
-        reorder_constants:              "1 + a" => "a + 1"
+        reorder_constants:              "1 + a"     => "a + 1"
+        reorder_constants_nested:       "1 + a + 2" => "a + 1 + 2"
+        reorder_constants_nested_left:  "a + 1 + 2" => "a + 1 + 2"
+        reorder_constants_nested_right: "1 + 2 + a" => "a + 3"
+
+        unwrap_parens_const:            "(1)"       => "1"
+        unwrap_parens_var:              "(a)"       => "a"
+        unwrap_parens_nested:           "(a) + (1)" => "a + 1"
+
+        unwrap_braces_const:            "[1]"       => "1"
+        unwrap_braces_var:              "[a]"       => "a"
+        unwrap_braces_nested:           "[a] + [1]" => "a + 1"
     }
 }

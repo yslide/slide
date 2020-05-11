@@ -70,12 +70,20 @@ pub enum Expr {
     Braced(Box<Self>),
 }
 
-// TODO: We can do better than hashing to a string as well, but we'll save that til we have an
-// arbitrary-precision numeric type.
 #[allow(clippy::derive_hash_xor_eq)]
 impl core::hash::Hash for Expr {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        state.write(self.to_string().as_bytes())
+        use Expr::*;
+        match self {
+            // TODO: We can do better than hashing to a string as well, but we'll save that til we
+            // have an arbitrary-precision numeric type.
+            Const(f) => state.write(f.to_string().as_bytes()),
+            Var(v) => v.hash(state),
+            BinaryExpr(e) => e.hash(state),
+            UnaryExpr(e) => e.hash(state),
+            Parend(e) => e.hash(state),
+            Braced(e) => e.hash(state),
+        }
     }
 }
 
@@ -118,7 +126,7 @@ impl fmt::Display for Expr {
     }
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Hash)]
 pub enum BinaryOperator {
     Plus,
     Minus,
@@ -163,7 +171,7 @@ impl fmt::Display for BinaryOperator {
     }
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Hash)]
 pub struct BinaryExpr<E: Expression> {
     pub op: BinaryOperator,
     pub lhs: Box<E>,
@@ -182,7 +190,7 @@ impl<E: Expression> fmt::Display for BinaryExpr<E> {
     }
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Hash)]
 pub enum UnaryOperator {
     SignPositive,
     SignNegative,
@@ -215,7 +223,7 @@ impl fmt::Display for UnaryOperator {
     }
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Hash)]
 pub struct UnaryExpr<E: Expression> {
     pub op: UnaryOperator,
     pub rhs: Box<E>,

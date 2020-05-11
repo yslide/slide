@@ -1,8 +1,9 @@
 use crate::evaluator_rules::RuleSet;
 use crate::grammar::*;
+use crate::utils::hash;
 
-use core::hash::{Hash, Hasher};
-use std::collections::{hash_map::DefaultHasher, HashSet};
+use std::collections::HashSet;
+use std::rc::Rc;
 
 /// Evaluates an expression to as simplified a form as possible.
 /// The evaluation may be partial, as some values (like variables) may be unknown.
@@ -10,30 +11,24 @@ pub fn evaluate(expr: Stmt) -> Expr {
     let rule_set = RuleSet::default();
     let built_rules = rule_set.build();
 
-    let mut simplified_expr: Expr = match expr {
-        Stmt::Expr(expr) => expr,
+    let mut simplified_expr: Rc<Expr> = match expr {
+        Stmt::Expr(expr) => expr.into(),
+        // TODO: see below
         _ => todo!("Evaluation currently only handles expressions"),
     };
 
     // Try simplifying the expression with a rule set until the same expression is seen again,
     // meaning we can't simplify any further or are stuck in a cycle.
-    let mut expr_hash = hash_expr(&simplified_expr);
+    let mut expr_hash = hash(&simplified_expr);
     let mut seen: HashSet<u64> = HashSet::new();
     while seen.insert(expr_hash) {
         for rule in &built_rules {
             simplified_expr = rule.transform(simplified_expr);
         }
-        expr_hash = hash_expr(&simplified_expr);
+        expr_hash = hash(&simplified_expr);
     }
 
-    simplified_expr
-}
-
-fn hash_expr(expr: &Expr) -> u64 {
-    // There is no way to reset a hasher's state, so we create a new one each time.
-    let mut hasher = DefaultHasher::new();
-    expr.hash(&mut hasher);
-    hasher.finish()
+    (*simplified_expr).clone()
 }
 
 #[cfg(test)]
@@ -99,6 +94,10 @@ mod tests {
         reorder_constants_nested:       "1 + a + 2" => "a + 1 + 2"
         reorder_constants_nested_left:  "a + 1 + 2" => "a + 1 + 2"
         reorder_constants_nested_right: "1 + 2 + a" => "a + 3"
+
+        distribute_negation:            "-(a - b)"     => "b - a"
+        distribute_negation_nested:     "1 + -(a - b)" => "1 + b - a"
+        distribute_negation_with_eval:  "1 + -(2 - 3)" => "2"
 
         unwrap_parens_const:            "(1)"       => "1"
         unwrap_parens_var:              "(a)"       => "a"

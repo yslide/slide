@@ -1,9 +1,11 @@
-use core::fmt;
-
+use super::pattern_match::match_rule;
 use crate::grammar::*;
+use crate::utils::hash;
 use crate::{parse_expression_pattern, scan};
 
-use super::pattern_match::match_rule;
+use core::fmt;
+use std::collections::HashMap;
+use std::rc::Rc;
 
 /// A mapping between two expression patterns.
 pub struct PatternMap {
@@ -13,7 +15,7 @@ pub struct PatternMap {
 
 pub enum Rule {
     PatternMap(PatternMap),
-    Evaluate(fn(Expr) -> Option<Expr>),
+    Evaluate(fn(&Expr) -> Option<Expr>),
 }
 
 impl Rule {
@@ -36,12 +38,12 @@ impl Rule {
         Self::PatternMap(PatternMap { from, to })
     }
 
-    pub fn from_fn(f: fn(Expr) -> Option<Expr>) -> Self {
+    pub fn from_fn(f: fn(&Expr) -> Option<Expr>) -> Self {
         Self::Evaluate(f)
     }
 }
 
-impl Transformer<Expr, Expr> for Rule {
+impl Transformer<Rc<Expr>, Rc<Expr>> for Rule {
     /// Attempts to apply a rule on a target expression by
     ///
     /// 1. Applying the rule recursively on the target's subexpression to obtain a
@@ -60,42 +62,65 @@ impl Transformer<Expr, Expr> for Rule {
     /// "$x + 0 -> $x".try_apply("x + 1")  // None
     /// "$x + 0 -> $x".try_apply("x")      // None
     /// ```
-    fn transform(&self, target: Expr) -> Expr {
-        // First, apply the rule recursively on the target's subexpressions.
-        let partially_transformed = match target {
-            expr @ Expr::Const(_) => expr,
-            var @ Expr::Var(_) => var,
-            Expr::BinaryExpr(binary_expr) => BinaryExpr {
-                op: binary_expr.op,
-                lhs: self.transform(*binary_expr.lhs).into(),
-                rhs: self.transform(*binary_expr.rhs).into(),
-            }
-            .into(),
-            Expr::UnaryExpr(unary_expr) => UnaryExpr {
-                op: unary_expr.op,
-                rhs: self.transform(*unary_expr.rhs).into(),
-            }
-            .into(),
-            Expr::Parend(expr) => Expr::Parend(self.transform(*expr).into()),
-            Expr::Braced(expr) => Expr::Braced(self.transform(*expr).into()),
-        };
-
-        match self {
-            Rule::PatternMap(PatternMap { from, to }) => {
-                let replacements = match match_rule(from.clone(), partially_transformed.clone()) {
-                    Some(repl) => repl,
-                    // Could not match the rule on the top-level of the expression; return the
-                    // partially transformed expression.
-                    None => return partially_transformed,
-                };
-
-                // If the rule was matched on the expression, we have replacements for rule
-                // patterns -> target subexpressions. Apply the rule by transforming the rule's RHS
-                // with the replacements.
-                replacements.transform(to.clone())
-            }
-            Rule::Evaluate(f) => f(partially_transformed.clone()).unwrap_or(partially_transformed),
+    fn transform(&self, target: Rc<Expr>) -> Rc<Expr> {
+        fn fill(cache: &mut HashMap<u64, Rc<Expr>>, t: Rc<Expr>, r: Rc<Expr>) -> Rc<Expr> {
+            Rc::clone(cache.entry(hash(t.as_ref())).or_insert_with(|| r))
         }
+
+        fn transform(
+            rule: &Rule,
+            target: Rc<Expr>,
+            cache: &mut HashMap<u64, Rc<Expr>>,
+        ) -> Rc<Expr> {
+            if let Some(result) = cache.get(&hash(target.as_ref())) {
+                return Rc::clone(result);
+            }
+
+            // First, apply the rule recursively on the target's subexpressions.
+            let partially_transformed = match target.as_ref() {
+                Expr::Const(_) => Rc::clone(&target),
+                Expr::Var(_) => Rc::clone(&target),
+                Expr::BinaryExpr(binary_expr) => Expr::BinaryExpr(BinaryExpr {
+                    op: binary_expr.op,
+                    lhs: transform(rule, Rc::clone(&binary_expr.lhs), cache),
+                    rhs: transform(rule, Rc::clone(&binary_expr.rhs), cache),
+                })
+                .into(),
+                Expr::UnaryExpr(unary_expr) => Expr::UnaryExpr(UnaryExpr {
+                    op: unary_expr.op,
+                    rhs: transform(rule, Rc::clone(&unary_expr.rhs), cache),
+                })
+                .into(),
+                Expr::Parend(expr) => {
+                    let inner = transform(rule, Rc::clone(expr), cache);
+                    Expr::Parend(inner).into()
+                }
+                Expr::Braced(expr) => {
+                    let inner = transform(rule, Rc::clone(expr), cache);
+                    Expr::Braced(inner).into()
+                }
+            };
+
+            let transformed = match rule {
+                Rule::PatternMap(PatternMap { from, to }) => {
+                    match_rule(Rc::new(from.clone()), Rc::clone(&partially_transformed))
+                        // If the rule was matched on the expression, we have replacements for rule
+                        // patterns -> target subexpressions. Apply the rule by transforming the
+                        // rule's RHS with the replacements.
+                        .map(|repls| repls.transform(Rc::new(to.clone())))
+                }
+                Rule::Evaluate(f) => f(partially_transformed.as_ref()).map(Rc::new),
+            }
+            .unwrap_or(partially_transformed);
+
+            fill(cache, target, transformed)
+        }
+
+        // Expr pointer -> transformed expression. Assumes that transient expressions of the same
+        // value are reference counters pointing to the same underlying expression. This is done
+        // via common subexpression elimination during parsing.
+        let mut cache: HashMap<u64, Rc<Expr>> = HashMap::new();
+        transform(self, target, &mut cache)
     }
 }
 

@@ -13,11 +13,12 @@ use crate::utils::PeekIter;
 
 use core::convert::TryFrom;
 use core::fmt::Display;
+use std::rc::Rc;
 
 macro_rules! binary_expr_parser {
     ($self:ident $($name:ident: lhs=$lhs_term:ident, rhs=$rhs_term:ident, op=[$($matching_op:tt)+])*) => {
         $(
-        fn $name(&mut $self) -> Box<Self::Expr> {
+        fn $name(&mut $self) -> Rc<Self::Expr> {
             use BinaryOperator::*;
 
             let mut lhs = $self.$lhs_term();
@@ -29,11 +30,12 @@ macro_rules! binary_expr_parser {
                 match op {
                     $($matching_op)+ => {
                         $self.input().next();
-                        lhs = Box::new(BinaryExpr{
+                        let bin_expr = BinaryExpr{
                             op,
                             lhs,
                             rhs: $self.$rhs_term(),
-                        }.into());
+                        }.into();
+                        lhs = $self.finish_expr(bin_expr);
                     }
                     _ => break,
                 }
@@ -47,16 +49,16 @@ macro_rules! binary_expr_parser {
 trait Parser<T>
 where
     T: Grammar,
-    Self::Expr: Expression,
+    Self::Expr: Expression + Clone,
     Self::Error: Display,
 {
     type Expr;
     type Error;
 
     fn new(input: Vec<Token>) -> Self;
-    fn parse(&mut self) -> Box<T>;
     fn errors(&self) -> &Vec<Self::Error>;
     fn input(&mut self) -> &mut PeekIter<Token>;
+    fn parse(&mut self) -> T;
     fn parse_float(&mut self, f: f64) -> Self::Expr;
     fn parse_variable(&mut self, name: String) -> Self::Expr;
     fn parse_var_pattern(&mut self, name: String) -> Self::Expr;
@@ -64,6 +66,7 @@ where
     fn parse_any_pattern(&mut self, name: String) -> Self::Expr;
     fn parse_open_paren(&mut self) -> Self::Expr;
     fn parse_open_brace(&mut self) -> Self::Expr;
+    fn finish_expr(&mut self, expr: Self::Expr) -> Rc<Self::Expr>;
 
     // Default parsing implementations.
     // TODO: increase modularity of this parser
@@ -72,7 +75,7 @@ where
         self.input().peek().map(|t| &t.ty) == Some(&TokenType::EOF)
     }
 
-    fn expr(&mut self) -> Box<Self::Expr> {
+    fn expr(&mut self) -> Rc<Self::Expr> {
         self.add_sub_term()
     }
 
@@ -89,35 +92,34 @@ where
         exp_term:            lhs = num_term,            rhs = exp_term,            op = [Exp]
     );
 
-    fn num_term(&mut self) -> Box<Self::Expr> {
+    fn num_term(&mut self) -> Rc<Self::Expr> {
         if let Some(Ok(op)) = self.input().peek().map(UnaryOperator::try_from) {
             self.input().next();
-            return Box::new(
-                UnaryExpr {
-                    op,
-                    rhs: self.exp_term(),
-                }
-                .into(),
-            );
+            let node = UnaryExpr {
+                op,
+                rhs: self.exp_term(),
+            }
+            .into();
+            return self.finish_expr(node);
         }
 
         let node = match self.input().peek().map(|t| t.ty.clone()) {
-            Some(TokenType::Float(f)) => self.parse_float(f).into(),
-            Some(TokenType::Variable(name)) => self.parse_variable(name).into(),
+            Some(TokenType::Float(f)) => self.parse_float(f),
+            Some(TokenType::Variable(name)) => self.parse_variable(name),
 
             // TODO: Currently patterns as all parsed as variables. Maybe there is a nice way to
             // store pattern information during parsing, but this would require some extension of
             // the grammar.
-            Some(TokenType::VariablePattern(name)) => self.parse_var_pattern(name).into(),
-            Some(TokenType::ConstPattern(name)) => self.parse_const_pattern(name).into(),
-            Some(TokenType::AnyPattern(name)) => self.parse_any_pattern(name).into(),
+            Some(TokenType::VariablePattern(name)) => self.parse_var_pattern(name),
+            Some(TokenType::ConstPattern(name)) => self.parse_const_pattern(name),
+            Some(TokenType::AnyPattern(name)) => self.parse_any_pattern(name),
 
-            Some(TokenType::OpenParen) => self.parse_open_paren().into(),
-            Some(TokenType::OpenBracket) => self.parse_open_brace().into(),
+            Some(TokenType::OpenParen) => self.parse_open_paren(),
+            Some(TokenType::OpenBracket) => self.parse_open_brace(),
             _ => unreachable!(),
         };
         self.input().next(); // eat rest of created expression
-        node
+        self.finish_expr(node)
     }
 }
 
@@ -159,6 +161,7 @@ mod tests {
         parentheses_exp_time:    "2 ^ (3 ^ 4 * 5)"
         parentheses_unary:       "-(2 + +-5)"
         nested_parentheses:      "((1 * (2 + 3)) ^ 4)"
+        bracket1: "[1 + 2]"
         brackets_plus_times:     "[1 + 2] * 3"
         brackets_time_plus:      "3 * [1 + 2]"
         brackets_time_mod:       "3 * [2 % 2]"

@@ -41,5 +41,5 @@ pub enum UnbuiltRule {
     M(&'static [&'static str]),
 
     /// A function rule.
-    F(fn(Expr) -> Option<Expr>),
+    F(fn(&Expr) -> Option<Expr>),
 }

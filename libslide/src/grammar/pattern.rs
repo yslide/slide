@@ -1,5 +1,7 @@
 pub use super::*;
 
+use std::rc::Rc;
+
 #[derive(Clone)]
 pub enum ExprPat {
     Const(f64),
@@ -11,11 +13,12 @@ pub enum ExprPat {
     AnyPat(String),
     BinaryExpr(BinaryExpr<Self>),
     UnaryExpr(UnaryExpr<Self>),
-    Parend(Box<Self>),
-    Braced(Box<Self>),
+    Parend(Rc<Self>),
+    Braced(Rc<Self>),
 }
 
 impl Grammar for ExprPat {}
+impl Grammar for Rc<ExprPat> {}
 impl Expression for ExprPat {}
 
 // TODO: We can't derive this because `f64` doesn't implement `Eq`.
@@ -42,7 +45,19 @@ impl PartialEq for ExprPat {
 // arbitrary-precision numeric type.
 impl core::hash::Hash for ExprPat {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        state.write(self.to_string().as_bytes())
+        use ExprPat::*;
+        match self {
+            // TODO: We can do better than hashing to a string as well, but we'll save that til we
+            // have an arbitrary-precision numeric type.
+            Const(f) => state.write(f.to_string().as_bytes()),
+            VarPat(v) => v.hash(state),
+            ConstPat(c) => c.hash(state),
+            AnyPat(a) => a.hash(state),
+            BinaryExpr(e) => e.hash(state),
+            UnaryExpr(e) => e.hash(state),
+            e @ Parend(_) => e.to_string().hash(state),
+            e @ Braced(_) => e.to_string().hash(state),
+        }
     }
 }
 

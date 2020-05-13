@@ -10,6 +10,7 @@ pub use parser::parse_expression_pattern;
 
 mod partial_evaluator;
 pub use partial_evaluator::evaluate;
+pub use partial_evaluator::EvaluatorContext;
 
 mod evaluator_rules;
 mod grammar;

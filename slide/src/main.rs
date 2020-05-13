@@ -1,4 +1,4 @@
-use libslide::{evaluate, parse_expression, scan};
+use libslide::{evaluate, parse_expression, scan, EvaluatorContext};
 
 use std::env;
 
@@ -15,7 +15,7 @@ fn main() -> Result<(), String> {
     if !errors.is_empty() {
         return Err(errors.join("\n"));
     }
-    let simplified = evaluate(parse_tree);
+    let simplified = evaluate(parse_tree, EvaluatorContext::default());
 
     println!("{}", simplified.to_string());
 

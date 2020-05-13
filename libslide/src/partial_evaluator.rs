@@ -1,3 +1,6 @@
+mod types;
+pub use types::*;
+
 use crate::evaluator_rules::RuleSet;
 use crate::grammar::*;
 use crate::utils::hash;
@@ -7,8 +10,11 @@ use std::rc::Rc;
 
 /// Evaluates an expression to as simplified a form as possible.
 /// The evaluation may be partial, as some values (like variables) may be unknown.
-pub fn evaluate(expr: Stmt) -> Expr {
-    let rule_set = RuleSet::default();
+pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Expr {
+    let mut rule_set = RuleSet::default();
+    for rule in ctxt.rule_blacklist {
+        rule_set.remove(rule)
+    }
     let built_rules = rule_set.build();
 
     let mut simplified_expr: Rc<Expr> = match expr {
@@ -33,17 +39,24 @@ pub fn evaluate(expr: Stmt) -> Expr {
 
 #[cfg(test)]
 mod tests {
+    use super::evaluate;
+    use crate::evaluator_rules::RuleName;
+    use crate::grammar::*;
+    use crate::{parse_expression, scan, EvaluatorContext};
+
+    fn parse(program: &str) -> Stmt {
+        let tokens = scan(program);
+        let (parsed, _) = parse_expression(tokens);
+        parsed
+    }
+
     macro_rules! partial_evaluator_tests {
         ($($name:ident: $program:expr => $result:expr)*) => {
         $(
             #[test]
             fn $name() {
-                use crate::{parse_expression, scan};
-                use super::evaluate;
-
-                let tokens = scan($program);
-                let (parsed, _) = parse_expression(tokens);
-                let evaluated = evaluate(parsed);
+                let parsed = parse($program);
+                let evaluated = evaluate(parsed, EvaluatorContext::default());
                 assert_eq!(evaluated.to_string(), $result.to_string());
             }
         )*
@@ -106,5 +119,13 @@ mod tests {
         unwrap_braces_const:            "[1]"       => "1"
         unwrap_braces_var:              "[a]"       => "a"
         unwrap_braces_nested:           "[a] + [1]" => "a + 1"
+    }
+
+    #[test]
+    fn remove_rule() {
+        let parsed = parse("1 - 2 + 3 * 4");
+        let ctxt = EvaluatorContext::default().with_blacklist([RuleName::Add].to_vec());
+        let evaluated = evaluate(parsed, ctxt);
+        assert_eq!(evaluated.to_string(), "-1 + 12".to_string());
     }
 }

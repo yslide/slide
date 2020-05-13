@@ -7,7 +7,7 @@ use std::ops;
 static INPUT_ERR_MSG: &str = "Input is not valid";
 const TOLERANCE: f64 = 1E-12;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Complex {
     real: f64,
     imag: f64,

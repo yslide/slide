@@ -1,6 +1,6 @@
 # slide
 
-Slide is an static expression optimizer. Given an expression like
+slide is an static expression optimizer. Given an expression like
 
 ```
 x(x + 2 * 3) / (x + 6)
@@ -12,3 +12,10 @@ One of slide's design goals is compilation as a platform, where optimizations ar
 plugins.
 
 Slide is not yet ready for use. All contributions are warmly welcomed.
+
+## Development
+
+Development documentation for slide, including documentation of private items, can be found in a
+rustdoc at slide-dev.ayazhafiz.com.
+
+More development details will be added later.

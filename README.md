@@ -16,6 +16,6 @@ Slide is not yet ready for use. All contributions are warmly welcomed.
 ## Development
 
 Development documentation for slide, including documentation of private items, can be found in a
-rustdoc at slide-dev.ayazhafiz.com.
+rustdoc at [slide-dev.ayazhafiz.com](https://slide-dev.ayazhafiz.com).
 
 More development details will be added later.

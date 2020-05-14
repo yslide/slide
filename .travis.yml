@@ -36,3 +36,20 @@ script:
     https://github.com/rust-lang/rust-clippy/ --force clippy
   - rustup component add rustfmt
   - scripts/check lintformat
+
+after_success:
+  - cargo doc --document-private-items
+
+deploy:
+  - provider: pages
+    local_dir: target/doc
+    fqdn: slide-dev.ayazhafiz.com
+    project_name: slide
+    skip_cleanup: true
+    github_token: $GITHUB_TOKEN
+    keep_history: true
+    committer_from_gh: true
+    deployment_file: true
+    target_branch: gh-pages
+    on:
+      branch: master

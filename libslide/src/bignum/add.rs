@@ -1,5 +1,6 @@
 #![allow(clippy::suspicious_arithmetic_impl)]
 use crate::bignum::utils::abs;
+use crate::bignum::utils::truncate_zeros;
 use crate::bignum::Bignum;
 use std::mem;
 use std::ops;
@@ -73,11 +74,11 @@ impl ops::Add for Bignum {
         if carry == 1 {
             res_int.push(1);
         }
-
+        // remove zeros
         Bignum {
             is_neg,
-            int: res_int,
-            dec: res_dec,
+            int: truncate_zeros(res_int),
+            dec: truncate_zeros(res_dec),
         }
     }
 }
@@ -130,6 +131,14 @@ mod tests {
             negative_mixed: "-12332.55", "1.0", "-12331.55"
             negative_mixed1: "-12332.55", "-1.0", "-12333.55"
             negative_mixed2: "1.0", "-12332.55", "-12331.55"
+            zero1: "0000.00", "0", "0"
+            zero2: "0.0000", "0", "0"
+            zero3: "0", "0.000", "0"
+            zero4: "0.0", "00.00", "0"
+            zero5: "-0", "00.00", "0"
+            zero6: "0.0000", "-00000.000", "0"
+            zero7: "-0.00", "-0000.00", "0"
+            trailing_zero1: "5.55", "5.55", "11.1"
         }
     }
 }

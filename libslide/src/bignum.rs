@@ -9,6 +9,7 @@ mod sub;
 mod utils;
 
 pub use modulo::*;
+pub use utils::truncate_zeros;
 // this probably can go in utils but I put it in here for now
 fn to_u8(c: char) -> u8 {
     c.to_digit(10).unwrap() as u8
@@ -62,13 +63,10 @@ impl Bignum {
                 return Err(INPUT_ERR_MSG);
             }
         }
-        if !dec.is_empty() && dec.iter().all(|&i| i == 0) {
-            dec.clear();
-        }
         Ok(Bignum {
             is_neg,
-            int: int.into_iter().rev().collect(),
-            dec,
+            int: truncate_zeros(int.into_iter().rev().collect()),
+            dec: truncate_zeros(dec),
         })
     }
 }
@@ -76,7 +74,7 @@ impl Bignum {
 impl fmt::Display for Bignum {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut result = String::new();
-        if self.is_neg {
+        if self.is_neg && (!self.int.is_empty() || !self.dec.is_empty()) {
             result.push('-');
         }
         if self.int.is_empty() {

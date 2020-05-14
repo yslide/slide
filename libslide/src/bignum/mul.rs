@@ -54,17 +54,14 @@ impl ops::Mul for Bignum {
         )
         .unwrap();
         let mut dec_vec: Vec<u8> = convert_poly(res);
-        let mut int_vec: Vec<u8> = dec_vec.split_off(dec_len);
+        let int_vec: Vec<u8> = dec_vec.split_off(dec_len);
 
         // remove preceeding zeros
         dec_vec = dec_vec.into_iter().rev().collect();
-        int_vec = truncate_zeros(int_vec);
-        dec_vec = truncate_zeros(dec_vec);
-
         Bignum {
             is_neg,
-            int: int_vec,
-            dec: dec_vec,
+            int: truncate_zeros(int_vec),
+            dec: truncate_zeros(dec_vec),
         }
     }
 }
@@ -101,6 +98,14 @@ mod tests {
             float3: "0.192781230589", "0.12182387511", "0.02348535655882644773979"
             mixed1: "1.0", "1.0", "1"
             mixed2: "12912572835.19235098273", "19325812.193812388322389", "249545957551850939.50568665382187490021134197"
+            zero1: "0000.00", "0", "0"
+            zero2: "0.0000", "0", "0"
+            zero3: "0", "0.000", "0"
+            zero4: "0.0", "00.00", "0"
+            zero5: "-0", "00.00", "0"
+            zero6: "0.0000", "-00000.000", "0"
+            zero7: "-0.00", "-0000.00", "0"
+            trailing_zero1: "1.00000", "000001.0000", "1"
         }
     }
 }

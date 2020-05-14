@@ -13,6 +13,12 @@ path = "benches/math/gcd.rs"
 harness = false
 required-features = ["benchmark-internals"]
 
+[[bench]]
+name = "modulo"
+path = "benches/bignum/modulo.rs"
+harness = false
+required-features = ["benchmark-internals"]
+
 [dependencies.num-traits]
 version = "0.2"
 default-features = false

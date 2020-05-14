@@ -56,13 +56,9 @@ mod tests {
             #[test]
             fn $name() {
                 let parsed = parse($program);
+                let evaluated = evaluate(parsed.clone(), EvaluatorContext::default());
 
-                // The order of rules applied in partial evaluation is non-determinstic (nor should
-                // it be), so run the evaluation a number of times for sanity.
-                for _ in 0..100 {
-                    let evaluated = evaluate(parsed.clone(), EvaluatorContext::default());
-                    assert_eq!(evaluated.to_string(), $result.to_string());
-                }
+                assert_eq!(evaluated.to_string(), $result.to_string());
             }
         )*
         }
@@ -71,10 +67,8 @@ mod tests {
     partial_evaluator_tests! {
         add:                            "1 + 2"     => "3"
         add_nested_left:                "1 + 2 + a" => "a + 3"
-        // TODO: This doesn't work yet... we need to be smarter, maybe by rewritting associativity
-        // or flipping constants between passes.
-        // add_nested_right:               "a + 1 + 2" => "a + 3"
-        // add_nested_with_reorder:        "1 + a + 2" => "a + 3"
+        add_nested_right:               "a + 1 + 2" => "a + 3"
+        add_nested_with_reorder:        "1 + a + 2" => "a + 3"
 
         sub:                            "1 - 2"     => "-1"
         sub_nested_left:                "1 - 2 - a" => "-1 - a"
@@ -109,8 +103,8 @@ mod tests {
         additive_identity_with_reorder: "0 + a + 0"   => "a"
 
         reorder_constants:              "1 + a"     => "a + 1"
-        reorder_constants_nested:       "1 + a + 2" => "a + 1 + 2"
-        reorder_constants_nested_left:  "a + 1 + 2" => "a + 1 + 2"
+        reorder_constants_nested:       "1 + a + 2" => "a + 3"
+        reorder_constants_nested_left:  "a + 1 + 2" => "a + 3"
         reorder_constants_nested_right: "1 + 2 + a" => "a + 3"
 
         distribute_negation:            "-(a - b)"     => "b - a"

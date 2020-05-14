@@ -107,9 +107,6 @@ where
             Some(TokenType::Float(f)) => self.parse_float(f),
             Some(TokenType::Variable(name)) => self.parse_variable(name),
 
-            // TODO: Currently patterns as all parsed as variables. Maybe there is a nice way to
-            // store pattern information during parsing, but this would require some extension of
-            // the grammar.
             Some(TokenType::VariablePattern(name)) => self.parse_var_pattern(name),
             Some(TokenType::ConstPattern(name)) => self.parse_const_pattern(name),
             Some(TokenType::AnyPattern(name)) => self.parse_any_pattern(name),
@@ -128,8 +125,10 @@ mod tests {
     common_parser_tests! {
         addition:                "2 + 2"
         addition_nested:         "1 + 2 + 3"
+        addition_sub_nested:     "1 + 2 - 3"
         subtraction:             "2 - 2"
         subtraction_nested:      "1 - 2 - 3"
+        subtraction_add_nested:  "1 - 2 + 3"
         multiplication:          "2 * 2"
         multiplication_nested:   "1 * 2 * 3"
         division:                "2 / 2"
@@ -161,7 +160,6 @@ mod tests {
         parentheses_exp_time:    "2 ^ (3 ^ 4 * 5)"
         parentheses_unary:       "-(2 + +-5)"
         nested_parentheses:      "((1 * (2 + 3)) ^ 4)"
-        bracket1: "[1 + 2]"
         brackets_plus_times:     "[1 + 2] * 3"
         brackets_time_plus:      "3 * [1 + 2]"
         brackets_time_mod:       "3 * [2 % 2]"
@@ -170,7 +168,8 @@ mod tests {
         brackets_unary:          "-[2 + +-5]"
         nested_brackets:         "[[1 * [2 + 3]] ^ 4]"
         unary_minus:             "-2"
-        unary_expo:              "-2 ^ 3"
+        unary_with_plus:         "-2 + 3"
+        unary_with_expo:         "-2 ^ 3 => -(2 ^ 3)"
         unary_quad:              "+-+-2"
     }
 }

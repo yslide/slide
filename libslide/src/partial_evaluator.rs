@@ -56,8 +56,13 @@ mod tests {
             #[test]
             fn $name() {
                 let parsed = parse($program);
-                let evaluated = evaluate(parsed, EvaluatorContext::default());
-                assert_eq!(evaluated.to_string(), $result.to_string());
+
+                // The order of rules applied in partial evaluation is non-determinstic (nor should
+                // it be), so run the evaluation a number of times for sanity.
+                for _ in 0..100 {
+                    let evaluated = evaluate(parsed.clone(), EvaluatorContext::default());
+                    assert_eq!(evaluated.to_string(), $result.to_string());
+                }
             }
         )*
         }
@@ -90,16 +95,16 @@ mod tests {
         exp_associated:                 "2 ^ 3 ^ 2" => "512"
 
         posate:                         "+1"           => "1"
-        // TODO: unwrap parantheses further
-        posate_nested_1:                "+(b + c)" => "(b + c)"
-        posate_nested:                  "a + +(b + c)" => "a + (b + c)"
+        posate_nested:                  "+(b + c)"     => "b + c"
+        posate_nested_right:            "a + +(b + c)" => "a + b + c"
+        posate_nested_prec:             "a * +(b + c)" => "a * (b + c)"
 
         negate:                         "-1"     => "-1"
         negate_nested:                  "1 + -2" => "-1"
 
         additive_identity_var:          "a + 0"       => "a"
         additive_identity_const:        "1 + 0"       => "1"
-        additive_identity_any:          "(a * b) + 0" => "(a * b)"
+        additive_identity_any:          "(a * b) + 0" => "a * b"
         additive_identity_nested:       "(a + 0) + 0" => "a"
         additive_identity_with_reorder: "0 + a + 0"   => "a"
 

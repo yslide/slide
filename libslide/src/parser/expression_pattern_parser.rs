@@ -6,7 +6,7 @@ use crate::utils::{hash, PeekIter};
 use std::collections::HashMap;
 use std::rc::Rc;
 
-pub fn parse(input: Vec<Token>) -> (ExprPat, Vec<String>) {
+pub fn parse(input: Vec<Token>) -> (Rc<ExprPat>, Vec<String>) {
     let mut parser = ExpressionPatternParser::new(input);
     let parsed = parser.parse();
     let errors = parser.errors().iter().map(|e| e.to_string()).collect();
@@ -22,7 +22,7 @@ pub struct ExpressionPatternParser {
     seen: HashMap<u64, Rc<ExprPat>>,
 }
 
-impl Parser<ExprPat> for ExpressionPatternParser {
+impl Parser<Rc<ExprPat>> for ExpressionPatternParser {
     type Expr = ExprPat;
     type Error = String;
 
@@ -42,10 +42,10 @@ impl Parser<ExprPat> for ExpressionPatternParser {
         &mut self._input
     }
 
-    fn parse(&mut self) -> ExprPat {
+    fn parse(&mut self) -> Rc<ExprPat> {
         let parsed = self.expr();
         assert!(self.done());
-        (*parsed).clone()
+        parsed
     }
 
     fn parse_float(&mut self, f: f64) -> Self::Expr {
@@ -125,7 +125,7 @@ mod tests {
         let program = "$v * #c + $v * #c";
         let tokens = scan(program);
         let (parsed, _) = parse(tokens);
-        let (l, r) = match parsed {
+        let (l, r) = match (*parsed).clone() {
             ExprPat::BinaryExpr(BinaryExpr { lhs, rhs, .. }) => (lhs, rhs),
             _ => unreachable!(),
         };

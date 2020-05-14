@@ -37,9 +37,6 @@ pub enum UnbuiltRule {
     /// always exact and deterministic.
     S(&'static str),
 
-    /// Multiple expression mappings representing one rule, perhaps in several different ways.
-    M(&'static [&'static str]),
-
     /// A function rule.
     F(fn(&Expr) -> Option<Expr>),
 }

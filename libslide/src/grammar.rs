@@ -15,6 +15,7 @@ pub trait Expression
 where
     Self: fmt::Display + From<BinaryExpr<Self>> + From<UnaryExpr<Self>>,
 {
+    fn is_const(&self) -> bool;
 }
 
 #[derive(Clone)]
@@ -98,7 +99,12 @@ impl core::hash::Hash for Expr {
 
 impl Grammar for Expr {}
 impl Grammar for Rc<Expr> {}
-impl Expression for Expr {}
+impl Expression for Expr {
+    #[inline]
+    fn is_const(&self) -> bool {
+        matches!(self, Self::Const(_))
+    }
+}
 
 impl From<f64> for Expr {
     fn from(f: f64) -> Self {

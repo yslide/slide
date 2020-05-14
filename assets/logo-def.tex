@@ -1,0 +1,39 @@
+\documentclass{article}
+\usepackage{anyfontsize}
+\usepackage{amsmath}
+\usepackage{soul}
+\usepackage{xfrac}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{pgfplots}
+
+\usepgfplotslibrary{external}
+
+% Make the 'export as png' a seperate style, with default density 200
+\tikzset{
+    export as png/.style={
+        external/system call/.add={}{
+            && convert -density #1 -transparent white "\image.pdf" "\image.png"
+        },
+    },
+    export as png/.default={600},
+}
+
+\begin{document}
+\fontsize{50}{60}\selectfont
+
+\begin{center}
+  \tikzset{export as png}
+  \tikzsetnextfilename{logo}
+  \begin{tikzpicture}
+    \node at (current page.south west) [above right,inner sep=0,outer sep=0] {
+      $\begin{aligned}
+        &&&\underline{x - x}\\
+        &\color{orange}/&&\\
+        \color{orange}\underline{0}/&&&\;\text{slide}
+      \end{aligned}$
+    };
+  \end{tikzpicture}
+\end{center}
+
+\end{document}

@@ -1,2 +1,10 @@
 /target
 Cargo.lock
+
+# latex
+assets/*.aux*
+assets/*.dpth
+assets/*.log
+assets/*.md5
+assets/*.out
+assets/*.pdf

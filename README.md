@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" width="50%" />
+</p>
+
 # slide
 
 slide is an static expression optimizer. Given an expression like

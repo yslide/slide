@@ -178,7 +178,7 @@ impl fmt::Display for BuildRuleErrors {
             .map(|(i, r)| format!("({}) {}", i + 1, r.to_string()))
             .map(|s| indent(s, 4))
             .collect::<Vec<_>>()
-            .join("\n\n");
+            .join("\n");
 
         write!(
             f,
@@ -218,7 +218,6 @@ mod tests {
     (1) Could not resolve pattern map
         "_a -> _b"
     Specifically, source "_a" is missing pattern(s) "_b" present in target "_b"
-
     (2) Could not resolve pattern map
         "$a -> $a - _c"
     Specifically, source "$a" is missing pattern(s) "_c" present in target "$a - _c""##

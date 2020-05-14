@@ -1,5 +1,6 @@
 #![allow(clippy::suspicious_arithmetic_impl)]
 #![allow(dead_code)]
+use std::convert::From;
 use std::convert::TryFrom;
 use std::fmt;
 use std::ops;
@@ -7,7 +8,7 @@ use std::ops;
 static INPUT_ERR_MSG: &str = "Input is not valid";
 const TOLERANCE: f64 = 1E-12;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Complex {
     real: f64,
     imag: f64,
@@ -30,6 +31,13 @@ impl Complex {
         Complex {
             real: self.real,
             imag: -1.0 * self.imag,
+        }
+    }
+
+    pub fn round(self) -> Complex {
+        Complex {
+            real: self.real.round(),
+            imag: self.imag.round(),
         }
     }
 
@@ -121,6 +129,21 @@ impl TryFrom<String> for Complex {
             Err(_) => return Err(INPUT_ERR_MSG),
         }
         Ok(Complex { real, imag })
+    }
+}
+
+impl From<u8> for Complex {
+    fn from(item: u8) -> Self {
+        Complex {
+            real: item as f64,
+            imag: 0.0,
+        }
+    }
+}
+
+impl From<Complex> for u16 {
+    fn from(item: Complex) -> Self {
+        item.real as u16
     }
 }
 

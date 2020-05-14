@@ -2,11 +2,13 @@ use std::fmt;
 mod add;
 mod compare;
 mod complex;
+mod modulo;
 mod mul;
 mod negate;
 mod sub;
 mod utils;
 
+pub use modulo::*;
 // this probably can go in utils but I put it in here for now
 fn to_u8(c: char) -> u8 {
     c.to_digit(10).unwrap() as u8
@@ -16,6 +18,7 @@ fn to_char(n: u8) -> char {
     std::char::from_digit(n as u32, 10).unwrap()
 }
 
+#[derive(Clone)]
 pub struct Bignum {
     is_neg: bool,
     // we use vector since it will allow faster computation time for smaller numbers.

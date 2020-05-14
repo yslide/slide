@@ -76,6 +76,18 @@ pub enum Expr {
     Braced(Rc<Self>),
 }
 
+impl Expr {
+    pub fn complexity(&self) -> u8 {
+        1 + match self {
+            Self::Const(_) => 0,
+            Self::Var(_) => 0,
+            Self::BinaryExpr(BinaryExpr { lhs, rhs, .. }) => lhs.complexity() + rhs.complexity(),
+            Self::UnaryExpr(UnaryExpr { rhs, .. }) => rhs.complexity(),
+            Self::Parend(expr) | Self::Braced(expr) => expr.complexity(),
+        }
+    }
+}
+
 impl Eq for Expr {}
 
 // TODO: We can do better than hashing to a string as well, but we'll save that til we have an

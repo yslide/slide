@@ -1,3 +1,6 @@
+mod grammar;
+pub use grammar::*;
+
 mod hash;
 pub use hash::*;
 

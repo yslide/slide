@@ -4,6 +4,7 @@ use super::rule::*;
 use super::unbuilt_rule::UnbuiltRule;
 use fn_rules::*;
 
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
 macro_rules! define_rules {
@@ -37,6 +38,18 @@ define_rules! {
          UnwrapExplicitBrackets: S("[_a] -> _a")
 }
 
+impl PartialOrd for RuleName {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for RuleName {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (*self as u8).cmp(&(*other as u8))
+    }
+}
+
 /// Set of unbuilt rules.
 pub struct RuleSet {
     rules: HashMap<RuleName, UnbuiltRule>,
@@ -65,18 +78,23 @@ impl RuleSet {
 
         let mut built_rules = Vec::with_capacity(num_rules);
         let bootstrapping_rules = Self::get_bootstrapping_rules();
-        for unbuilt_rule in self.rules.values() {
+        for (rn, unbuilt_rule) in self.rules.iter() {
             match unbuilt_rule {
                 UnbuiltRule::S(s) => {
                     let pm = PatternMap::from_str(s);
                     let bootstrapped_pm = pm.bootstrap(&bootstrapping_rules);
-                    built_rules.push(Rule::PatternMap(pm));
-                    built_rules.push(Rule::PatternMap(bootstrapped_pm));
+                    built_rules.push((rn, Rule::PatternMap(pm)));
+                    built_rules.push((rn, Rule::PatternMap(bootstrapped_pm)));
                 }
-                UnbuiltRule::F(f) => built_rules.push(Rule::from_fn(*f)),
+                UnbuiltRule::F(f) => built_rules.push((rn, Rule::from_fn(*f))),
             }
         }
+        // Sort rules by rule name so that rule application is determinstic.
+        built_rules.sort_by(|&(a, _), &(b, _)| b.cmp(a));
         built_rules
+            .into_iter()
+            .map(|(_, built_rule)| built_rule)
+            .collect()
     }
 
     /// Remove a rule from the rule set.

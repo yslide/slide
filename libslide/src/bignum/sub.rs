@@ -1,6 +1,8 @@
 #![allow(clippy::suspicious_arithmetic_impl)]
 use crate::bignum::utils::abs;
+use crate::bignum::utils::normalize_vecs;
 use crate::bignum::utils::recast_vec;
+use crate::bignum::utils::truncate_zeros;
 use crate::bignum::Bignum;
 use std::ops;
 
@@ -33,30 +35,13 @@ impl ops::Sub for Bignum {
 
         // make the decimal vectors the same size
         // fill lhs and rhs vectors as well
-        let self_size: usize = lhs.dec.len();
-        let other_size: usize = rhs.dec.len();
-        let (mut res_int, lhs_int, mut res_dec, lhs_dec): (Vec<i8>, Vec<i8>, Vec<i8>, Vec<i8>) =
-            if self_size > other_size {
-                let mut equal_dec = vec![0; self_size];
-                equal_dec[..other_size].clone_from_slice(&rhs.dec[..other_size]);
-                (
-                    recast_vec(rhs.int),
-                    recast_vec(lhs.int),
-                    recast_vec(equal_dec),
-                    recast_vec(lhs.dec),
-                )
-            } else {
-                let mut equal_dec = vec![0; other_size];
-                equal_dec[..self_size].clone_from_slice(&lhs.dec[..self_size]);
-                (
-                    recast_vec(rhs.int),
-                    recast_vec(lhs.int),
-                    recast_vec(rhs.dec),
-                    recast_vec(equal_dec),
-                )
-            };
-
-        // now we need to make the bigger number the res dec
+        let (res_dec_equal, lhs_dec_equal) = normalize_vecs(rhs.dec, lhs.dec);
+        let (mut res_int, lhs_int, mut res_dec, lhs_dec): (Vec<i8>, Vec<i8>, Vec<i8>, Vec<i8>) = (
+            recast_vec(rhs.int),
+            recast_vec(lhs.int),
+            recast_vec(res_dec_equal),
+            recast_vec(lhs_dec_equal),
+        );
         // 1. Decimal
 
         let mut res: i8;
@@ -87,37 +72,15 @@ impl ops::Sub for Bignum {
         }
 
         // remove preceeding zeros
-        let mut count = 0;
-        for i in (0..res_int.len()).rev() {
-            if res_int[i] == 0 {
-                count += 1;
-            } else {
-                break;
-            }
-        }
-
-        res_int.truncate(res_int.len() - count);
-
-        count = 0;
-        for i in (0..res_dec.len()).rev() {
-            if res_dec[i] == 0 {
-                count += 1;
-            } else {
-                break;
-            }
-        }
-        res_dec.truncate(res_dec.len() - count);
+        let int: Vec<u8> = truncate_zeros(recast_vec(res_int));
+        let dec: Vec<u8> = truncate_zeros(recast_vec(res_dec));
 
         // quick optimization to remove -0 from possible results.
-        if is_neg && res_int.is_empty() && res_dec.is_empty() {
+        if is_neg && int.is_empty() && dec.is_empty() {
             is_neg = false;
         }
 
-        Bignum {
-            is_neg,
-            dec: recast_vec(res_dec),
-            int: recast_vec(res_int),
-        }
+        Bignum { is_neg, dec, int }
     }
 }
 

@@ -2,7 +2,7 @@ pub use super::*;
 
 use std::rc::Rc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ExprPat {
     Const(f64),
     /// Pattern matching a variable

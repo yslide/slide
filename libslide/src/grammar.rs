@@ -5,6 +5,7 @@ pub use transformer::*;
 
 use crate::scanner::types::{Token, TokenType};
 
+use core::cmp::Ordering;
 use core::convert::TryFrom;
 use core::fmt;
 use std::rc::Rc;
@@ -16,6 +17,7 @@ where
 {
 }
 
+#[derive(Clone)]
 pub enum Stmt {
     Expr(Expr),
     Assignment(Assignment),
@@ -49,6 +51,7 @@ impl fmt::Display for Stmt {
     }
 }
 
+#[derive(Clone)]
 pub struct Assignment {
     pub var: String,
     pub rhs: Rc<Expr>,
@@ -60,7 +63,7 @@ impl fmt::Display for Assignment {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Expr {
     Const(f64),
     Var(String),
@@ -133,14 +136,32 @@ impl fmt::Display for Expr {
     }
 }
 
-#[derive(PartialEq, Clone, Copy, Hash)]
+#[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub enum BinaryOperator {
-    Plus,
-    Minus,
-    Mult,
-    Div,
-    Mod,
-    Exp,
+    // Discrimant values exist for ease of operator partial ordering. See the `PartialOrd` impl
+    // below for more details.
+    Plus = 1,
+    Minus = 2,
+    Mult = 10,
+    Div = 11,
+    Mod = 12,
+    Exp = 20,
+}
+
+impl PartialOrd for BinaryOperator {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self == other {
+            return Some(Ordering::Equal);
+        }
+
+        let (l, r) = (*self as u8 / 10, *other as u8 / 10);
+
+        match l.cmp(&r) {
+            Ordering::Less => Some(Ordering::Less),
+            Ordering::Greater => Some(Ordering::Greater),
+            _ => None,
+        }
+    }
 }
 
 impl TryFrom<&Token> for BinaryOperator {
@@ -178,26 +199,46 @@ impl fmt::Display for BinaryOperator {
     }
 }
 
-#[derive(PartialEq, Clone, Hash)]
+#[derive(PartialEq, Clone, Hash, Debug)]
 pub struct BinaryExpr<E: Expression> {
     pub op: BinaryOperator,
     pub lhs: Rc<E>,
     pub rhs: Rc<E>,
 }
 
-impl<E: Expression> fmt::Display for BinaryExpr<E> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} {} {}",
-            self.lhs.to_string(),
-            self.op.to_string(),
-            self.rhs.to_string(),
-        )
-    }
+macro_rules! display_binary_expr {
+    (<$expr:ident>) => {
+        impl fmt::Display for BinaryExpr<$expr> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                let mut result = String::with_capacity(128);
+                use $expr::*;
+                let format_arg = |arg: &Rc<$expr>| match arg.as_ref() {
+                    BinaryExpr(l) => {
+                        if l.op < self.op {
+                            eprintln!("{} {} {}", l.op, self.op, l.op < self.op);
+                            format!("({})", l)
+                        } else {
+                            l.to_string()
+                        }
+                    }
+                    expr => expr.to_string(),
+                };
+                result.push_str(&format!(
+                    "{} {} {}",
+                    format_arg(&self.lhs),
+                    self.op,
+                    format_arg(&self.rhs)
+                ));
+                f.write_str(&result)
+            }
+        }
+    };
 }
 
-#[derive(PartialEq, Clone, Copy, Hash)]
+display_binary_expr!(<Expr>);
+display_binary_expr!(<ExprPat>);
+
+#[derive(PartialEq, Clone, Copy, Hash, Debug)]
 pub enum UnaryOperator {
     SignPositive,
     SignNegative,
@@ -230,14 +271,28 @@ impl fmt::Display for UnaryOperator {
     }
 }
 
-#[derive(PartialEq, Clone, Hash)]
+#[derive(PartialEq, Clone, Hash, Debug)]
 pub struct UnaryExpr<E: Expression> {
     pub op: UnaryOperator,
     pub rhs: Rc<E>,
 }
 
-impl<E: Expression> fmt::Display for UnaryExpr<E> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}{}", self.op.to_string(), self.rhs.to_string(),)
-    }
+macro_rules! display_unary_expr {
+    (<$expr:ident>) => {
+        impl fmt::Display for UnaryExpr<$expr> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                let mut result = String::with_capacity(128);
+                use $expr::*;
+                let format_arg = |arg: &Rc<$expr>| match arg.as_ref() {
+                    BinaryExpr(l) => format!("({})", l),
+                    expr => expr.to_string(),
+                };
+                result.push_str(&format!("{}{}", self.op, format_arg(&self.rhs)));
+                f.write_str(&result)
+            }
+        }
+    };
 }
+
+display_unary_expr!(<Expr>);
+display_unary_expr!(<ExprPat>);

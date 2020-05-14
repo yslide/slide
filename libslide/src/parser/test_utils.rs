@@ -1,22 +1,29 @@
 #![allow(unused_macros)]
 macro_rules! __parse {
-    ($parser:ident, $program:expr) => {
-        let tokens = scan($program);
+    ($parser:ident, $inout:expr) => {
+        let inout: Vec<&str> = $inout.split(" => ").collect();
+        let pin = inout[0];
+        let pout = if inout.len() > 1 {
+            inout[1].to_owned()
+        } else {
+            pin.to_owned()
+        };
+        let tokens = scan(pin);
         let (parsed, _) = $parser(tokens);
-        assert_eq!(parsed.to_string(), $program);
+        assert_eq!(parsed.to_string(), pout);
     };
 }
 
 macro_rules! common_parser_tests {
-    ($($name:ident: $program:expr)*) => {
+    ($($name:ident: $inout:expr)*) => {
     $(
         #[test]
         fn $name() {
             use crate::scanner::{scan};
             use crate::parser::{parse_expression, parse_expression_pattern};
 
-            __parse!(parse_expression, $program);
-            __parse!(parse_expression_pattern, $program);
+            __parse!(parse_expression, $inout);
+            __parse!(parse_expression_pattern, $inout);
         }
     )*
     }

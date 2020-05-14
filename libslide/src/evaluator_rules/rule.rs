@@ -1,4 +1,4 @@
-use super::pattern_match::match_rule;
+use super::pattern_match::{MatchRule, PatternMatch};
 use crate::grammar::*;
 use crate::utils::hash;
 use crate::{parse_expression_pattern, scan};
@@ -8,23 +8,21 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 /// A mapping between two expression patterns.
+#[derive(Clone)]
 pub struct PatternMap {
-    from: ExprPat,
-    to: ExprPat,
+    pub from: Rc<ExprPat>,
+    pub to: Rc<ExprPat>,
 }
 
-pub enum Rule {
-    PatternMap(PatternMap),
-    Evaluate(fn(&Expr) -> Option<Expr>),
-}
-
-impl Rule {
-    /// Converts a string representation of a rule to a `BuiltRule`.
+impl PatternMap {
+    /// Converts a string representation of a rule to a `PatternMap`.
     /// A rule's string form must be
-    ///   "<expr> -> <expr>"
-    /// Where <expr> is an expression pattern. See [`RuleSet`] for more details.
     ///
-    /// [`RuleSet`]: crate::evaluator_rules::RuleSet
+    /// ```text
+    /// "<expr> -> <expr>"
+    /// ```
+    ///
+    /// Where <expr> is an expression pattern.
     pub fn from_str(rule: &str) -> Self {
         let split = rule.split(" -> ");
         let mut split = split
@@ -35,9 +33,38 @@ impl Rule {
         // Unofficially, rustc's expression evaluation order is L2R, but officially it is undefined.
         let from = split.next().unwrap();
         let to = split.next().unwrap();
-        Self::PatternMap(PatternMap { from, to })
+        Self { from, to }
     }
 
+    /// Bootstraps a `PatternMap` rule with a one-pass application of a rule set, which may include
+    /// the rule itself.
+    ///
+    /// This allows the rule to match evaluated contexts that cannot be represented by a
+    /// `PatternMap` created from just a string form. For example, the rule
+    ///
+    /// ```text
+    /// "-(_a - _b) -> _b - _a"
+    /// ```
+    ///
+    /// in its raw form may only be applied to an expression with explicit parentheses. By
+    /// bootstrapping this rule with a rule that removes explicit parentheses, the rule can be
+    /// applied on expressions with implicit parentheses (i.e. of the prefix form `(- (- _a _b))`).
+    pub fn bootstrap(&self, bootstrapping_rules: &[Rule]) -> Self {
+        let mut bootstrapped = self.clone();
+        for rule in bootstrapping_rules.iter() {
+            bootstrapped.from = rule.transform(bootstrapped.from);
+            bootstrapped.to = rule.transform(bootstrapped.to);
+        }
+        bootstrapped
+    }
+}
+
+pub enum Rule {
+    PatternMap(PatternMap),
+    Evaluate(fn(&Expr) -> Option<Expr>),
+}
+
+impl Rule {
     pub fn from_fn(f: fn(&Expr) -> Option<Expr>) -> Self {
         Self::Evaluate(f)
     }
@@ -103,11 +130,11 @@ impl Transformer<Rc<Expr>, Rc<Expr>> for Rule {
 
             let transformed = match rule {
                 Rule::PatternMap(PatternMap { from, to }) => {
-                    match_rule(Rc::new(from.clone()), Rc::clone(&partially_transformed))
+                    PatternMatch::match_rule(Rc::clone(from), Rc::clone(&partially_transformed))
                         // If the rule was matched on the expression, we have replacements for rule
                         // patterns -> target subexpressions. Apply the rule by transforming the
                         // rule's RHS with the replacements.
-                        .map(|repls| repls.transform(Rc::new(to.clone())))
+                        .map(|repls| repls.transform(Rc::clone(to)))
                 }
                 Rule::Evaluate(f) => f(partially_transformed.as_ref()).map(Rc::new),
             }
@@ -116,11 +143,52 @@ impl Transformer<Rc<Expr>, Rc<Expr>> for Rule {
             fill(cache, target, transformed)
         }
 
-        // Expr pointer -> transformed expression. Assumes that transient expressions of the same
-        // value are reference counters pointing to the same underlying expression. This is done
-        // via common subexpression elimination during parsing.
         let mut cache: HashMap<u64, Rc<Expr>> = HashMap::new();
         transform(self, target, &mut cache)
+    }
+}
+
+impl Transformer<Rc<ExprPat>, Rc<ExprPat>> for Rule {
+    /// Bootstraps a rule with another (or possibly the same) rule.
+    fn transform(&self, target: Rc<ExprPat>) -> Rc<ExprPat> {
+        // First, apply the rule recursively on the target's subexpressions.
+        let partially_transformed = match target.as_ref() {
+            ExprPat::Const(_) | ExprPat::VarPat(_) | ExprPat::ConstPat(_) | ExprPat::AnyPat(_) => {
+                Rc::clone(&target)
+            }
+            ExprPat::BinaryExpr(binary_expr) => ExprPat::BinaryExpr(BinaryExpr {
+                op: binary_expr.op,
+                lhs: self.transform(Rc::clone(&binary_expr.lhs)),
+                rhs: self.transform(Rc::clone(&binary_expr.rhs)),
+            })
+            .into(),
+            ExprPat::UnaryExpr(unary_expr) => {
+                let rhs = self.transform(Rc::clone(&unary_expr.rhs));
+                ExprPat::UnaryExpr(UnaryExpr {
+                    op: unary_expr.op,
+                    rhs,
+                })
+                .into()
+            }
+            ExprPat::Parend(expr) => {
+                let inner = self.transform(Rc::clone(expr));
+                ExprPat::Parend(inner).into()
+            }
+            ExprPat::Braced(expr) => {
+                let inner = self.transform(Rc::clone(expr));
+                ExprPat::Braced(inner).into()
+            }
+        };
+
+        match self {
+            Rule::PatternMap(PatternMap { from, to }) => {
+                PatternMatch::match_rule(Rc::clone(from), Rc::clone(&partially_transformed))
+                    .map(|repls| repls.transform(Rc::clone(to)))
+            }
+            // Only pattern map rules can be used for bootstrapping. Function rules should be exact.
+            _ => unreachable!(),
+        }
+        .unwrap_or(partially_transformed)
     }
 }
 

@@ -126,6 +126,11 @@ where
     {
         PeekingTakeWhile::new(self, predicate).collect()
     }
+
+    /// Adds an item to the front of the current iteration.
+    pub fn push_front(&mut self, item: T) {
+        self.lookahead.push_front(Some(item));
+    }
 }
 
 impl<T> Iterator for PeekIter<T>

@@ -19,7 +19,12 @@ pub enum ExprPat {
 
 impl Grammar for ExprPat {}
 impl Grammar for Rc<ExprPat> {}
-impl Expression for ExprPat {}
+impl Expression for ExprPat {
+    #[inline]
+    fn is_const(&self) -> bool {
+        matches!(self, Self::Const(_))
+    }
+}
 
 // TODO: We can't derive this because `f64` doesn't implement `Eq`.
 // This should be fixed by moving to a arbitrary-precision numeric type.

@@ -15,7 +15,8 @@ fn main() -> Result<(), String> {
     if !errors.is_empty() {
         return Err(errors.join("\n"));
     }
-    let simplified = evaluate(parse_tree, EvaluatorContext::default());
+    // TODO: handle errors
+    let simplified = evaluate(parse_tree, EvaluatorContext::default()).unwrap();
 
     println!("{}", simplified.to_string());
 

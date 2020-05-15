@@ -6,16 +6,17 @@ use crate::grammar::*;
 use crate::utils::hash;
 
 use std::collections::HashSet;
+use std::error::Error;
 use std::rc::Rc;
 
 /// Evaluates an expression to as simplified a form as possible.
 /// The evaluation may be partial, as some values (like variables) may be unknown.
-pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Expr {
+pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Result<Expr, Box<dyn Error>> {
     let mut rule_set = RuleSet::default();
     for rule in ctxt.rule_blacklist {
         rule_set.remove(rule)
     }
-    let built_rules = rule_set.build();
+    let built_rules = rule_set.build()?;
 
     let mut simplified_expr: Rc<Expr> = match expr {
         Stmt::Expr(expr) => expr.into(),
@@ -34,7 +35,7 @@ pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Expr {
         expr_hash = hash(&simplified_expr);
     }
 
-    (*simplified_expr).clone()
+    Ok((*simplified_expr).clone())
 }
 
 #[cfg(test)]
@@ -56,7 +57,7 @@ mod tests {
             #[test]
             fn $name() {
                 let parsed = parse($program);
-                let evaluated = evaluate(parsed.clone(), EvaluatorContext::default());
+                let evaluated = evaluate(parsed.clone(), EvaluatorContext::default()).unwrap();
 
                 assert_eq!(evaluated.to_string(), $result.to_string());
             }
@@ -124,7 +125,7 @@ mod tests {
     fn remove_rule() {
         let parsed = parse("1 - 2 + 3 * 4");
         let ctxt = EvaluatorContext::default().with_blacklist([RuleName::Add].to_vec());
-        let evaluated = evaluate(parsed, ctxt);
+        let evaluated = evaluate(parsed, ctxt).unwrap();
         assert_eq!(evaluated.to_string(), "-1 + 12".to_string());
     }
 }

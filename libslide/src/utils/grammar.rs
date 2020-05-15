@@ -1,6 +1,6 @@
 use crate::grammar::*;
 
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::rc::Rc;
 
 pub fn get_symmetric_expressions(expr: Rc<Expr>) -> Vec<Rc<Expr>> {
@@ -106,10 +106,36 @@ where
     }
 }
 
+/// Returns all unique patterns in a pattern expression.
+pub fn unique_pats<'a>(expr: &'a Rc<ExprPat>) -> HashSet<&'a Rc<ExprPat>> {
+    fn unique_pats<'a>(expr: &'a Rc<ExprPat>, set: &mut HashSet<&'a Rc<ExprPat>>) {
+        match expr.as_ref() {
+            ExprPat::VarPat(_) | ExprPat::ConstPat(_) | ExprPat::AnyPat(_) => {
+                set.insert(expr);
+            }
+            ExprPat::BinaryExpr(BinaryExpr { lhs, rhs, .. }) => {
+                unique_pats(&lhs, set);
+                unique_pats(&rhs, set);
+            }
+            ExprPat::UnaryExpr(UnaryExpr { rhs, .. }) => {
+                unique_pats(&rhs, set);
+            }
+            ExprPat::Parend(e) | ExprPat::Braced(e) => {
+                unique_pats(&e, set);
+            }
+            ExprPat::Const(_) => {}
+        }
+    }
+
+    let mut hs = HashSet::new();
+    unique_pats(expr, &mut hs);
+    hs
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{parse_expression, scan};
+    use crate::{parse_expression, parse_expression_pattern, scan};
 
     fn parse<T: Into<String>>(s: T) -> Rc<Expr> {
         let toks = scan(s);
@@ -238,5 +264,22 @@ mod tests {
             }
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn unique_pats() {
+        let parsed = parse_expression_pattern(scan("$a + _b * (#c - [$d]) / $a")).0;
+        let pats = super::unique_pats(&parsed);
+
+        let mut pats: Vec<_> = pats
+            .iter()
+            .map(|p| match p.as_ref() {
+                ExprPat::VarPat(v) | ExprPat::ConstPat(v) | ExprPat::AnyPat(v) => v,
+                _ => unreachable!(),
+            })
+            .collect();
+        pats.sort_by(|a, b| a.as_bytes()[1].cmp(&b.as_bytes()[1]));
+
+        assert_eq!(pats, vec!["$a", "_b", "#c", "$d"]);
     }
 }

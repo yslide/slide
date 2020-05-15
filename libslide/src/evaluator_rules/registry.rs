@@ -2,10 +2,13 @@ mod fn_rules;
 
 use super::rule::*;
 use super::unbuilt_rule::UnbuiltRule;
+use crate::utils::indent;
 use fn_rules::*;
 
+use core::fmt;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::error::Error;
 
 macro_rules! define_rules {
     ($($kind:ident: $def:expr)*) => {
@@ -53,6 +56,7 @@ impl Ord for RuleName {
 /// Set of unbuilt rules.
 pub struct RuleSet {
     rules: HashMap<RuleName, UnbuiltRule>,
+    custom_rules: Vec<UnbuiltRule>,
 }
 
 impl Default for RuleSet {
@@ -60,14 +64,24 @@ impl Default for RuleSet {
     fn default() -> Self {
         Self {
             rules: get_all_rules(),
+            custom_rules: Vec::new(),
         }
     }
 }
 
 impl RuleSet {
     /// Creates a list of `Rules`s from the unbuilt rule set.
-    pub fn build(&self) -> Vec<Rule> {
-        let num_rules = self.rules.values().fold(0, |sum, ur| match ur {
+    pub fn build(&self) -> Result<Vec<Rule>, BuildRuleErrors> {
+        // Order rules deterministically -- first order by name, then add custom rules.
+        let mut unbuilt_named_rules: Vec<(&RuleName, &UnbuiltRule)> = self.rules.iter().collect();
+        unbuilt_named_rules.sort_by(|&(a, _), &(b, _)| a.cmp(b));
+        let all_rules: Vec<_> = unbuilt_named_rules
+            .into_iter()
+            .map(|(_, rule)| rule)
+            .chain(self.custom_rules.iter())
+            .collect();
+
+        let num_rules = all_rules.iter().clone().fold(0, |sum, ur| match ur {
             // Building a string rule actually generates two versions:
             // 1. The "raw" form of the string rule
             // 2. A version of the (1) boostrapped with a set of rules, possibly including (1)
@@ -77,29 +91,41 @@ impl RuleSet {
         });
 
         let mut built_rules = Vec::with_capacity(num_rules);
+        let mut errors: Vec<Box<dyn Error>> = Vec::new();
         let bootstrapping_rules = Self::get_bootstrapping_rules();
-        for (rn, unbuilt_rule) in self.rules.iter() {
+        for unbuilt_rule in all_rules.into_iter() {
             match unbuilt_rule {
                 UnbuiltRule::S(s) => {
                     let pm = PatternMap::from_str(s);
+                    if let Some(err) = pm.validate() {
+                        errors.push(err.into());
+                        continue;
+                    }
+
                     let bootstrapped_pm = pm.bootstrap(&bootstrapping_rules);
-                    built_rules.push((rn, Rule::PatternMap(pm)));
-                    built_rules.push((rn, Rule::PatternMap(bootstrapped_pm)));
+                    built_rules.push(Rule::PatternMap(pm));
+                    built_rules.push(Rule::PatternMap(bootstrapped_pm));
                 }
-                UnbuiltRule::F(f) => built_rules.push((rn, Rule::from_fn(*f))),
+                UnbuiltRule::F(f) => built_rules.push(Rule::from_fn(*f)),
             }
         }
-        // Sort rules by rule name so that rule application is determinstic.
-        built_rules.sort_by(|&(a, _), &(b, _)| b.cmp(a));
-        built_rules
-            .into_iter()
-            .map(|(_, built_rule)| built_rule)
-            .collect()
+
+        if !errors.is_empty() {
+            return Err(BuildRuleErrors { errors });
+        }
+
+        Ok(built_rules)
     }
 
-    /// Remove a rule from the rule set.
+    /// Remove a named rule from the rule set.
     pub fn remove(&mut self, rule: RuleName) {
         self.rules.remove(&rule);
+    }
+
+    /// Insert a custom unbuilt rule into the rule set.
+    #[allow(unused)] // Used in testing. TODO: enable
+    fn insert_custom<T: Into<UnbuiltRule>>(&mut self, rule: T) {
+        self.custom_rules.push(rule.into());
     }
 
     /// Retrieves a set of rules to be used in bootstrapping other rules.
@@ -121,6 +147,33 @@ impl RuleSet {
     }
 }
 
+#[derive(Debug)]
+pub struct BuildRuleErrors {
+    errors: Vec<Box<dyn Error>>,
+}
+
+impl fmt::Display for BuildRuleErrors {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let errors = self
+            .errors
+            .iter()
+            .enumerate()
+            .map(|(i, r)| format!("({}) {}", i + 1, r.to_string()))
+            .map(|s| indent(s, 4))
+            .collect::<Vec<_>>()
+            .join("\n\n");
+
+        write!(
+            f,
+            "Failed to build rules with {} errors.\n{}",
+            self.errors.len(),
+            errors
+        )
+    }
+}
+
+impl Error for BuildRuleErrors {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,8 +181,31 @@ mod tests {
     #[test]
     fn builds_rules() {
         let rule_set = RuleSet::default();
-        let built_rules = rule_set.build();
+        let built_rules = rule_set.build().unwrap();
 
-        assert!(built_rules.iter().any(|r| r.to_string() == "_a + 0 -> _a"));
+        assert_eq!(
+            built_rules[RuleName::AdditiveIdentity as usize].to_string(),
+            "_a + 0 -> _a"
+        );
+    }
+
+    #[test]
+    fn fail_build_rules() {
+        let mut rule_set = RuleSet::default();
+        rule_set.insert_custom("_a -> _b");
+        rule_set.insert_custom("$a -> $a - _c");
+        let err = rule_set.build().expect_err("");
+
+        assert_eq!(
+            err.to_string(),
+            r##"Failed to build rules with 2 errors.
+    (1) Could not resolve pattern map
+        "_a -> _b"
+    Specifically, source "_a" is missing pattern(s) "_b" present in target "_b"
+
+    (2) Could not resolve pattern map
+        "$a -> $a - _c"
+    Specifically, source "$a" is missing pattern(s) "_c" present in target "$a - _c""##
+        );
     }
 }

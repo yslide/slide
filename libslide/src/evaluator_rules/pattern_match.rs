@@ -149,8 +149,8 @@ impl Transformer<Rc<ExprPat>, Rc<Expr>> for PatternMatch<Expr> {
                         Some(transformed) => Rc::clone(transformed),
 
                         // A pattern can only be transformed into an expression if it has an
-                        // expression replacement.
-                        // TODO: Return an error rather than panicking
+                        // expression replacement. Patterns are be validated before transformation,
+                        // so this branch should never be hit.
                         None => unreachable!(),
                     }
                 }

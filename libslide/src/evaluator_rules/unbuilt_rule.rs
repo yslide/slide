@@ -40,3 +40,9 @@ pub enum UnbuiltRule {
     /// A function rule.
     F(fn(&Expr) -> Option<Expr>),
 }
+
+impl From<&'static str> for UnbuiltRule {
+    fn from(s: &'static str) -> Self {
+        Self::S(s)
+    }
+}

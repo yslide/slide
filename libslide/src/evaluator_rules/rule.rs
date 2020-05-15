@@ -1,18 +1,58 @@
 use super::pattern_match::{MatchRule, PatternMatch};
 use crate::grammar::*;
-use crate::utils::{get_symmetric_expressions, hash};
+use crate::utils::{get_symmetric_expressions, hash, indent, unique_pats};
 use crate::{parse_expression_pattern, scan};
 
 use core::fmt;
 use std::collections::HashMap;
+use std::error::Error;
 use std::rc::Rc;
 
 /// A mapping between two expression patterns.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PatternMap {
     pub from: Rc<ExprPat>,
     pub to: Rc<ExprPat>,
 }
+
+impl fmt::Display for PatternMap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} -> {}", self.from.to_string(), self.to.to_string())
+    }
+}
+
+#[derive(Debug)]
+pub struct UnresolvedMapping {
+    map: PatternMap,
+    unresolved_pats: Vec<Rc<ExprPat>>,
+}
+
+impl fmt::Display for UnresolvedMapping {
+    #[rustfmt::skip]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut missing_pats = self
+            .unresolved_pats
+            .iter()
+            .map(|p| format!(r#""{}""#, p))
+            .collect::<Vec<_>>();
+        missing_pats.sort();
+        let missing_pats = missing_pats.join(", ");
+
+        write!(
+            f,
+r#"Could not resolve pattern map
+{}"{}"
+Specifically, source "{}" is missing pattern(s) {} present in target "{}""#,
+            indent("\n", 4),
+            self.map,
+            self.map.from,
+            missing_pats,
+            self.map.to
+        )
+    }
+}
+
+impl Error for UnresolvedMapping {}
 
 impl PatternMap {
     /// Converts a string representation of a rule to a `PatternMap`.
@@ -22,7 +62,7 @@ impl PatternMap {
     /// "<expr> -> <expr>"
     /// ```
     ///
-    /// Where <expr> is an expression pattern.
+    /// Where `<expr>` is an expression pattern.
     pub fn from_str(rule: &str) -> Self {
         let split = rule.split(" -> ");
         let mut split = split
@@ -56,6 +96,23 @@ impl PatternMap {
             bootstrapped.to = rule.transform(bootstrapped.to);
         }
         bootstrapped
+    }
+
+    /// Checks a `PatternMap` is resolvable, returning an error if it is not.
+    pub fn validate(&self) -> Option<UnresolvedMapping> {
+        let unresolved_pats: Vec<Rc<_>> = unique_pats(&self.to)
+            .difference(&unique_pats(&self.from))
+            .map(|p| Rc::clone(*p))
+            .collect();
+
+        if unresolved_pats.is_empty() {
+            return None;
+        }
+
+        Some(UnresolvedMapping {
+            map: self.clone(),
+            unresolved_pats,
+        })
     }
 }
 
@@ -199,17 +256,55 @@ impl Transformer<Rc<ExprPat>, Rc<ExprPat>> for Rule {
     }
 }
 
+fn fn_name<T>(_: T) -> &'static str {
+    let name = std::any::type_name::<T>();
+    name.split("::").last().unwrap()
+}
+
 impl fmt::Display for Rule {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fn fn_name<T>(_: T) -> &'static str {
-            let name = std::any::type_name::<T>();
-            name.split("::").last().unwrap()
-        }
-        match self {
-            Self::PatternMap(PatternMap { from, to }) => {
-                write!(f, "{} -> {}", from.to_string(), to.to_string())
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::PatternMap(pm) => pm.to_string(),
+                Self::Evaluate(fun) => fn_name(fun).to_string(),
             }
+        )
+    }
+}
+
+impl fmt::Debug for Rule {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::PatternMap(pm) => write!(f, "{:?}", pm),
             Self::Evaluate(fun) => write!(f, "{}", fn_name(fun)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_error() {
+        let err = PatternMap::from_str("_a + $b / #c * 3 -> 1 + $b * #e / _f")
+            .validate()
+            .unwrap();
+
+        assert_eq!(
+            err.to_string(),
+            r##"Could not resolve pattern map
+    "_a + $b / #c * 3 -> 1 + $b * #e / _f"
+Specifically, source "_a + $b / #c * 3" is missing pattern(s) "#e", "_f" present in target "1 + $b * #e / _f""##
+        );
+    }
+
+    #[test]
+    fn validate_ok() {
+        assert!(PatternMap::from_str("_a + $b / #c -> _a + $b")
+            .validate()
+            .is_none());
     }
 }

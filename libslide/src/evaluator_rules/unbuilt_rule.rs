@@ -1,5 +1,7 @@
 use crate::grammar::Expr;
 
+use std::rc::Rc;
+
 /// An unbuilt rule, generally used to express a rule in a human-readable form.
 #[derive(Copy, Clone)]
 pub enum UnbuiltRule {
@@ -38,7 +40,7 @@ pub enum UnbuiltRule {
     S(&'static str),
 
     /// A function rule.
-    F(fn(&Expr) -> Option<Expr>),
+    F(fn(Rc<Expr>) -> Option<Rc<Expr>>),
 }
 
 impl From<&'static str> for UnbuiltRule {

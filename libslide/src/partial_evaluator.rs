@@ -115,7 +115,7 @@ mod tests {
         reorder_constants_nested_right: "1 + 2 + a" => "a + 3"
 
         distribute_negation:            "-(a - b)"     => "b - a"
-        distribute_negation_nested:     "1 + -(a - b)" => "1 + b - a"
+        distribute_negation_nested:     "1 + -(a - b)" => "b - a + 1"
         distribute_negation_with_eval:  "1 + -(2 - 3)" => "2"
 
         unwrap_parens_const:            "(1)"       => "1"

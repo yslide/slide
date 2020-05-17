@@ -35,6 +35,7 @@ define_rules! {
                          Posate: F(posate)
                          Negate: F(negate)
                AdditiveIdentity: S("_a + 0 -> _a")
+                AdditiveInverse: S("_a - _a -> 0")
                ReorderConstants: S("#a + $b -> $b + #a")
              DistributeNegation: S("-(_a - _b) -> _b - _a")
            UnwrapExplicitParens: S("(_a) -> _a")

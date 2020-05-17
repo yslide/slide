@@ -38,7 +38,7 @@ pub fn get_symmetric_expressions(expr: Rc<Expr>) -> Vec<Rc<Expr>> {
     }
 }
 
-fn get_flattened_binary_args(expr: Rc<Expr>, op: BinaryOperator) -> VecDeque<Rc<Expr>> {
+pub fn get_flattened_binary_args(expr: Rc<Expr>, op: BinaryOperator) -> Vec<Rc<Expr>> {
     match expr.as_ref() {
         Expr::BinaryExpr(child) if child.op == op => {
             let mut args = VecDeque::with_capacity(2);
@@ -48,19 +48,19 @@ fn get_flattened_binary_args(expr: Rc<Expr>, op: BinaryOperator) -> VecDeque<Rc<
             {
                 args.push_front(arg);
             }
-            args.append(&mut get_flattened_binary_args(Rc::clone(&child.rhs), op));
-            args
+            args.extend(&mut get_flattened_binary_args(Rc::clone(&child.rhs), op).drain(..));
+            args.into_iter().collect()
         }
-        _ => vec![expr].into_iter().collect(),
+        _ => vec![expr],
     }
 }
 
-enum UnflattenStrategy {
+pub enum UnflattenStrategy {
     Left,  // (+ (+ 1 2) 3)
     Right, // (+ 1 (+ 2 3))
 }
 
-fn unflatten_binary_expr<E>(
+pub fn unflatten_binary_expr<E>(
     args: &[Rc<E>],
     op: BinaryOperator,
     strategy: UnflattenStrategy,

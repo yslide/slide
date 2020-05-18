@@ -151,17 +151,12 @@ impl Transformer<Rc<Expr>, Rc<Expr>> for Rule {
             Rc::clone(cache.entry(hash(t.as_ref())).or_insert_with(|| r))
         }
 
-        fn transform(
+        fn transform_inner(
             rule: &Rule,
             target: Rc<Expr>,
             cache: &mut HashMap<u64, Rc<Expr>>,
         ) -> Rc<Expr> {
-            if let Some(result) = cache.get(&hash(target.as_ref())) {
-                return Rc::clone(result);
-            }
-
-            // First, apply the rule recursively on the target's subexpressions.
-            let partially_transformed = match target.as_ref() {
+            match target.as_ref() {
                 Expr::Const(_) => Rc::clone(&target),
                 Expr::Var(_) => Rc::clone(&target),
                 Expr::BinaryExpr(binary_expr) => Expr::BinaryExpr(BinaryExpr {
@@ -183,22 +178,48 @@ impl Transformer<Rc<Expr>, Rc<Expr>> for Rule {
                     let inner = transform(rule, Rc::clone(expr), cache);
                     Expr::Braced(inner).into()
                 }
-            };
+            }
+        }
 
-            let result = match rule {
+        fn transform(
+            rule: &Rule,
+            target: Rc<Expr>,
+            cache: &mut HashMap<u64, Rc<Expr>>,
+        ) -> Rc<Expr> {
+            if let Some(result) = cache.get(&hash(target.as_ref())) {
+                return Rc::clone(result);
+            }
+
+            let mut result = Rc::clone(&target);
+            match rule {
                 Rule::PatternMap(PatternMap { from, to }) => {
-                    get_symmetric_expressions(Rc::clone(&partially_transformed))
-                        .into_iter()
-                        .filter_map(|expr| PatternMatch::match_rule(Rc::clone(from), expr))
+                    for target in get_symmetric_expressions(Rc::clone(&target)) {
+                        // First, apply the rule recursively on the target's subexpressions.
+                        let partially_transformed =
+                            transform_inner(rule, Rc::clone(&target), cache);
+                        if partially_transformed.complexity() < result.complexity() {
+                            result = Rc::clone(&partially_transformed);
+                        }
+
+                        if let Some(transformed) = PatternMatch::match_rule(
+                            Rc::clone(from),
+                            Rc::clone(&partially_transformed),
+                        )
                         // If the rule was matched on the expression, we have replacements for rule
                         // patterns -> target subexpressions. Apply the rule by transforming the
                         // rule's RHS with the replacements.
                         .map(|repls| repls.transform(Rc::clone(to)))
-                        .next()
+                        {
+                            result = transformed;
+                        }
+                    }
                 }
-                Rule::Evaluate(f) => f(Rc::clone(&partially_transformed)),
+                Rule::Evaluate(f) => {
+                    // First, apply the rule recursively on the target's subexpressions.
+                    let partially_transformed = transform_inner(rule, Rc::clone(&target), cache);
+                    result = f(Rc::clone(&partially_transformed)).unwrap_or(partially_transformed);
+                }
             }
-            .unwrap_or(partially_transformed);
 
             fill(cache, target, result)
         }

@@ -90,6 +90,43 @@ impl Expr {
 
 impl Eq for Expr {}
 
+impl PartialOrd for Expr {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Expr {
+    // For expression normalization.
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Self::Var(a), Self::Var(b)) => a.cmp(b),
+            (Self::Var(_), Self::Const(_)) => Ordering::Less,
+            (Self::Const(a), Self::Const(b)) => a.partial_cmp(b).unwrap(), // assume NaNs don't exist
+            (Self::Var(_), Self::UnaryExpr(UnaryExpr { rhs: expr, .. }))
+            | (Self::Var(_), Self::Parend(expr))
+            | (Self::Var(_), Self::Braced(expr))
+            | (Self::Const(_), Self::UnaryExpr(UnaryExpr { rhs: expr, .. }))
+            | (Self::Const(_), Self::Parend(expr))
+            | (Self::Const(_), Self::Braced(expr)) => match expr.as_ref() {
+                Self::Const(_) | Self::Var(_) => self.cmp(expr),
+                _ => Ordering::Less,
+            },
+            (Self::Const(_), Self::Var(_))
+            | (Self::UnaryExpr(_), Self::Var(_))
+            | (Self::Parend(_), Self::Var(_))
+            | (Self::Braced(_), Self::Var(_))
+            | (Self::UnaryExpr(_), Self::Const(_))
+            | (Self::Parend(_), Self::Const(_))
+            | (Self::Braced(_), Self::Const(_)) => other.cmp(self).reverse(),
+            (Self::Var(_), Self::BinaryExpr(_)) | (Self::Const(_), Self::BinaryExpr(_)) => {
+                Ordering::Less
+            }
+            _ => Ordering::Equal,
+        }
+    }
+}
+
 // TODO: We can do better than hashing to a string as well, but we'll save that til we have an
 // arbitrary-precision numeric type.
 #[allow(clippy::derive_hash_xor_eq)]

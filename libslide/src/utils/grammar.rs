@@ -38,20 +38,116 @@ pub fn get_symmetric_expressions(expr: Rc<Expr>) -> Vec<Rc<Expr>> {
     }
 }
 
-pub fn get_flattened_binary_args(expr: Rc<Expr>, op: BinaryOperator) -> Vec<Rc<Expr>> {
+macro_rules! insert_front {
+    ($container:ident, $items:expr) => {
+        for item in $items.into_iter().rev() {
+            $container.push_front(item);
+        }
+    };
+}
+
+macro_rules! insert_back {
+    ($container:ident, $items:expr) => {
+        $container.extend($items);
+    };
+}
+
+pub fn get_flattened_binary_args(expr: Rc<Expr>, parent_op: BinaryOperator) -> Vec<Rc<Expr>> {
     match expr.as_ref() {
-        Expr::BinaryExpr(child) if child.op == op => {
+        Expr::BinaryExpr(
+            child
+            @
+            BinaryExpr {
+                op: BinaryOperator::Plus,
+                ..
+            },
+        ) if parent_op == BinaryOperator::Plus => {
+            // ... + ((1 + 2) + (3 + 4)) => ... + 1, 2, 3, 4
             let mut args = VecDeque::with_capacity(2);
-            for arg in get_flattened_binary_args(Rc::clone(&child.lhs), op)
-                .into_iter()
-                .rev()
-            {
-                args.push_front(arg);
-            }
-            args.extend(&mut get_flattened_binary_args(Rc::clone(&child.rhs), op).drain(..));
+            let flattened_left = get_flattened_binary_args(Rc::clone(&child.lhs), child.op);
+            let flattened_right = get_flattened_binary_args(Rc::clone(&child.rhs), child.op);
+            insert_front!(args, flattened_left);
+            insert_back!(args, flattened_right);
+            args.into_iter().collect()
+        }
+
+        Expr::BinaryExpr(
+            child
+            @
+            BinaryExpr {
+                op: BinaryOperator::Mult,
+                ..
+            },
+        ) if parent_op == BinaryOperator::Mult => {
+            // ... * ((1 * 2) * (3 * 4)) => ... * 1, 2, 3, 4
+            let mut args = VecDeque::with_capacity(2);
+            let flattened_left = get_flattened_binary_args(Rc::clone(&child.lhs), child.op);
+            let flattened_right = get_flattened_binary_args(Rc::clone(&child.rhs), child.op);
+            insert_front!(args, flattened_left);
+            insert_back!(args, flattened_right);
+            args.into_iter().collect()
+        }
+
+        Expr::BinaryExpr(
+            child
+            @
+            BinaryExpr {
+                op: BinaryOperator::Minus,
+                ..
+            },
+        ) if parent_op == BinaryOperator::Plus => {
+            // ... + (2 - 3) => ... + 2, -3
+            // ... + ((1 + 2) - (2 + 3)) => ... + 1, 2, -2, -3
+            let mut args = VecDeque::with_capacity(2);
+            let flattened_left = get_flattened_binary_args(Rc::clone(&child.lhs), child.op);
+            let flattened_right = get_flattened_binary_args(Rc::clone(&child.rhs), child.op);
+            insert_front!(args, flattened_left);
+            insert_back!(args, flattened_right.into_iter().map(negate));
             args.into_iter().collect()
         }
         _ => vec![expr],
+    }
+}
+
+fn negate(expr: Rc<Expr>) -> Rc<Expr> {
+    match expr.as_ref() {
+        // #a -> -#a
+        Expr::Const(f) => Expr::Const(-f).into(),
+
+        // $a -> -$a
+        Expr::Var(_) => Expr::UnaryExpr(UnaryExpr {
+            op: UnaryOperator::SignNegative,
+            rhs: expr,
+        })
+        .into(),
+
+        // +_a => -_a
+        Expr::UnaryExpr(UnaryExpr {
+            op: UnaryOperator::SignPositive,
+            rhs,
+        }) => Expr::UnaryExpr(UnaryExpr {
+            op: UnaryOperator::SignPositive,
+            rhs: Rc::clone(rhs),
+        })
+        .into(),
+
+        // -_a => _a
+        Expr::UnaryExpr(UnaryExpr {
+            op: UnaryOperator::SignNegative,
+            rhs,
+        }) => Rc::clone(rhs),
+
+        // _a <op> _b => -(_a <op> _b)
+        // TODO: We could expand factorable expressions further:
+        //       -(_a + _b) = -_a + -_b
+        //       -(_a - _b) = -_a - -_b
+        Expr::BinaryExpr(_) => Expr::UnaryExpr(UnaryExpr {
+            op: UnaryOperator::SignNegative,
+            rhs: Rc::clone(&expr),
+        })
+        .into(),
+
+        Expr::Parend(expr) | Expr::Braced(expr) => negate(Rc::clone(expr)),
     }
 }
 
@@ -132,6 +228,36 @@ pub fn unique_pats<'a>(expr: &'a Rc<ExprPat>) -> HashSet<&'a Rc<ExprPat>> {
     hs
 }
 
+pub fn normalize(expr: Rc<Expr>) -> Rc<Expr> {
+    match expr.as_ref() {
+        Expr::BinaryExpr(BinaryExpr { op, lhs, rhs }) => {
+            let partially_normalized = Expr::BinaryExpr(BinaryExpr {
+                op: *op,
+                lhs: normalize(Rc::clone(lhs)),
+                rhs: normalize(Rc::clone(rhs)),
+            });
+            let mut flattened_args = get_flattened_binary_args(partially_normalized.into(), *op);
+            flattened_args.sort();
+            unflatten_binary_expr(&flattened_args, *op, UnflattenStrategy::Left)
+        }
+        Expr::UnaryExpr(UnaryExpr { op, rhs }) => Expr::UnaryExpr(UnaryExpr {
+            op: *op,
+            rhs: normalize(Rc::clone(rhs)),
+        })
+        .into(),
+        Expr::Parend(expr) => {
+            let inner = normalize(Rc::clone(expr));
+            Expr::Parend(inner).into()
+        }
+        Expr::Braced(expr) => {
+            let inner = normalize(Rc::clone(expr));
+            Expr::Braced(inner).into()
+        }
+
+        _ => expr,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,14 +283,16 @@ mod tests {
             exprs,
             vec![
                 // Same versions with left and right associativity
-                "1 - 2 + 3 + (x * 4) + 5",
-                "1 - 2 + 3 + (x * 4) + 5",
-                "3 + 1 - 2 + (x * 4) + 5",
-                "3 + 1 - 2 + (x * 4) + 5",
-                "(x * 4) + 1 - 2 + 3 + 5",
-                "(x * 4) + 1 - 2 + 3 + 5",
-                "5 + 1 - 2 + 3 + (x * 4)",
-                "5 + 1 - 2 + 3 + (x * 4)",
+                "1 + -2 + 3 + (x * 4) + 5",
+                "1 + -2 + 3 + (x * 4) + 5",
+                "-2 + 1 + 3 + (x * 4) + 5",
+                "-2 + 1 + 3 + (x * 4) + 5",
+                "3 + 1 + -2 + (x * 4) + 5",
+                "3 + 1 + -2 + (x * 4) + 5",
+                "(x * 4) + 1 + -2 + 3 + 5",
+                "(x * 4) + 1 + -2 + 3 + 5",
+                "5 + 1 + -2 + 3 + (x * 4)",
+                "5 + 1 + -2 + 3 + (x * 4)"
             ]
         );
     }
@@ -201,7 +329,7 @@ mod tests {
             .map(|e| e.to_string())
             .collect();
 
-        assert_eq!(args, vec!["1 - 2", "3", "4 * 5", "6"]);
+        assert_eq!(args, vec!["1", "-2", "3", "4 * 5", "6"]);
     }
 
     #[test]

@@ -50,9 +50,7 @@ pub(super) fn add(expr: Rc<Expr>) -> Option<Rc<Expr>> {
             _ => i += 1,
         }
     }
-    if konst != 0. {
-        args.push(Rc::new(konst.into()));
-    }
+    args.push(Rc::new(konst.into()));
 
     Some(unflatten_binary_expr(
         &args,
@@ -67,8 +65,25 @@ pub(super) fn subtract(expr: Rc<Expr>) -> Option<Rc<Expr>> {
 }
 
 pub(super) fn multiply(expr: Rc<Expr>) -> Option<Rc<Expr>> {
-    let (l, r) = get_binary_args!(expr, BinaryOperator::Mult)?;
-    Some(Rc::new(Expr::Const(l * r)))
+    let mut args = get_flattened_binary_args!(expr, BinaryOperator::Mult)?;
+    let mut konst = 1.;
+    let mut i = 0;
+    for _ in 0..args.len() {
+        match args[i].as_ref() {
+            Expr::Const(f) => {
+                konst *= f;
+                args.swap_remove(i);
+            }
+            _ => i += 1,
+        }
+    }
+    args.push(Rc::new(konst.into()));
+
+    Some(unflatten_binary_expr(
+        &args,
+        BinaryOperator::Mult,
+        UnflattenStrategy::Left,
+    ))
 }
 
 pub(super) fn divide(expr: Rc<Expr>) -> Option<Rc<Expr>> {

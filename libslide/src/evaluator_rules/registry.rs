@@ -7,12 +7,12 @@ use fn_rules::*;
 
 use core::fmt;
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 
 macro_rules! define_rules {
     ($($kind:ident: $def:expr)*) => {
-        #[derive(Clone, Copy, Hash, PartialEq, Eq)]
+        #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
         pub enum RuleName {
             $($kind,)*
         }
@@ -26,6 +26,8 @@ macro_rules! define_rules {
 }
 
 define_rules! {
+           UnwrapExplicitParens: S("(_a) -> _a")
+         UnwrapExplicitBrackets: S("[_a] -> _a")
                             Add: F(add)
                        Subtract: F(subtract)
                        Multiply: F(multiply)
@@ -34,12 +36,12 @@ define_rules! {
                    Exponentiate: F(exponentiate)
                          Posate: F(posate)
                          Negate: F(negate)
+           MultiplicateIdentity: S("_a * 1 -> _a")
                AdditiveIdentity: S("_a + 0 -> _a")
                 AdditiveInverse: S("_a - _a -> 0")
                ReorderConstants: S("#a + $b -> $b + #a")
              DistributeNegation: S("-(_a - _b) -> _b - _a")
-           UnwrapExplicitParens: S("(_a) -> _a")
-         UnwrapExplicitBrackets: S("[_a] -> _a")
+            FoldNegatedAddition: S("_a + -_b -> _a - _b")
 }
 
 impl PartialOrd for RuleName {
@@ -78,11 +80,11 @@ impl RuleSet {
         unbuilt_named_rules.sort_by(|&(a, _), &(b, _)| a.cmp(b));
         let all_rules: Vec<_> = unbuilt_named_rules
             .into_iter()
-            .map(|(_, rule)| rule)
-            .chain(self.custom_rules.iter())
+            .map(|(rn, rule)| (Some(rn), rule))
+            .chain(self.custom_rules.iter().map(|r| (None, r)))
             .collect();
 
-        let num_rules = all_rules.iter().clone().fold(0, |sum, ur| match ur {
+        let num_rules = all_rules.iter().clone().fold(0, |sum, (_, ur)| match ur {
             // Building a string rule actually generates two versions:
             // 1. The "raw" form of the string rule
             // 2. A version of the (1) boostrapped with a set of rules, possibly including (1)
@@ -94,7 +96,8 @@ impl RuleSet {
         let mut built_rules = Vec::with_capacity(num_rules);
         let mut errors: Vec<Box<dyn Error>> = Vec::new();
         let bootstrapping_rules = Self::get_bootstrapping_rules();
-        for unbuilt_rule in all_rules.into_iter() {
+        let bootstrap_blacklist = Self::get_boostrap_blacklist();
+        for (rule_name, unbuilt_rule) in all_rules.into_iter() {
             match unbuilt_rule {
                 UnbuiltRule::S(s) => {
                     let pm = PatternMap::from_str(s);
@@ -103,9 +106,12 @@ impl RuleSet {
                         continue;
                     }
 
-                    let bootstrapped_pm = pm.bootstrap(&bootstrapping_rules);
+                    if !bootstrap_blacklist.contains(&rule_name.copied()) {
+                        let bootstrapped_pm = pm.bootstrap(&bootstrapping_rules);
+                        built_rules.push(Rule::PatternMap(bootstrapped_pm));
+                    }
+
                     built_rules.push(Rule::PatternMap(pm));
-                    built_rules.push(Rule::PatternMap(bootstrapped_pm));
                 }
                 UnbuiltRule::F(f) => built_rules.push(Rule::from_fn(*f)),
             }
@@ -146,6 +152,16 @@ impl RuleSet {
             })
             .collect()
     }
+
+    /// Retrieves a set of rules to be excluded from being bootstrapped.
+    fn get_boostrap_blacklist() -> HashSet<Option<RuleName>> {
+        vec![
+            Some(RuleName::UnwrapExplicitParens),
+            Some(RuleName::UnwrapExplicitBrackets),
+        ]
+        .into_iter()
+        .collect()
+    }
 }
 
 #[derive(Debug)]
@@ -184,10 +200,9 @@ mod tests {
         let rule_set = RuleSet::default();
         let built_rules = rule_set.build().unwrap();
 
-        assert_eq!(
-            built_rules[RuleName::AdditiveIdentity as usize].to_string(),
-            "_a + 0 -> _a"
-        );
+        assert!(built_rules
+            .into_iter()
+            .any(|s| s.to_string() == "_a + 0 -> _a"));
     }
 
     #[test]

@@ -3,7 +3,7 @@ pub use types::*;
 
 use crate::evaluator_rules::RuleSet;
 use crate::grammar::*;
-use crate::utils::hash;
+use crate::utils::{hash, normalize};
 
 use std::collections::HashSet;
 use std::error::Error;
@@ -35,7 +35,7 @@ pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Result<Expr, Box<dyn Erro
         expr_hash = hash(&simplified_expr);
     }
 
-    Ok((*simplified_expr).clone())
+    Ok(normalize(simplified_expr).as_ref().clone())
 }
 
 #[cfg(test)]
@@ -75,7 +75,7 @@ mod tests {
         sub_nested_left:                "1 - 2 - a" => "-1 - a"
 
         mult:                           "2 * 3"     => "6"
-        mult_nested_left:               "2 * 3 * a" => "6 * a"
+        mult_nested_left:               "2 * 3 * a" => "a * 6"
 
         div:                            "6 / 2"     => "3"
         div_nested_left:                "6 / 2 / a" => "3 / a"
@@ -115,7 +115,7 @@ mod tests {
         reorder_constants_nested_right: "1 + 2 + a" => "a + 3"
 
         distribute_negation:            "-(a - b)"     => "b - a"
-        distribute_negation_nested:     "1 + -(a - b)" => "b - a + 1"
+        distribute_negation_nested:     "1 + -(a - b)" => "b + 1 - a"
         distribute_negation_with_eval:  "1 + -(2 - 3)" => "2"
 
         unwrap_parens_const:            "(1)"       => "1"
@@ -125,6 +125,8 @@ mod tests {
         unwrap_braces_const:            "[1]"       => "1"
         unwrap_braces_var:              "[a]"       => "a"
         unwrap_braces_nested:           "[a] + [1]" => "a + 1"
+
+        flattened_addition:             "1 + 2 - b + 3 - b" => "6 - b - b"
     }
 
     #[test]

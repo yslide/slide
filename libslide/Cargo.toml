@@ -4,4 +4,19 @@ version = "0.0.0"
 authors = ["ayazhafiz <ayaz.hafiz.1@gmail.com>"]
 edition = "2018"
 
-[dependencies]
+[features]
+benchmark-internals = []
+
+[[bench]]
+name = "gcd"
+path = "benches/math/gcd.rs"
+harness = false
+required-features = ["benchmark-internals"]
+
+[dependencies.num-traits]
+version = "0.2"
+default-features = false
+features = ["std"]
+
+[dev-dependencies]
+criterion = "0.3.2"

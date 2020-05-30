@@ -1,39 +1,49 @@
 #[macro_use]
 extern crate criterion;
 extern crate libslide;
-extern crate lazy_static;
 
 use criterion::Criterion;
 use libslide::{Bignum, _binary_skip_mod, _single_skip_mod};
-use lazy_static::lazy_static;
 
-lazy_static! {
-    static ref INPUT: [(Bignum, Bignum); 2] = 
-        [(Bignum::new("92138591".to_string()).unwrap() , 
-            Bignum::new("29135".to_string()).unwrap()),
-         (Bignum::new("10201231.1235123".to_string()).unwrap(),
-            Bignum::new("139581".to_string()).unwrap())];
-}
-
-fn bench_binary_modulo(c: &mut Criterion) {
-    c.bench_function("binary_modulo", |b| {
-        b.iter(|| {
-            for (u, v) in INPUT.iter() {
-                _binary_skip_mod(u.to_owned(), v.to_owned());
+macro_rules! bench_mod {
+    ($($name: ident: $size: expr, $mode: expr)*) => {
+        $(
+        fn $name(c: &mut Criterion) -> () {
+            match $mode {
+                1 => {
+                    c.bench_function(concat!("binary_skip_modulo_", $size), |b| {
+                        b.iter(|| {
+                            let u = String::from_utf8(vec![b'9'; $size]).unwrap();
+                            let v = String::from_utf8(vec![b'2'; $size]).unwrap();
+                            _binary_skip_mod(Bignum::new(u).unwrap(), Bignum::new(v).unwrap());
+                        })
+                    });
+                    
+                }, 
+                2 => {
+                    c.bench_function(concat!("single_skip_modulo_", $size), |b| {
+                        b.iter(|| {
+                            let u = String::from_utf8(vec![b'9';$size]).unwrap();
+                            let v = String::from_utf8(vec![b'2';$size/10]).unwrap();
+                            _single_skip_mod(Bignum::new(u).unwrap(), Bignum::new(v).unwrap());
+                        })
+                    });
+                }, 
+                _ => unreachable!(),
             }
-        })
-    });
+        }
+    )*
+    }
 }
 
-fn bench_single_modulo(c: &mut Criterion) {
-    c.bench_function("single_modulo", |b| {
-        b.iter(|| {
-            for (u, v) in INPUT.iter() {
-                _single_skip_mod(u.to_owned(), v.to_owned());
-            }
-        })
-    });
+bench_mod! {
+    size_1024_bin: 1024, 1
+    size_2048_bin: 2048, 1
+    size_4096_bin: 4096, 1
+    size_1024_sin: 1024, 2
+    size_2048_sin: 2048, 2
+    size_4096_sin: 4096, 2
 }
 
-criterion_group!(mod_benches, bench_binary_modulo, bench_single_modulo);
+criterion_group!(mod_benches, size_1024_bin, size_2048_bin, size_4096_bin, size_1024_sin, size_2048_sin, size_4096_sin);
 criterion_main!(mod_benches);

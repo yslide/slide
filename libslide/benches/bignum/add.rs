@@ -1,31 +1,31 @@
 #[macro_use]
 extern crate criterion;
 extern crate libslide;
-extern crate lazy_static;
 
 use criterion::Criterion;
 use libslide::{Bignum, _add};
-use lazy_static::lazy_static;
 
-lazy_static! {
-    static ref INPUT: [(Bignum, Bignum); 3] = 
-        [(Bignum::new("99999999999999999999999999999999".to_string()).unwrap(), 
-            Bignum::new("999999999999999999999".to_string()).unwrap()), 
-        (Bignum::new("0.555555555555555555555555555".to_string()).unwrap(), 
-            Bignum::new("0.555555555555555555".to_string()).unwrap()),
-        (Bignum::new("99999999999999.999999999999".to_string()).unwrap(),
-            Bignum::new("99999999999.99999".to_string()).unwrap())];
+macro_rules! bench_add {
+    ($($name: ident: $size: expr)*)=> {
+        $(
+        fn $name(c: &mut Criterion) -> () {
+            c.bench_function(concat!("add_", $size), |b| {
+                b.iter(|| {
+                    let u = String::from_utf8(vec![b'9'; $size]).unwrap();
+                    let v = String::from_utf8(vec![b'5'; $size]).unwrap();
+                    _add(Bignum::new(u).unwrap(), Bignum::new(v).unwrap());
+                })
+            });
+        }
+    )*
+    }
 }
 
-fn bench_add(c: &mut Criterion) {
-    c.bench_function("add", |b| {
-        b.iter(|| {
-            for (u, v) in INPUT.iter() {
-                _add(u.to_owned(), v.to_owned());
-            }
-        })
-    });
+bench_add! {
+    size_1024: 1024
+    size_2048: 2048
+    size_4096: 4096
 }
 
-criterion_group!(add_benches, bench_add);
+criterion_group!(add_benches, size_1024, size_2048, size_4096);
 criterion_main!(add_benches);

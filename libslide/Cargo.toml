@@ -25,6 +25,12 @@ path = "benches/bignum/add.rs"
 harness = false
 required-features = ["benchmark-internals"]
 
+[[bench]]
+name = "sub"
+path = "benches/bignum/sub.rs"
+harness = false
+required-features = ["benchmark-internals"]
+
 [dependencies.num-traits]
 version = "0.2"
 default-features = false

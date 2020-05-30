@@ -10,6 +10,7 @@ mod utils;
 
 pub use modulo::*;
 pub use add::*;
+pub use sub::*;
 // this probably can go in utils but I put it in here for now
 fn to_u8(c: char) -> u8 {
     c.to_digit(10).unwrap() as u8

@@ -8,15 +8,13 @@ use libslide::{Bignum, _add};
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref INPUT: [(Bignum, Bignum); 4] = 
+    static ref INPUT: [(Bignum, Bignum); 3] = 
         [(Bignum::new("99999999999999999999999999999999".to_string()).unwrap(), 
             Bignum::new("999999999999999999999".to_string()).unwrap()), 
         (Bignum::new("0.555555555555555555555555555".to_string()).unwrap(), 
             Bignum::new("0.555555555555555555".to_string()).unwrap()),
         (Bignum::new("99999999999999.999999999999".to_string()).unwrap(),
-            Bignum::new("99999999999.99999".to_string()).unwrap()), 
-        (Bignum::new("-99999999999999.999999999999".to_string()).unwrap(),
-            Bignum::new("-99999999999.99999".to_string()).unwrap())];
+            Bignum::new("99999999999.99999".to_string()).unwrap())];
 }
 
 fn bench_add(c: &mut Criterion) {

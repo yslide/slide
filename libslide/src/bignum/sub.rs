@@ -84,6 +84,11 @@ impl ops::Sub for Bignum {
     }
 }
 
+#[cfg(feature = "benchmark-internals")]
+pub fn _sub(u: Bignum, v: Bignum) -> Bignum {
+    u - v
+}
+
 #[cfg(test)]
 mod tests {
     macro_rules! bignum_test_sub {

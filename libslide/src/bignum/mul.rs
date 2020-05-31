@@ -69,6 +69,11 @@ impl ops::Mul for Bignum {
     }
 }
 
+#[cfg(feature = "benchmark-internals")]
+pub fn _mul(u: Bignum, v: Bignum) -> Bignum {
+    u * v
+}
+
 #[cfg(test)]
 mod tests {
     macro_rules! bignum_test_mul {

@@ -14,8 +14,26 @@ harness = false
 required-features = ["benchmark-internals"]
 
 [[bench]]
-name = "modulo"
+name = "ctor"
+path = "benches/bignum/constructor.rs"
+harness = false
+required-features = ["benchmark-internals"]
+
+[[bench]]
+name = "compare"
+path = "benches/bignum/compare.rs"
+harness = false
+required-features = ["benchmark-internals"]
+
+[[bench]]
+name = "mod"
 path = "benches/bignum/modulo.rs"
+harness = false
+required-features = ["benchmark-internals"]
+
+[[bench]]
+name = "mul"
+path = "benches/bignum/mul.rs"
 harness = false
 required-features = ["benchmark-internals"]
 
@@ -31,6 +49,12 @@ path = "benches/bignum/sub.rs"
 harness = false
 required-features = ["benchmark-internals"]
 
+[[bench]]
+name = "fft"
+path = "benches/bignum/utils/fft.rs"
+harness = false
+required-features = ["benchmark-internals"]
+
 [dependencies.num-traits]
 version = "0.2"
 default-features = false
@@ -38,4 +62,4 @@ features = ["std"]
 
 [dev-dependencies]
 criterion = "0.3.2"
-lazy_static = "1.4.0"
+criterion-macro = "0.3.2"

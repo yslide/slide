@@ -65,6 +65,18 @@ impl PartialOrd for Bignum {
     }
 }
 
+#[cfg(feature = "benchmark-internals")]
+pub fn _compare(u: Bignum, v: Bignum, s: &str) -> bool {
+    match s {
+        "eq" => u == v,
+        "lte" => u <= v,
+        "lt" => u < v,
+        "gte" => u >= v,
+        "gt" => u > v,
+        _ => unreachable!(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     macro_rules! bignum_test_cmp {

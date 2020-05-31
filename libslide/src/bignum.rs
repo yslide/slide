@@ -8,9 +8,12 @@ mod negate;
 mod sub;
 mod utils;
 
-pub use modulo::*;
-pub use add::*;
-pub use sub::*;
+pub use add::_add;
+pub use compare::_compare;
+pub use modulo::{_binary_skip_mod, _single_skip_mod};
+pub use mul::_mul;
+pub use sub::_sub;
+pub use utils::_fft;
 // this probably can go in utils but I put it in here for now
 fn to_u8(c: char) -> u8 {
     c.to_digit(10).unwrap() as u8

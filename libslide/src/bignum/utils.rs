@@ -103,6 +103,12 @@ pub fn fft(item: Vec<Complex>, n: usize, ifft: bool) -> Vec<Complex> {
     a
 }
 
+#[cfg(feature = "benchmark-internals")]
+pub fn _fft(v: Vec<u8>) -> Vec<Complex> {
+    let vlen = v.len();
+    fft(recast_user_vec(v).unwrap(), vlen, false)
+}
+
 pub fn ifft(item: Vec<Complex>, n: usize) -> Vec<Complex> {
     let n_complex = Complex::new(n as f64, 0.0);
     let a: Vec<Complex> = fft(item, n, true)

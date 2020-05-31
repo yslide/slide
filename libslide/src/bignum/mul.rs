@@ -28,7 +28,7 @@ impl ops::Mul for Bignum {
             rhs_int.push(0);
             lhs_int.push(0);
         }
-        while !ispowerof2(rhs_int.len() + rhs_dec.len()) {
+        while !ispowerof2(rhs_int.len() + rhs_dec.len()) || rhs_int.len() <= 2 {
             rhs_int.push(0);
             lhs_int.push(0);
         }
@@ -106,6 +106,7 @@ mod tests {
             zero6: "0.0000", "-00000.000", "0"
             zero7: "-0.00", "-0000.00", "0"
             trailing_zero1: "1.00000", "000001.0000", "1"
+            mixed3: "5", ".5", "2.5"
         }
     }
 }

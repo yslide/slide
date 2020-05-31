@@ -8,3 +8,6 @@ assets/*.log
 assets/*.md5
 assets/*.out
 assets/*.pdf
+
+# Intellij
+.idea*

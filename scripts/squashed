@@ -34,7 +34,7 @@ fi
 git fetch squash_check &>/dev/null
 
 ACTION="${1:-}"
-BRANCH="${TRAVIS_BRANCH}/${BRANCH:-$(git branch --show-current)}"
+BRANCH="${TARGET_BRANCH_REMOTE}/${BRANCH:-$(git branch --show-current)}"
 case "$ACTION" in
 "")
   COMMIT_DIFF=$(git rev-list --count squash_check/master.."$BRANCH")

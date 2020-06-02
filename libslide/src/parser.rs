@@ -65,7 +65,7 @@ where
     fn parse_const_pattern(&mut self, name: String) -> Self::Expr;
     fn parse_any_pattern(&mut self, name: String) -> Self::Expr;
     fn parse_open_paren(&mut self) -> Self::Expr;
-    fn parse_open_brace(&mut self) -> Self::Expr;
+    fn parse_open_bracket(&mut self) -> Self::Expr;
     fn finish_expr(&mut self, expr: Self::Expr) -> Rc<Self::Expr>;
 
     // Default parsing implementations.
@@ -110,7 +110,7 @@ where
                 Some(TokenType::AnyPattern(name)) => self.parse_any_pattern(name),
 
                 Some(TokenType::OpenParen) => self.parse_open_paren(),
-                Some(TokenType::OpenBracket) => self.parse_open_brace(),
+                Some(TokenType::OpenBracket) => self.parse_open_bracket(),
                 _ => unreachable!(),
             };
             self.input().next(); // eat rest of created expression

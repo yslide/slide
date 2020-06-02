@@ -80,9 +80,9 @@ impl Parser<Rc<ExprPat>> for ExpressionPatternParser {
         Self::Expr::Parend(self.expr())
     }
 
-    fn parse_open_brace(&mut self) -> Self::Expr {
+    fn parse_open_bracket(&mut self) -> Self::Expr {
         self.input().next(); // eat open paren
-        Self::Expr::Braced(self.expr())
+        Self::Expr::Bracketed(self.expr())
     }
 
     fn finish_expr(&mut self, expr: Self::Expr) -> Rc<Self::Expr> {

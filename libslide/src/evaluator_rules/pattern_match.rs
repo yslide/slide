@@ -74,7 +74,7 @@ impl MatchRule<Expr> for PatternMatch<Expr> {
             (ExprPat::Parend(rule), Expr::Parend(expr)) => {
                 Self::match_rule(Rc::clone(rule), Rc::clone(expr))
             }
-            (ExprPat::Braced(rule), Expr::Braced(expr)) => {
+            (ExprPat::Bracketed(rule), Expr::Bracketed(expr)) => {
                 Self::match_rule(Rc::clone(rule), Rc::clone(expr))
             }
             _ => None,
@@ -117,7 +117,7 @@ impl MatchRule<ExprPat> for PatternMatch<ExprPat> {
             (ExprPat::Parend(rule), ExprPat::Parend(expr)) => {
                 Self::match_rule(Rc::clone(rule), Rc::clone(expr))
             }
-            (ExprPat::Braced(rule), ExprPat::Braced(expr)) => {
+            (ExprPat::Bracketed(rule), ExprPat::Bracketed(expr)) => {
                 Self::match_rule(Rc::clone(rule), Rc::clone(expr))
             }
             _ => None,
@@ -171,9 +171,9 @@ impl Transformer<Rc<ExprPat>, Rc<Expr>> for PatternMatch<Expr> {
                     let inner = transform(repls, Rc::clone(expr), cache);
                     Expr::Parend(inner).into()
                 }
-                ExprPat::Braced(expr) => {
+                ExprPat::Bracketed(expr) => {
                     let inner = transform(repls, Rc::clone(expr), cache);
-                    Expr::Braced(inner).into()
+                    Expr::Bracketed(inner).into()
                 }
             };
 
@@ -226,9 +226,9 @@ impl Transformer<Rc<ExprPat>, Rc<ExprPat>> for PatternMatch<ExprPat> {
                     let inner = transform(repls, Rc::clone(expr), cache);
                     ExprPat::Parend(inner).into()
                 }
-                ExprPat::Braced(expr) => {
+                ExprPat::Bracketed(expr) => {
                     let inner = transform(repls, Rc::clone(expr), cache);
-                    ExprPat::Braced(inner).into()
+                    ExprPat::Bracketed(inner).into()
                 }
             };
 
@@ -428,10 +428,10 @@ mod tests {
             unary_pattern_partial:      "+$a" => "+1" => None
 
             parend:                     "($a + #b)" => "(x + 0)" => Some(vec!["$a: x", "#b: 0"])
-            parend_on_braced:           "($a + #b)" => "[x + 0]" => None
+            parend_on_bracketed:           "($a + #b)" => "[x + 0]" => None
 
-            braced:                     "[$a + #b]" => "[x + 0]" => Some(vec!["$a: x", "#b: 0"])
-            braced_on_parend:           "[$a + #b]" => "(x + 0)" => None
+            bracketed:                     "[$a + #b]" => "[x + 0]" => Some(vec!["$a: x", "#b: 0"])
+            bracketed_on_parend:           "[$a + #b]" => "(x + 0)" => None
         }
 
         #[test]

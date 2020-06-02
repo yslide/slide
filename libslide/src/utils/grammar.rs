@@ -147,7 +147,7 @@ fn negate(expr: Rc<Expr>) -> Rc<Expr> {
         })
         .into(),
 
-        Expr::Parend(expr) | Expr::Braced(expr) => negate(Rc::clone(expr)),
+        Expr::Parend(expr) | Expr::Bracketed(expr) => negate(Rc::clone(expr)),
     }
 }
 
@@ -216,7 +216,7 @@ pub fn unique_pats<'a>(expr: &'a Rc<ExprPat>) -> HashSet<&'a Rc<ExprPat>> {
             ExprPat::UnaryExpr(UnaryExpr { rhs, .. }) => {
                 unique_pats(&rhs, set);
             }
-            ExprPat::Parend(e) | ExprPat::Braced(e) => {
+            ExprPat::Parend(e) | ExprPat::Bracketed(e) => {
                 unique_pats(&e, set);
             }
             ExprPat::Const(_) => {}
@@ -249,9 +249,9 @@ pub fn normalize(expr: Rc<Expr>) -> Rc<Expr> {
             let inner = normalize(Rc::clone(expr));
             Expr::Parend(inner).into()
         }
-        Expr::Braced(expr) => {
+        Expr::Bracketed(expr) => {
             let inner = normalize(Rc::clone(expr));
-            Expr::Braced(inner).into()
+            Expr::Bracketed(inner).into()
         }
 
         _ => expr,

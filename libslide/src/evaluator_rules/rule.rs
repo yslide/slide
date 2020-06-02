@@ -174,9 +174,9 @@ impl Transformer<Rc<Expr>, Rc<Expr>> for Rule {
                     let inner = transform(rule, Rc::clone(expr), cache);
                     Expr::Parend(inner).into()
                 }
-                Expr::Braced(expr) => {
+                Expr::Bracketed(expr) => {
                     let inner = transform(rule, Rc::clone(expr), cache);
-                    Expr::Braced(inner).into()
+                    Expr::Bracketed(inner).into()
                 }
             }
         }
@@ -255,9 +255,9 @@ impl Transformer<Rc<ExprPat>, Rc<ExprPat>> for Rule {
                 let inner = self.transform(Rc::clone(expr));
                 ExprPat::Parend(inner).into()
             }
-            ExprPat::Braced(expr) => {
+            ExprPat::Bracketed(expr) => {
                 let inner = self.transform(Rc::clone(expr));
-                ExprPat::Braced(inner).into()
+                ExprPat::Bracketed(inner).into()
             }
         };
 

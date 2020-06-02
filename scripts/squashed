@@ -1,2 +1,59 @@
 #!/bin/bash
-REPO="https://github.com/ayazhafiz/slide" scripts/_scripts/git/squashed "$@"
+#
+# Verifies that a branch differs from master by at most one commit.
+# This intended to be used in validating that a branch can be
+# rebased onto master with a squash strategy.
+#
+# By default, the current branch is compared against master.
+# To check a specific branch, set the `BRANCH` environment variable.
+#
+# Usage:
+#       <REPO=url> [BRANCH=branch] squashed [--rebase]
+#
+# Variables:
+#       REPO       Repository URL
+#       BRANCH     Target branch to compare current branch against
+#
+# Options:
+#       --rebase   Rebase interactively on master
+#
+# Dependencies:
+#       git
+set -e
+
+REPO=$1
+BRANCH_REMOTE=$2
+
+
+if [ -z "$REPO" ]; then
+  echo "The \$REPO variable must be set." 1>&2
+  exit 1
+fi
+
+(git remote add squash_check "$REPO" || git remote set-url squash_check "$REPO" // git remote add branch_check "$BRANCH_REMOTE" // git remote set-url branch_check "$BRANCH_REMOTE") &>/dev/null
+git fetch squash_check &>/dev/null
+
+ACTION="${1:-}"
+BRANCH="${TRAVIS_BRANCH}/${BRANCH:-$(git branch --show-current)}"
+case "$ACTION" in
+"")
+  COMMIT_DIFF=$(git rev-list --count squash_check/master.."$BRANCH")
+  if [ "$COMMIT_DIFF" -gt 1 ]; then
+    ERR_MSG="Please squash branch to 1 commit before merging to master."
+  fi
+  ;;
+--rebase)
+  git rebase -i --autosquash squash_check/master
+  ;;
+*)
+  ERR_MSG="Invalid option"
+esac
+
+git remote remove squash_check &>/dev/null
+
+if [ -z "$ERR_MSG" ]; then
+  exit 0
+fi
+
+echo "$ERR_MSG" 1>&2
+exit 1

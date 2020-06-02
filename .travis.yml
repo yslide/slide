@@ -20,11 +20,13 @@ jobs:
 
     - name: "Squashed commits"
       if: type = pull_request
-      env: BRANCH="origin/$TRAVIS_PULL_REQUEST_BRANCH"
+      env:
+        - BRANCH="https://github.com/$TRAVIS_REPO_SLUG/$TRAVIS_PULL_REQUEST_BRANCH"
+        - REPO="https://github.com/ayazhafiz/slide"
       script: 
         - git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
         - git fetch origin
-        - scripts/squashed
+        - scripts/squashed REPO BRANCH
 
   allow_failures:
     - rust: nightly

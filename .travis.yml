@@ -22,7 +22,7 @@ jobs:
       if: type = pull_request
       env:
         - BRANCH="https://github.com/$TRAVIS_REPO_SLUG/$TRAVIS_PULL_REQUEST_BRANCH"
-        - REPO="https://github.com/ayazhafiz/slide"
+        - REPO="https://github.com/timothycobrien/slide"
       script: 
         - git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
         - git fetch origin

@@ -122,9 +122,9 @@ mod tests {
         unwrap_parens_var:              "(a)"       => "a"
         unwrap_parens_nested:           "(a) + (1)" => "a + 1"
 
-        unwrap_braces_const:            "[1]"       => "1"
-        unwrap_braces_var:              "[a]"       => "a"
-        unwrap_braces_nested:           "[a] + [1]" => "a + 1"
+        unwrap_brackets_const:            "[1]"       => "1"
+        unwrap_brackets_var:              "[a]"       => "a"
+        unwrap_brackets_nested:           "[a] + [1]" => "a + 1"
 
         flattened_addition:             "1 + 2 - b + 3 - b" => "6 - b - b"
     }

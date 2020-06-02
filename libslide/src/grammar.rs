@@ -72,8 +72,8 @@ pub enum Expr {
     UnaryExpr(UnaryExpr<Self>),
     /// An expression wrapped in parentheses
     Parend(Rc<Self>),
-    /// An expression wrapped in braces
-    Braced(Rc<Self>),
+    /// An expression wrapped in brackets
+    Bracketed(Rc<Self>),
 }
 
 impl Expr {
@@ -83,7 +83,7 @@ impl Expr {
             Self::Var(_) => 0,
             Self::BinaryExpr(BinaryExpr { lhs, rhs, .. }) => lhs.complexity() + rhs.complexity(),
             Self::UnaryExpr(UnaryExpr { rhs, .. }) => rhs.complexity(),
-            Self::Parend(expr) | Self::Braced(expr) => expr.complexity(),
+            Self::Parend(expr) | Self::Bracketed(expr) => expr.complexity(),
         }
     }
 }
@@ -105,20 +105,20 @@ impl Ord for Expr {
             (Self::Const(a), Self::Const(b)) => a.partial_cmp(b).unwrap(), // assume NaNs don't exist
             (Self::Var(_), Self::UnaryExpr(UnaryExpr { rhs: expr, .. }))
             | (Self::Var(_), Self::Parend(expr))
-            | (Self::Var(_), Self::Braced(expr))
+            | (Self::Var(_), Self::Bracketed(expr))
             | (Self::Const(_), Self::UnaryExpr(UnaryExpr { rhs: expr, .. }))
             | (Self::Const(_), Self::Parend(expr))
-            | (Self::Const(_), Self::Braced(expr)) => match expr.as_ref() {
+            | (Self::Const(_), Self::Bracketed(expr)) => match expr.as_ref() {
                 Self::Const(_) | Self::Var(_) => self.cmp(expr),
                 _ => Ordering::Less,
             },
             (Self::Const(_), Self::Var(_))
             | (Self::UnaryExpr(_), Self::Var(_))
             | (Self::Parend(_), Self::Var(_))
-            | (Self::Braced(_), Self::Var(_))
+            | (Self::Bracketed(_), Self::Var(_))
             | (Self::UnaryExpr(_), Self::Const(_))
             | (Self::Parend(_), Self::Const(_))
-            | (Self::Braced(_), Self::Const(_)) => other.cmp(self).reverse(),
+            | (Self::Bracketed(_), Self::Const(_)) => other.cmp(self).reverse(),
             (Self::Var(_), Self::BinaryExpr(_)) | (Self::Const(_), Self::BinaryExpr(_)) => {
                 Ordering::Less
             }
@@ -141,7 +141,7 @@ impl core::hash::Hash for Expr {
             BinaryExpr(e) => e.hash(state),
             UnaryExpr(e) => e.hash(state),
             e @ Parend(_) => e.to_string().hash(state),
-            e @ Braced(_) => e.to_string().hash(state),
+            e @ Bracketed(_) => e.to_string().hash(state),
         }
     }
 }
@@ -185,7 +185,7 @@ impl fmt::Display for Expr {
                 BinaryExpr(binary_expr) => binary_expr.to_string(),
                 UnaryExpr(unary_expr) => unary_expr.to_string(),
                 Parend(expr) => format!("({})", expr.to_string()),
-                Braced(expr) => format!("[{}]", expr.to_string()),
+                Bracketed(expr) => format!("[{}]", expr.to_string()),
             }
         )
     }

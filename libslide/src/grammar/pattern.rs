@@ -14,7 +14,7 @@ pub enum ExprPat {
     BinaryExpr(BinaryExpr<Self>),
     UnaryExpr(UnaryExpr<Self>),
     Parend(Rc<Self>),
-    Braced(Rc<Self>),
+    Bracketed(Rc<Self>),
 }
 
 impl Grammar for ExprPat {}
@@ -40,7 +40,7 @@ impl PartialEq for ExprPat {
             (BinaryExpr(x), BinaryExpr(y)) => x == y,
             (UnaryExpr(x), UnaryExpr(y)) => x == y,
             (Parend(x), Parend(y)) => x == y,
-            (Braced(x), Braced(y)) => x == y,
+            (Bracketed(x), Bracketed(y)) => x == y,
             _ => false,
         }
     }
@@ -61,7 +61,7 @@ impl core::hash::Hash for ExprPat {
             BinaryExpr(e) => e.hash(state),
             UnaryExpr(e) => e.hash(state),
             e @ Parend(_) => e.to_string().hash(state),
-            e @ Braced(_) => e.to_string().hash(state),
+            e @ Bracketed(_) => e.to_string().hash(state),
         }
     }
 }
@@ -90,7 +90,7 @@ impl fmt::Display for ExprPat {
                 BinaryExpr(binary_expr) => binary_expr.to_string(),
                 UnaryExpr(unary_expr) => unary_expr.to_string(),
                 Parend(expr) => format!("({})", expr.to_string()),
-                Braced(expr) => format!("[{}]", expr.to_string()),
+                Bracketed(expr) => format!("[{}]", expr.to_string()),
             }
         )
     }

@@ -1,8 +1,3 @@
-mod bignum;
-
-#[cfg(feature = "benchmark-internals")]
-pub use bignum::*;
-
 mod scanner;
 pub use scanner::scan;
 

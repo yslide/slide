@@ -109,6 +109,13 @@ mod tests {
         additive_inverse_nested:       "(a + 0) - a"       => "0"
         additive_inverse_with_reorder: "a + 0 - a"         => "0"
 
+        subtractive_identity_var:          "a - 0"       => "a"
+        subtractive_identity_const:        "1 - 0"       => "1"
+        subtractive_identity_any:          "(a * b) - 0" => "a * b"
+        subtractive_identity_nested:       "(a + 0) - 0" => "a"
+        // TODO(#89): simplify
+        subtractive_identity_with_reorder: "0 - a - 0"   => "0 - a"
+
         reorder_constants:              "1 + a"     => "a + 1"
         reorder_constants_nested:       "1 + a + 2" => "a + 3"
         reorder_constants_nested_left:  "a + 1 + 2" => "a + 3"

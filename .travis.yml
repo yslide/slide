@@ -38,7 +38,7 @@ script:
   - scripts/check lintformat
 
 after_success:
-  - cargo doc --document-private-items
+  - cargo doc --document-private-items --no-deps
 
 deploy:
   - provider: pages

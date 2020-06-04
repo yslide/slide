@@ -39,6 +39,7 @@ define_rules! {
            MultiplicateIdentity: S("_a * 1 -> _a")
                AdditiveIdentity: S("_a + 0 -> _a")
                 AdditiveInverse: S("_a - _a -> 0")
+            SubtractiveIdentity: S("_a - 0 -> _a")
                ReorderConstants: S("#a + $b -> $b + #a")
              DistributeNegation: S("-(_a - _b) -> _b - _a")
             FoldNegatedAddition: S("_a + -_b -> _a - _b")

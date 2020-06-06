@@ -11,6 +11,8 @@ pub use partial_evaluator::EvaluatorContext;
 
 mod evaluator_rules;
 mod grammar;
+pub use grammar::Grammar;
+
 mod math;
 
 #[cfg(feature = "benchmark-internals")]

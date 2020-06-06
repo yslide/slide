@@ -1,24 +1,83 @@
-use libslide::{evaluate, parse_expression, scan, EvaluatorContext};
+use libslide::{evaluate, parse_expression, scan, EvaluatorContext, Grammar};
 
 use std::env;
 
-fn main() -> Result<(), String> {
-    let program = match env::args().nth(1) {
-        Some(prog) => prog,
-        None => {
-            return Err("Must supply a program.".into());
-        }
-    };
+struct Opts {
+    pub program: String,
+    pub output_form: OutputForm,
+    pub parse_only: bool,
+}
 
-    let tokens = scan(program);
+enum OutputForm {
+    Pretty,
+    SExpression,
+    Debug,
+}
+
+fn get_opts() -> Opts {
+    let matches = clap::App::new(clap::crate_name!())
+        .version(clap::crate_version!())
+        .about(clap::crate_description!())
+        .author(clap::crate_authors!())
+        .arg(
+            clap::Arg::with_name("program")
+                .help("Program to evaluate")
+                .required(true),
+        )
+        .arg(
+            clap::Arg::with_name("output-form")
+                .short("o")
+                .default_value("pretty")
+                .takes_value(true)
+                .possible_values(&["pretty", "s-expression", "debug"]),
+        )
+        .arg(
+            clap::Arg::with_name("parse-only")
+                .long("--parse-only")
+                .help("Stop after parsing and dump the AST"),
+        )
+        .get_matches();
+
+    Opts {
+        program: matches.value_of("program").unwrap().into(),
+        output_form: match matches.value_of("output-form").unwrap() {
+            "pretty" => OutputForm::Pretty,
+            "s-expression" => OutputForm::SExpression,
+            "debug" => OutputForm::Debug,
+            _ => unreachable!(),
+        },
+        parse_only: matches.is_present("parse-only"),
+    }
+}
+
+fn main() -> Result<(), String> {
+    let opts = get_opts();
+
+    let tokens = scan(opts.program);
     let (parse_tree, errors) = parse_expression(tokens);
     if !errors.is_empty() {
         return Err(errors.join("\n"));
     }
     // TODO: handle errors
-    let simplified = evaluate(parse_tree, EvaluatorContext::default()).unwrap();
 
-    println!("{}", simplified.to_string());
+    if opts.parse_only {
+        println!("{}", print(parse_tree, opts.output_form));
+        return Ok(());
+    }
+
+    let simplified = evaluate(parse_tree, EvaluatorContext::default()).unwrap();
+    println!("{}", print(simplified, opts.output_form));
 
     Ok(())
+}
+
+fn print<T>(obj: T, output_form: OutputForm) -> String
+where
+    T: Grammar,
+{
+    match output_form {
+        OutputForm::Pretty => obj.to_string(),
+        OutputForm::SExpression => obj.s_form(),
+        OutputForm::Debug => format!("{:#?}", obj),
+    }
 }

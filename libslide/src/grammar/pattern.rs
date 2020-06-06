@@ -17,8 +17,27 @@ pub enum ExprPat {
     Bracketed(Rc<Self>),
 }
 
-impl Grammar for ExprPat {}
-impl Grammar for Rc<ExprPat> {}
+impl Grammar for ExprPat {
+    fn s_form(&self) -> String {
+        match self {
+            Self::Const(konst) => konst.to_string(),
+            Self::VarPat(pat) | Self::ConstPat(pat) | Self::AnyPat(pat) => pat.to_string(),
+            Self::BinaryExpr(BinaryExpr { op, lhs, rhs }) => {
+                format!("({} {} {})", op.to_string(), lhs.s_form(), rhs.s_form())
+            }
+            Self::UnaryExpr(UnaryExpr { op, rhs }) => {
+                format!("({} {})", op.to_string(), rhs.s_form())
+            }
+            Self::Parend(inner) => format!("({})", inner.s_form()),
+            Self::Bracketed(inner) => format!("[{}]", inner.s_form()),
+        }
+    }
+}
+impl Grammar for Rc<ExprPat> {
+    fn s_form(&self) -> String {
+        self.as_ref().s_form()
+    }
+}
 impl Expression for ExprPat {
     #[inline]
     fn is_const(&self) -> bool {

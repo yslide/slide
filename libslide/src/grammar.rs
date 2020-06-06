@@ -10,7 +10,14 @@ use core::convert::TryFrom;
 use core::fmt;
 use std::rc::Rc;
 
-pub trait Grammar {}
+pub trait Grammar
+where
+    Self: fmt::Display + fmt::Debug,
+{
+    /// Returns the S-expression form of this expression.
+    /// For example, 1 + 1 -> (+ 1 1).
+    fn s_form(&self) -> String;
+}
 pub trait Expression
 where
     Self: fmt::Display + From<BinaryExpr<Self>> + From<UnaryExpr<Self>>,
@@ -18,13 +25,20 @@ where
     fn is_const(&self) -> bool;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Stmt {
     Expr(Expr),
     Assignment(Assignment),
 }
 
-impl Grammar for Stmt {}
+impl Grammar for Stmt {
+    fn s_form(&self) -> String {
+        match self {
+            Self::Expr(expr) => expr.s_form(),
+            Self::Assignment(Assignment { var, rhs }) => format!("(= {} {})", var, rhs.s_form()),
+        }
+    }
+}
 
 impl From<Expr> for Stmt {
     fn from(expr: Expr) -> Self {
@@ -52,7 +66,7 @@ impl fmt::Display for Stmt {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Assignment {
     pub var: String,
     pub rhs: Rc<Expr>,
@@ -146,8 +160,27 @@ impl core::hash::Hash for Expr {
     }
 }
 
-impl Grammar for Expr {}
-impl Grammar for Rc<Expr> {}
+impl Grammar for Expr {
+    fn s_form(&self) -> String {
+        match self {
+            Self::Const(konst) => konst.to_string(),
+            Self::Var(var) => var.to_string(),
+            Self::BinaryExpr(BinaryExpr { op, lhs, rhs }) => {
+                format!("({} {} {})", op.to_string(), lhs.s_form(), rhs.s_form())
+            }
+            Self::UnaryExpr(UnaryExpr { op, rhs }) => {
+                format!("({} {})", op.to_string(), rhs.s_form())
+            }
+            Self::Parend(inner) => format!("({})", inner.s_form()),
+            Self::Bracketed(inner) => format!("[{}]", inner.s_form()),
+        }
+    }
+}
+impl Grammar for Rc<Expr> {
+    fn s_form(&self) -> String {
+        self.as_ref().s_form()
+    }
+}
 impl Expression for Expr {
     #[inline]
     fn is_const(&self) -> bool {

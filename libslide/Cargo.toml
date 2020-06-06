@@ -13,6 +13,12 @@ path = "benches/math/gcd.rs"
 harness = false
 required-features = ["benchmark-internals"]
 
+[[bench]]
+name = "gcd_poly"
+path = "benches/math/gcd_poly_zz.rs"
+harness = false
+required-features = ["benchmark-internals"]
+
 [dependencies]
 rug = "1.9.0"
 

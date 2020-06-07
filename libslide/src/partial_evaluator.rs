@@ -1,4 +1,6 @@
+mod flatten;
 mod types;
+use flatten::flatten_expr;
 pub use types::*;
 
 use crate::evaluator_rules::RuleSet;
@@ -28,6 +30,9 @@ pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Result<Expr, Box<dyn Erro
     // meaning we can't simplify any further or are stuck in a cycle.
     let mut expr_hash = hash(&simplified_expr);
     let mut seen: HashSet<u64> = HashSet::new();
+    if ctxt.always_flatten {
+        simplified_expr = flatten_expr(&simplified_expr);
+    }
     while seen.insert(expr_hash) {
         for rule in &built_rules {
             simplified_expr = rule.transform(simplified_expr);
@@ -113,8 +118,7 @@ mod tests {
         subtractive_identity_const:        "1 - 0"       => "1"
         subtractive_identity_any:          "(a * b) - 0" => "a * b"
         subtractive_identity_nested:       "(a + 0) - 0" => "a"
-        // TODO(#89): simplify
-        subtractive_identity_with_reorder: "0 - a - 0"   => "0 - a"
+        subtractive_identity_with_reorder: "0 - a - 0"   => "-a"
 
         reorder_constants:              "1 + a"     => "a + 1"
         reorder_constants_nested:       "1 + a + 2" => "a + 3"
@@ -134,6 +138,8 @@ mod tests {
         unwrap_brackets_nested:           "[a] + [1]" => "a + 1"
 
         flattened_addition:             "1 + 2 - b + 3 - b" => "6 - b - b"
+
+        issue_92: "a + 1 - 1" => "a"
     }
 
     #[test]

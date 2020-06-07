@@ -201,9 +201,11 @@ mod tests {
         let rule_set = RuleSet::default();
         let built_rules = rule_set.build().unwrap();
 
-        assert!(built_rules
-            .into_iter()
-            .any(|s| s.to_string() == "_a + 0 -> _a"));
+        assert!(
+            built_rules
+                .into_iter()
+                .any(|s| s.to_string() == "_a + 0 -> _a")
+        );
     }
 
     #[test]

@@ -294,6 +294,23 @@ pub struct BinaryExpr<E: Expression> {
     pub rhs: Rc<E>,
 }
 
+impl<E> BinaryExpr<E>
+where
+    E: Expression,
+{
+    pub fn mult<T, U>(lhs: T, rhs: U) -> Self
+    where
+        T: Into<Rc<E>>,
+        U: Into<Rc<E>>,
+    {
+        Self {
+            op: BinaryOperator::Mult,
+            lhs: lhs.into(),
+            rhs: rhs.into(),
+        }
+    }
+}
+
 macro_rules! display_binary_expr {
     (<$expr:ident>) => {
         impl fmt::Display for BinaryExpr<$expr> {
@@ -363,6 +380,21 @@ impl fmt::Display for UnaryOperator {
 pub struct UnaryExpr<E: Expression> {
     pub op: UnaryOperator,
     pub rhs: Rc<E>,
+}
+
+impl<E> UnaryExpr<E>
+where
+    E: Expression,
+{
+    pub fn negate<T>(expr: T) -> Self
+    where
+        T: Into<Rc<E>>,
+    {
+        Self {
+            op: UnaryOperator::SignNegative,
+            rhs: expr.into(),
+        }
+    }
 }
 
 macro_rules! display_unary_expr {

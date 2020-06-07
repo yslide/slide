@@ -320,10 +320,8 @@ Specifically, source "_a + $b / #c * 3" is missing pattern(s) "#e", "_f" present
 
     #[test]
     fn validate_ok() {
-        assert!(
-            PatternMap::from_str("_a + $b / #c -> _a + $b")
-                .validate()
-                .is_none()
-        );
+        assert!(PatternMap::from_str("_a + $b / #c -> _a + $b")
+            .validate()
+            .is_none());
     }
 }

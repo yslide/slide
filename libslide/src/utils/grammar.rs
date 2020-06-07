@@ -55,7 +55,9 @@ macro_rules! insert_back {
 pub fn get_flattened_binary_args(expr: Rc<Expr>, parent_op: BinaryOperator) -> Vec<Rc<Expr>> {
     match expr.as_ref() {
         Expr::BinaryExpr(
-            child @ BinaryExpr {
+            child
+            @
+            BinaryExpr {
                 op: BinaryOperator::Plus,
                 ..
             },
@@ -70,7 +72,9 @@ pub fn get_flattened_binary_args(expr: Rc<Expr>, parent_op: BinaryOperator) -> V
         }
 
         Expr::BinaryExpr(
-            child @ BinaryExpr {
+            child
+            @
+            BinaryExpr {
                 op: BinaryOperator::Mult,
                 ..
             },
@@ -85,7 +89,9 @@ pub fn get_flattened_binary_args(expr: Rc<Expr>, parent_op: BinaryOperator) -> V
         }
 
         Expr::BinaryExpr(
-            child @ BinaryExpr {
+            child
+            @
+            BinaryExpr {
                 op: BinaryOperator::Minus,
                 ..
             },

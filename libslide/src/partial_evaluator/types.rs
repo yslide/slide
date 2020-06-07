@@ -1,7 +1,10 @@
 use crate::evaluator_rules::RuleName;
 
 pub struct EvaluatorContext {
+    /// Rules that should not be included in the evaluation of an expression.
     pub(crate) rule_blacklist: Vec<RuleName>,
+
+    /// Whether an expression should always be flattened before it is further evaluated.
     pub(crate) always_flatten: bool,
 }
 

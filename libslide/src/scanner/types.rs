@@ -3,12 +3,14 @@
 //
 //
 
+use crate::utils::display_float;
 use core::fmt;
+use rug::Float;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum TokenType {
     // Stores a floating point number as dp
-    Float(f64),
+    Float(Float),
 
     // Identifies addition
     Plus,
@@ -81,7 +83,7 @@ impl fmt::Display for Token {
             f,
             "{}",
             match &self.ty {
-                Float(num) => num.to_string(),
+                Float(num) => display_float(num.to_string()),
                 Plus => "+".into(),
                 Minus => "-".into(),
                 Mult => "*".into(),
@@ -108,6 +110,8 @@ impl fmt::Display for Token {
 mod tests {
     mod format {
         use crate::scanner::types::*;
+        use crate::scanner::FLOAT_PRECISION;
+        use rug::Float as Float_mod;
 
         macro_rules! format_tests {
         ($($name:ident: $ty:expr, $format_str:expr)*) => {
@@ -123,7 +127,7 @@ mod tests {
     }
 
         format_tests! {
-            float: Float(1.3), "1.3"
+            float: Float(Float_mod::with_val(FLOAT_PRECISION, 1.3)), "1.3"
             plus: Plus, "+"
             minus: Minus, "-"
             mult: Mult, "*"

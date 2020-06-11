@@ -1,6 +1,8 @@
 use crate::grammar::*;
+use crate::scanner::FLOAT_PRECISION;
 use crate::utils::*;
 
+use rug::Float;
 use std::rc::Rc;
 
 macro_rules! get_binary_args {
@@ -39,7 +41,7 @@ macro_rules! get_unary_arg {
 
 pub(super) fn add(expr: Rc<Expr>) -> Option<Rc<Expr>> {
     let mut args = get_flattened_binary_args!(expr, BinaryOperator::Plus)?;
-    let mut konst = 0.;
+    let mut konst = Float::with_val(FLOAT_PRECISION, 0);
     let mut i = 0;
     for _ in 0..args.len() {
         match args[i].as_ref() {
@@ -61,12 +63,12 @@ pub(super) fn add(expr: Rc<Expr>) -> Option<Rc<Expr>> {
 
 pub(super) fn subtract(expr: Rc<Expr>) -> Option<Rc<Expr>> {
     let (l, r) = get_binary_args!(expr, BinaryOperator::Minus)?;
-    Some(Rc::new(Expr::Const(l - r)))
+    Some(Rc::new(Expr::Const(Float::with_val(FLOAT_PRECISION, l - r))))
 }
 
 pub(super) fn multiply(expr: Rc<Expr>) -> Option<Rc<Expr>> {
     let mut args = get_flattened_binary_args!(expr, BinaryOperator::Mult)?;
-    let mut konst = 1.;
+    let mut konst = Float::with_val(FLOAT_PRECISION, 1);
     let mut i = 0;
     for _ in 0..args.len() {
         match args[i].as_ref() {
@@ -88,17 +90,22 @@ pub(super) fn multiply(expr: Rc<Expr>) -> Option<Rc<Expr>> {
 
 pub(super) fn divide(expr: Rc<Expr>) -> Option<Rc<Expr>> {
     let (l, r) = get_binary_args!(expr, BinaryOperator::Div)?;
-    Some(Rc::new(Expr::Const(l / r)))
+    Some(Rc::new(Expr::Const(Float::with_val(FLOAT_PRECISION, l/r))))
 }
 
 pub(super) fn modulo(expr: Rc<Expr>) -> Option<Rc<Expr>> {
     let (l, r) = get_binary_args!(expr, BinaryOperator::Mod)?;
-    Some(Rc::new(Expr::Const(l % r)))
+    Some(Rc::new(Expr::Const(Float::with_val(FLOAT_PRECISION, l/r))))
 }
 
 pub(super) fn exponentiate(expr: Rc<Expr>) -> Option<Rc<Expr>> {
     let (l, r) = get_binary_args!(expr, BinaryOperator::Exp)?;
-    Some(Rc::new(Expr::Const(l.powf(*r))))
+    // we need to check that binary args returns two u32
+    if Float::with_val(FLOAT_PRECISION, l.to_u32_saturating().unwrap())== *l && Float::with_val(FLOAT_PRECISION, r.to_u32_saturating().unwrap()) == *r {
+        Some(Rc::new(Expr::Const(Float::with_val(FLOAT_PRECISION, Float::u_pow_u(l.to_u32_saturating().unwrap(), r.to_u32_saturating().unwrap())))))
+    } else {
+        None
+    }
 }
 
 pub(super) fn posate(expr: Rc<Expr>) -> Option<Rc<Expr>> {
@@ -107,7 +114,7 @@ pub(super) fn posate(expr: Rc<Expr>) -> Option<Rc<Expr>> {
 
 pub(super) fn negate(expr: Rc<Expr>) -> Option<Rc<Expr>> {
     match get_unary_arg!(expr, UnaryOperator::SignNegative)?.as_ref() {
-        Expr::Const(n) => Some(Rc::new(Expr::Const(-n))),
+        Expr::Const(n) => Some(Rc::new(Expr::Const(Float::with_val(FLOAT_PRECISION, -1*n)))),
         _ => None,
     }
 }

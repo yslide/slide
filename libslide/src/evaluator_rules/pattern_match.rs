@@ -1,6 +1,8 @@
 use crate::grammar::*;
+use crate::scanner::FLOAT_PRECISION;
 use crate::utils::hash;
 
+use rug::Float;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -44,7 +46,7 @@ impl MatchRule<Expr> for PatternMatch<Expr> {
                 Some(replacements)
             }
             (ExprPat::Const(a), Expr::Const(b)) => {
-                if (a - b).abs() > std::f64::EPSILON {
+                if Float::with_val(FLOAT_PRECISION, a-b).abs() > Float::with_val(FLOAT_PRECISION, std::f64::EPSILON) {
                     // Constants don't match; rule can't be applied.
                     return None;
                 }
@@ -93,7 +95,7 @@ impl MatchRule<ExprPat> for PatternMatch<ExprPat> {
                 Some(replacements)
             }
             (ExprPat::Const(a), ExprPat::Const(b)) => {
-                if (a - b).abs() > std::f64::EPSILON {
+                if  Float::with_val(FLOAT_PRECISION, a-b).abs() > Float::with_val(FLOAT_PRECISION, std::f64::EPSILON) {
                     return None;
                 }
                 Some(PatternMatch::default())
@@ -155,7 +157,7 @@ impl Transformer<Rc<ExprPat>, Rc<Expr>> for PatternMatch<Expr> {
                     }
                 }
 
-                ExprPat::Const(f) => Expr::Const(*f).into(),
+                ExprPat::Const(f) => Expr::Const(Float::with_val(FLOAT_PRECISION, f)).into(),
                 ExprPat::BinaryExpr(binary_expr) => Expr::BinaryExpr(BinaryExpr {
                     op: binary_expr.op,
                     lhs: transform(repls, Rc::clone(&binary_expr.lhs), cache),
@@ -210,7 +212,7 @@ impl Transformer<Rc<ExprPat>, Rc<ExprPat>> for PatternMatch<ExprPat> {
                     }
                 }
 
-                ExprPat::Const(f) => ExprPat::Const(*f).into(),
+                ExprPat::Const(f) => ExprPat::Const(Float::with_val(FLOAT_PRECISION, f)).into(),
                 ExprPat::BinaryExpr(binary_expr) => ExprPat::BinaryExpr(BinaryExpr {
                     op: binary_expr.op,
                     lhs: transform(repls, Rc::clone(&binary_expr.lhs), cache),
@@ -297,12 +299,12 @@ mod tests {
             let c = Rc::new(ExprPat::VarPat("c".into()));
 
             let mut left = PatternMatch::default();
-            left.insert(&a, Expr::Const(1.).into());
-            left.insert(&b, Expr::Const(2.).into());
+            left.insert(&a, Expr::Const(Float::with_val(FLOAT_PRECISION, 1)).into());
+            left.insert(&b, Expr::Const(Float::with_val(FLOAT_PRECISION, 2)).into());
 
             let mut right = PatternMatch::default();
-            right.insert(&b, Expr::Const(2.).into());
-            right.insert(&c, Expr::Const(3.).into());
+            right.insert(&b, Expr::Const(Float::with_val(FLOAT_PRECISION, 2)).into());
+            right.insert(&c, Expr::Const(Float::with_val(FLOAT_PRECISION, 3)).into());
 
             let merged = PatternMatch::try_merge(left, right).unwrap();
             assert_eq!(merged.map.len(), 3);
@@ -316,10 +318,10 @@ mod tests {
             let a = Rc::new(ExprPat::VarPat("a".into()));
 
             let mut left = PatternMatch::default();
-            left.insert(&a, Expr::Const(1.).into());
+            left.insert(&a, Expr::Const(Float::with_val(FLOAT_PRECISION, 1)).into());
 
             let mut right = PatternMatch::default();
-            right.insert(&a, Expr::Const(2.).into());
+            right.insert(&a, Expr::Const(Float::with_val(FLOAT_PRECISION, 2)).into());
 
             let merged = PatternMatch::try_merge(left, right);
             assert!(merged.is_none());

@@ -17,3 +17,20 @@ pub fn indent<T: Into<String>>(s: T, n: usize) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
+
+pub fn display_float(mut s: String) -> String {
+    let mut count = 0;
+    print!("{}", s);
+    for c in s.chars().rev() {
+        if c == '0' || c == '.'{
+            count += 1;
+        }
+        else {
+            break;
+        }
+    }
+    s.truncate(s.len()-count);
+    s
+}
+
+

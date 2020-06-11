@@ -1,7 +1,10 @@
 pub mod types;
 
 use crate::utils::PeekIter;
+use rug::Float;
 use types::*;
+
+pub const FLOAT_PRECISION: u32 = 20;
 
 pub fn scan<T: Into<String>>(input: T) -> Vec<Token> {
     let mut scanner = Scanner::new(input);
@@ -72,7 +75,7 @@ impl Scanner {
             self.input.next();
             float_str.push_str(&self.input.collect_while::<_, String>(|c| c.is_digit(10)));
         }
-        let tok = Token::new(TokenType::Float(float_str.parse::<f64>().unwrap()));
+        let tok = Token::new(TokenType::Float(Float::with_val(FLOAT_PRECISION, Float::parse(float_str).unwrap())));
         self.output.push(tok);
     }
 

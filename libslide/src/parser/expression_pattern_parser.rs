@@ -3,6 +3,7 @@ use crate::grammar::*;
 use crate::scanner::types::Token;
 use crate::utils::{hash, PeekIter};
 
+use rug::Float;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -48,7 +49,7 @@ impl Parser<Rc<ExprPat>> for ExpressionPatternParser {
         parsed
     }
 
-    fn parse_float(&mut self, f: f64) -> Self::Expr {
+    fn parse_float(&mut self, f: Float) -> Self::Expr {
         Self::Expr::Const(f)
     }
 

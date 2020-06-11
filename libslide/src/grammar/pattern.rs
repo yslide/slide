@@ -1,10 +1,12 @@
 pub use super::*;
+use crate::scanner::FLOAT_PRECISION;
 
+use rug::Float;
 use std::rc::Rc;
 
 #[derive(Clone, Debug)]
 pub enum ExprPat {
-    Const(f64),
+    Const(Float),
     /// Pattern matching a variable
     VarPat(String),
     /// Pattern matching a constant
@@ -52,7 +54,7 @@ impl PartialEq for ExprPat {
     fn eq(&self, other: &ExprPat) -> bool {
         use ExprPat::*;
         match (self, other) {
-            (Const(x), Const(y)) => (x - y).abs() < std::f64::EPSILON,
+            (Const(x), Const(y)) => Float::with_val(FLOAT_PRECISION, x-y) < Float::with_val(FLOAT_PRECISION, std::f64::EPSILON),
             (VarPat(x), VarPat(y)) => x == y,
             (ConstPat(x), ConstPat(y)) => x == y,
             (AnyPat(x), AnyPat(y)) => x == y,

@@ -1,5 +1,7 @@
 use crate::grammar::*;
+use crate::scanner::FLOAT_PRECISION;
 
+use rug::Float;
 use std::collections::{HashSet, VecDeque};
 use std::rc::Rc;
 
@@ -112,7 +114,7 @@ pub fn get_flattened_binary_args(expr: Rc<Expr>, parent_op: BinaryOperator) -> V
 fn negate(expr: Rc<Expr>) -> Rc<Expr> {
     match expr.as_ref() {
         // #a -> -#a
-        Expr::Const(f) => Expr::Const(-f).into(),
+        Expr::Const(f) => Expr::Const(Float::with_val(FLOAT_PRECISION, -1*f)).into(),
 
         // $a -> -$a
         Expr::Var(_) => Expr::UnaryExpr(UnaryExpr {

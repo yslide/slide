@@ -311,7 +311,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            err.to_string(),
+            err.to_string(), 
             r##"Could not resolve pattern map
     "_a + $b / #c * 3 -> 1 + $b * #e / _f"
 Specifically, source "_a + $b / #c * 3" is missing pattern(s) "#e", "_f" present in target "1 + $b * #e / _f""##

@@ -4,6 +4,7 @@ pub use pattern::*;
 pub use transformer::*;
 
 use crate::scanner::types::{Token, TokenType};
+use rug::Float;
 
 use core::cmp::Ordering;
 use core::convert::TryFrom;
@@ -80,7 +81,7 @@ impl fmt::Display for Assignment {
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Expr {
-    Const(f64),
+    Const(Float),
     Var(String),
     BinaryExpr(BinaryExpr<Self>),
     UnaryExpr(UnaryExpr<Self>),
@@ -188,8 +189,8 @@ impl Expression for Expr {
     }
 }
 
-impl From<f64> for Expr {
-    fn from(f: f64) -> Self {
+impl From<Float> for Expr {
+    fn from(f: Float) -> Self {
         Self::Const(f)
     }
 }

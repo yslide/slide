@@ -64,7 +64,7 @@ mod tests {
                 let parsed = parse($program);
                 let evaluated = evaluate(parsed.clone(), EvaluatorContext::default()).unwrap();
 
-                assert_eq!(evaluated.to_string(), $result.to_string());
+                assert_eq!(evaluated.to_string(), parse($result).to_string());
             }
         )*
         }
@@ -88,7 +88,7 @@ mod tests {
 
         modulo:                         "6 % 4"     => "2"
         modulo_nested_left:             "6 % 4 % a" => "2 % a"
-        modulo_associated:              "9 % 5 % 5" => "4" // (9 % 5) % 5
+        modulo_associated:              "9 % 5 % 3" => "1" // (9 % 5) % 3
 
         exp:                            "2 ^ 3"     => "8"
         exp_nested_left:                "2 ^ 3 ^ a" => "2 ^ 3 ^ a"

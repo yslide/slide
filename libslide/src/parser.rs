@@ -11,6 +11,7 @@ use crate::grammar::*;
 use crate::scanner::types::{Token, TokenType};
 use crate::utils::PeekIter;
 
+use rug::Float;
 use core::convert::TryFrom;
 use core::fmt::Display;
 use std::rc::Rc;
@@ -59,7 +60,7 @@ where
     fn errors(&self) -> &Vec<Self::Error>;
     fn input(&mut self) -> &mut PeekIter<Token>;
     fn parse(&mut self) -> T;
-    fn parse_float(&mut self, f: f64) -> Self::Expr;
+    fn parse_float(&mut self, f: Float) -> Self::Expr;
     fn parse_variable(&mut self, name: String) -> Self::Expr;
     fn parse_var_pattern(&mut self, name: String) -> Self::Expr;
     fn parse_const_pattern(&mut self, name: String) -> Self::Expr;

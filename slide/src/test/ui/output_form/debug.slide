@@ -1,0 +1,43 @@
+!!!args
+--parse-only
+-o debug
+!!!args
+
+===in
+1 + 5 / 10 + 2
+===in
+
+~~~stdout
+Expr(
+    BinaryExpr(
+        BinaryExpr {
+            op: Plus,
+            lhs: BinaryExpr(
+                BinaryExpr {
+                    op: Plus,
+                    lhs: Const(
+                        1.0,
+                    ),
+                    rhs: BinaryExpr(
+                        BinaryExpr {
+                            op: Div,
+                            lhs: Const(
+                                5.0,
+                            ),
+                            rhs: Const(
+                                10.0,
+                            ),
+                        },
+                    ),
+                },
+            ),
+            rhs: Const(
+                2.0,
+            ),
+        },
+    ),
+)
+~~~stdout
+
+~~~stderr
+~~~stderr

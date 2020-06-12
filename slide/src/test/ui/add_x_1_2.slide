@@ -1,0 +1,14 @@
+!!!args
+-o s-expression
+!!!args
+
+===in
+x + 1 + 2
+===in
+
+~~~stdout
+(+ x 3)
+~~~stdout
+
+~~~stderr
+~~~stderr

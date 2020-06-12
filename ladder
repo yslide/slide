@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+
+import argparse
+from argparse import RawTextHelpFormatter
+import os
+import sys
+import subprocess
+
+
+def test(args, runner_args):
+    cargo_args = ["cargo", "test"]
+    env = os.environ.copy()
+    if args.sys:
+        cargo_args.append("--test")
+        cargo_args.append("system_tests")
+    cargo_args.append("--")
+    cargo_args.append("--test-threads")
+    cargo_args.append(str(args.threads))
+    for runner_arg in unknown:
+        cargo_args.append(runner_arg)
+    cargo_args.append("--")
+    if args.filter:
+        cargo_args.append(args.filter)
+
+    if args.bless:
+        env["BLESS"] = "1"
+
+    process = subprocess.run(cargo_args, env=env)
+    sys.exit(process.returncode)
+
+
+def bench(args, _unknown):
+    os.chdir("libslide")
+    cargo_args = ["cargo", "bench"]
+    if args.filter:
+        cargo_args.append(args.filter)
+    cargo_args.append("--features")
+    cargo_args.append("benchmark-internals")
+
+    process = subprocess.run(cargo_args)
+    sys.exit(process.returncode)
+
+
+def lf(args, _unknown):
+    process = subprocess.run(["./scripts/check", "lf"])
+    sys.exit(process.returncode)
+
+
+parser = argparse.ArgumentParser(
+    prog="ladder",
+    description="ladder: the slide development tool.",
+    formatter_class=RawTextHelpFormatter
+)
+sub_parsers = parser.add_subparsers(help="ladder subcommands")
+
+test_parser = sub_parsers.add_parser(
+    "test",
+    help="Run slide tests",
+    formatter_class=RawTextHelpFormatter,
+    description="""
+Runs slide tests using cargo. Arguments to the underlying "cargo test" runners
+can be passed as extra flags on this command.
+
+This command accepts an optional positional argument that serves as a test
+filter. If no filter is specified, all tests are run.
+
+To run only system tests, pass --sys.
+
+Examples:
+
+> ladder test                  # runs all tests
+> ladder test --sys --bless    # runs all system tests and accepts their output
+> ladder test --quiet          # runs `cargo test` in quiet mode
+> ladder test add              # only runs tests with "add" in their name
+"""
+)
+test_parser.add_argument(
+    "filter",
+    nargs="?",
+    help="""Optional test filter. If not specified, all tests are run."""
+)
+test_parser.add_argument(
+    "--sys",
+    action="store_true",
+    default=False,
+    help="""Only run system tests."""
+)
+test_parser.add_argument(
+    "-t", "--threads",
+    type=int,
+    default=4,
+    help="""The number of threads that should be used to run the tests."""
+)
+test_parser.add_argument(
+    "--bless",
+    action="store_true",
+    default=False,
+    help="""Accept the output of tests as new baselines.
+This only affects system tests."""
+)
+test_parser.set_defaults(handler=test)
+
+bench_parser = sub_parsers.add_parser(
+    "bench",
+    help="Run slide benchmarks",
+    formatter_class=RawTextHelpFormatter,
+    description="""
+Run libslide benchmarks using cargo.
+
+This command accepts an optional positional argument that serves as a benchmark
+filter. If no filter is specified, all benchmarks are run.
+"""
+)
+bench_parser.add_argument(
+    "filter",
+    nargs="?",
+    help="Optional benchmark filter. If not specified, all benchmarks are run."
+)
+bench_parser.set_defaults(handler=bench)
+
+lf_parser = sub_parsers.add_parser("lf", help="Run lint and format checks")
+lf_parser.set_defaults(handler=lf)
+
+argv = sys.argv[1:]
+if not argv:
+    parser.print_help()
+    sys.exit(1)
+args, unknown = parser.parse_known_args(argv)
+if ("handler" not in args):
+    parser.print_help()
+else:
+    args.handler(args, unknown)

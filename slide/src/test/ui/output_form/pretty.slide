@@ -1,0 +1,15 @@
+!!!args
+--parse-only
+-o pretty
+!!!args
+
+===in
+1 + 5 / 10 + 2
+===in
+
+~~~stdout
+1 + 5 / 10 + 2
+~~~stdout
+
+~~~stderr
+~~~stderr

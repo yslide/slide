@@ -7,3 +7,12 @@ edition = "2018"
 [dependencies]
 libslide = { path = "../libslide" }
 clap = "2.33.1"
+
+[[test]]
+name = "system_tests"
+path = "src/test/mod.rs"
+harness = false
+
+[dev-dependencies]
+libtest-mimic = { git = "https://github.com/ayazhafiz/libtest-mimic", branch = "master" }
+difference = "2.0.0"

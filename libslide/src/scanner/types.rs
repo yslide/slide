@@ -63,14 +63,42 @@ pub enum TokenType {
     EOF,
 }
 
+/// Describes the character span of a substring in a text.
+///
+/// For example, in "abcdef", "bcd" has the span (1, 4).
+#[derive(PartialEq, Clone, Debug)]
+pub struct Span {
+    /// Inclusive lower bound index of the span
+    pub lo: usize,
+    /// Exclusive upper bound index of the span
+    pub hi: usize,
+}
+
+impl From<(usize, usize)> for Span {
+    fn from(span: (usize, usize)) -> Self {
+        Self {
+            lo: span.0,
+            hi: span.1,
+        }
+    }
+}
+
+/// Describes a token in a slide program.
 #[derive(PartialEq, Clone, Debug)]
 pub struct Token {
     pub ty: TokenType,
+    pub span: Span,
 }
 
 impl Token {
-    pub fn new(ty: TokenType) -> Self {
-        Self { ty }
+    pub fn new<S>(ty: TokenType, span: S) -> Self
+    where
+        S: Into<Span>,
+    {
+        Self {
+            ty,
+            span: span.into(),
+        }
     }
 }
 
@@ -97,7 +125,7 @@ impl fmt::Display for Token {
                 VariablePattern(s) => s.to_string(),
                 ConstPattern(s) => s.to_string(),
                 AnyPattern(s) => s.to_string(),
-                Invalid(s) => format!("Invalid({})", s),
+                Invalid(s) => s.to_string(),
                 EOF => "<EOF>".into(),
             }
         )
@@ -110,17 +138,17 @@ mod tests {
         use crate::scanner::types::*;
 
         macro_rules! format_tests {
-        ($($name:ident: $ty:expr, $format_str:expr)*) => {
-        $(
-            #[test]
-            fn $name() {
-                use TokenType::*;
-                let tok = Token {ty: $ty};
-                assert_eq!(tok.to_string(), $format_str);
+            ($($name:ident: $ty:expr, $format_str:expr)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    use TokenType::*;
+                    let tok = Token {ty: $ty, span: (0, 0).into()};
+                    assert_eq!(tok.to_string(), $format_str);
+                }
+            )*
             }
-        )*
         }
-    }
 
         format_tests! {
             float: Float(1.3), "1.3"
@@ -136,7 +164,7 @@ mod tests {
             open_bracket: OpenBracket, "["
             close_bracket: CloseBracket, "]"
             variable: Variable("ab".into()), "ab"
-            invalid: Invalid("@&@".into()), "Invalid(@&@)"
+            invalid: Invalid("@&@".into()), "@&@"
         }
     }
 }

@@ -1,6 +1,6 @@
 pub mod types;
 
-use crate::utils::PeekIter;
+use types::TokenType as TT;
 use types::*;
 
 pub fn scan<T: Into<String>>(input: T) -> Vec<Token> {
@@ -10,27 +10,53 @@ pub fn scan<T: Into<String>>(input: T) -> Vec<Token> {
 }
 
 struct Scanner {
-    input: PeekIter<char>,
+    pos: usize,
+    input: Vec<char>,
     pub output: Vec<Token>,
+}
+
+macro_rules! tok {
+    ($ty:expr, $pos:expr) => {
+        Token::new($ty, $pos)
+    };
 }
 
 impl Scanner {
     // instantiate a new scanner
     pub fn new<T: Into<String>>(input: T) -> Scanner {
-        let chars: Vec<char> = input.into().chars().collect();
-
         Scanner {
-            input: PeekIter::new(chars.into_iter()),
+            pos: 0,
+            input: input.into().chars().collect(),
             output: Vec::new(),
         }
     }
 
+    #[inline]
+    fn peek(&self) -> Option<&char> {
+        self.input.get(self.pos)
+    }
+
+    #[inline]
+    fn next(&mut self) -> Option<&char> {
+        let ch = self.input.get(self.pos);
+        self.pos += 1;
+        ch
+    }
+
+    fn collect_while(&mut self, pred: fn(&char) -> bool) -> String {
+        let mut s = String::with_capacity(8);
+        while let Some(true) = self.peek().map(pred) {
+            s.push(*self.next().unwrap());
+        }
+        s
+    }
+
     pub fn scan(&mut self) {
         // iterate through string
-        while let Some(c) = self.input.peek() {
+        while let Some(c) = self.peek() {
             match c {
                 _ if c.is_whitespace() => {
-                    self.input.next();
+                    self.next();
                 }
                 _ if c.is_digit(10) => self.scan_num(),
                 '$' => self.scan_var_pattern(),
@@ -41,13 +67,14 @@ impl Scanner {
             }
         }
 
-        self.output.push(Token::new(TokenType::EOF));
+        self.output.push(tok!(TT::EOF, (self.pos, self.pos)));
     }
 
     // matches token with symbol and creates it: private helper function
     fn scan_symbol(&mut self) {
         use TokenType::*;
-        let ty = match self.input.next().unwrap() {
+        let start = self.pos;
+        let ty = match self.next().unwrap() {
             '+' => Plus,
             '-' => Minus,
             '*' => Mult,
@@ -61,56 +88,69 @@ impl Scanner {
             ']' => CloseBracket,
             c => Invalid(c.to_string()),
         };
-        self.output.push(Token::new(ty));
+        self.output.push(tok!(ty, (start, self.pos)));
     }
 
     // iterates through any digits to create a token of that value
     fn scan_num(&mut self) {
-        let mut float_str: String = self.input.collect_while(|c| c.is_digit(10));
-        if let Some('.') = self.input.peek() {
-            float_str.push('.');
-            self.input.next();
-            float_str.push_str(&self.input.collect_while::<_, String>(|c| c.is_digit(10)));
+        let start = self.pos;
+
+        let mut float_str = self.collect_while(|c| c.is_digit(10));
+        if let Some('.') = self.peek() {
+            float_str.push(*self.next().unwrap());
+            float_str.push_str(&self.collect_while(|c| c.is_digit(10)));
         }
-        let tok = Token::new(TokenType::Float(float_str.parse::<f64>().unwrap()));
-        self.output.push(tok);
+        let float = float_str.parse::<f64>().unwrap();
+
+        self.output.push(tok!(TT::Float(float), (start, self.pos)));
     }
 
     fn scan_var_str(&mut self) -> String {
-        self.input.collect_while(|c| c.is_alphabetic())
+        self.collect_while(|c| c.is_alphabetic())
     }
 
     fn scan_var(&mut self) {
+        let start = self.pos;
+
         let var_name = self.scan_var_str();
-        self.output.push(Token::new(TokenType::Variable(var_name)));
+        self.output
+            .push(tok!(TT::Variable(var_name), (start, self.pos)));
     }
 
     fn scan_var_pattern(&mut self) {
-        let mut pat = match self.input.next() {
-            Some(c @ '$') => c.to_string(),
-            _ => unreachable!(),
-        };
+        let start = self.pos;
+
+        let mut pat = String::with_capacity(4);
+        // Push the pattern prefix, which we already verified exists.
+        pat.push(*self.next().unwrap());
         pat.push_str(&self.scan_var_str());
+
         self.output
-            .push(Token::new(TokenType::VariablePattern(pat)));
+            .push(tok!(TT::VariablePattern(pat), (start, self.pos)));
     }
 
     fn scan_const_pattern(&mut self) {
-        let mut pat = match self.input.next() {
-            Some(c @ '#') => c.to_string(),
-            _ => unreachable!(),
-        };
+        let start = self.pos;
+
+        let mut pat = String::with_capacity(4);
+        // Push the pattern prefix, which we already verified exists.
+        pat.push(*self.next().unwrap());
         pat.push_str(&self.scan_var_str());
-        self.output.push(Token::new(TokenType::ConstPattern(pat)));
+
+        self.output
+            .push(tok!(TT::ConstPattern(pat), (start, self.pos)));
     }
 
     fn scan_any_pattern(&mut self) {
-        let mut pat = match self.input.next() {
-            Some(c @ '_') => c.to_string(),
-            _ => unreachable!(),
-        };
+        let start = self.pos;
+
+        let mut pat = String::with_capacity(4);
+        // Push the pattern prefix, which we already verified exists.
+        pat.push(*self.next().unwrap());
         pat.push_str(&self.scan_var_str());
-        self.output.push(Token::new(TokenType::AnyPattern(pat)));
+
+        self.output
+            .push(tok!(TT::AnyPattern(pat), (start, self.pos)));
     }
 }
 
@@ -124,14 +164,23 @@ mod tests {
         $(
             #[test]
             fn $name() {
-                use crate::scanner::scan;
+                use crate::scanner::{scan, Span};
 
-                let mut tokens = scan($program)
-                    .into_iter()
+                let mut tokens = scan($program);
+                tokens.pop(); // EOF
+
+                // First check if token string matches.
+                let tokens_str = tokens
+                    .iter()
                     .map(|tok| tok.to_string())
-                    .collect::<Vec<_>>();
-                tokens.pop();
-                assert_eq!(tokens.join(" "), $format_str);
+                    .collect::<Vec<_>>().join(" ");
+                assert_eq!(tokens_str, $format_str);
+
+                // Now check the token spans are correct.
+                for token in tokens {
+                    let Span {lo, hi} = token.span;
+                    assert_eq!($program[lo..hi], token.to_string());
+                }
             }
         )*
         }
@@ -172,9 +221,9 @@ mod tests {
 
     mod scan_invalid {
         scanner_tests! {
-            invalid_numbers: "1.2.3", "1.2 Invalid(.) 3"
-            invalid_tokens: "@", "Invalid(@)"
-            invalid_tokens_mixed_with_valid: "=@/", "= Invalid(@) /"
+            invalid_numbers: "1.2.3", "1.2 . 3"
+            invalid_tokens: "@", "@"
+            invalid_tokens_mixed_with_valid: "=@/", "= @ /"
             invalid_expressions: "1 + * 2", "1 + * 2"
         }
     }

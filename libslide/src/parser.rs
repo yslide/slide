@@ -120,7 +120,8 @@ where
         match self.input().peek().map(|t| &t.ty) {
             // <node>(<other>) => <node> * (<other>)
             Some(TokenType::OpenParen) | Some(TokenType::OpenBracket) => {
-                self.input().push_front(Token::new(TokenType::Mult));
+                // TODO: mark this node as synthetic
+                self.input().push_front(Token::new(TokenType::Mult, (0, 0)));
             }
             // <num><var> => <num> * <var>
             Some(TokenType::Variable(_))
@@ -129,7 +130,8 @@ where
             | Some(TokenType::AnyPattern(_))
                 if node.is_const() =>
             {
-                self.input().push_front(Token::new(TokenType::Mult))
+                // TODO: mark this node as synthetic
+                self.input().push_front(Token::new(TokenType::Mult, (0, 0)))
             }
             _ => {}
         }

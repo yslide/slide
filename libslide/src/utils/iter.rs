@@ -1,4 +1,3 @@
-use core::iter::FromIterator;
 use std::collections::VecDeque;
 use std::vec::IntoIter;
 
@@ -33,16 +32,6 @@ where
     /// consume items that match the predicate.
     peeker: &'a mut PeekIter<T>,
     predicate: P,
-}
-
-impl<'a, T, P> PeekingTakeWhile<'a, T, P>
-where
-    T: Clone + 'a,
-    P: Fn(&T) -> bool,
-{
-    pub fn new(peeker: &'a mut PeekIter<T>, predicate: P) -> Self {
-        Self { peeker, predicate }
-    }
 }
 
 impl<'a, T, P> Iterator for PeekingTakeWhile<'a, T, P>
@@ -115,16 +104,6 @@ where
             .filter_map(|o| o.as_ref())
             .map(f)
             .collect()
-    }
-
-    /// Collects items in the iteration while `predicate` returns `True` on an item.
-    /// Only collected items are consumed from the iteration.
-    pub fn collect_while<P, C>(&mut self, predicate: P) -> C
-    where
-        P: Fn(&T) -> bool,
-        C: FromIterator<T>,
-    {
-        PeekingTakeWhile::new(self, predicate).collect()
     }
 
     /// Adds an item to the front of the current iteration.

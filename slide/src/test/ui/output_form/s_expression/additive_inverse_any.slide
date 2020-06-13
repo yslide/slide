@@ -1,14 +1,14 @@
 !!!args
 --parse-only
--o pretty
+-o s-expression
 !!!args
 
 ===in
-1 + 5 / 10 + 2
+(a * b) - (a * b)
 ===in
 
 ~~~stdout
-1 + 5 / 10 + 2
+(- ((* a b)) ((* a b)))
 ~~~stdout
 
 ~~~stderr

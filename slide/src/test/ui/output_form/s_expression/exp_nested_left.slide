@@ -1,9 +1,14 @@
+!!!args
+--parse-only
+-o s-expression
+!!!args
+
 ===in
-1 + 2
+2 ^ 3 ^ a
 ===in
 
 ~~~stdout
-3
+(^ 2 (^ 3 a))
 ~~~stdout
 
 ~~~stderr

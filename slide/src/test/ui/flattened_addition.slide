@@ -1,9 +1,11 @@
+@TODO: This should go to 6 - 2b.
+
 ===in
-1 + 2
+1 + 2 - b + 3 - b
 ===in
 
 ~~~stdout
-3
+6 - b - b
 ~~~stdout
 
 ~~~stderr

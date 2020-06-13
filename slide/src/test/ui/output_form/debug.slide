@@ -41,3 +41,7 @@ Expr(
 
 ~~~stderr
 ~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

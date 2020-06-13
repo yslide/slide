@@ -1,9 +1,9 @@
 ===in
-1 + 2
++(b + c)
 ===in
 
 ~~~stdout
-3
+b + c
 ~~~stdout
 
 ~~~stderr

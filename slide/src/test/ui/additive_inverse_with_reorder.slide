@@ -1,9 +1,9 @@
 ===in
-1 + 2
+a + 0 - a
 ===in
 
 ~~~stdout
-3
+0
 ~~~stdout
 
 ~~~stderr

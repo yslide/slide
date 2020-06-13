@@ -1,9 +1,9 @@
 ===in
-1 + 2
+6 % 4 % a
 ===in
 
 ~~~stdout
-3
+2 % a
 ~~~stdout
 
 ~~~stderr

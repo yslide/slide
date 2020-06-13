@@ -12,3 +12,7 @@ x + 1 + 2
 
 ~~~stderr
 ~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

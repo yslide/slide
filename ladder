@@ -24,6 +24,8 @@ def test(args, runner_args):
 
     if args.bless:
         env["BLESS"] = "1"
+    if args.fail_todo:
+        env["FAIL_TODO"] = "1"
 
     process = subprocess.run(cargo_args, env=env)
     sys.exit(process.returncode)
@@ -101,6 +103,13 @@ test_parser.add_argument(
     action="store_true",
     default=False,
     help="""Accept the output of tests as new baselines.
+This only affects system tests."""
+)
+test_parser.add_argument(
+    "--fail-todo",
+    action="store_true",
+    default=False,
+    help="""Fail on tests with a @TODO annotation.
 This only affects system tests."""
 )
 test_parser.set_defaults(handler=test)

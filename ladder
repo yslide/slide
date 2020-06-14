@@ -46,6 +46,11 @@ def lf(args, _unknown):
     sys.exit(process.returncode)
 
 
+def squash(args, _unknown):
+    process = subprocess.run(["./scripts/squashed", "--rebase"])
+    sys.exit(process.returncode)
+
+
 parser = argparse.ArgumentParser(
     prog="ladder",
     description="ladder: the slide development tool.",
@@ -120,6 +125,12 @@ bench_parser.set_defaults(handler=bench)
 
 lf_parser = sub_parsers.add_parser("lf", help="Run lint and format checks")
 lf_parser.set_defaults(handler=lf)
+
+squash_parser = sub_parsers.add_parser(
+    "squash",
+    help="Squash commits ahead of master on this branch into one"
+)
+squash_parser.set_defaults(handler=squash)
 
 argv = sys.argv[1:]
 if not argv:

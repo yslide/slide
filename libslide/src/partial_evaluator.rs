@@ -51,7 +51,7 @@ mod tests {
     use crate::{parse_expression, scan, EvaluatorContext};
 
     fn parse(program: &str) -> Stmt {
-        let tokens = scan(program);
+        let tokens = scan(program).tokens;
         let (parsed, _) = parse_expression(tokens);
         parsed
     }

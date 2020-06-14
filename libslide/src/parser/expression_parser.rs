@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn common_subexpression_elimination() {
         let program = "1 * 2 + 1 * 2";
-        let tokens = scan(program);
+        let tokens = scan(program).tokens;
         let (parsed, _) = parse(tokens);
         let (l, r) = match parsed {
             Stmt::Expr(Expr::BinaryExpr(BinaryExpr { lhs, rhs, .. })) => (lhs, rhs),

@@ -263,8 +263,8 @@ mod tests {
     use super::*;
     use crate::{parse_expression, parse_expression_pattern, scan};
 
-    fn parse<T: Into<String>>(s: T) -> Rc<Expr> {
-        let toks = scan(s);
+    fn parse(s: &'static str) -> Rc<Expr> {
+        let toks = scan(s).tokens;
         match parse_expression(toks) {
             (Stmt::Expr(expr), _) => Rc::new(expr),
             _ => unreachable!(),
@@ -396,7 +396,7 @@ mod tests {
 
     #[test]
     fn unique_pats() {
-        let parsed = parse_expression_pattern(scan("$a + _b * (#c - [$d]) / $a")).0;
+        let parsed = parse_expression_pattern(scan("$a + _b * (#c - [$d]) / $a").tokens).0;
         let pats = super::unique_pats(&parsed);
 
         let mut pats: Vec<_> = pats

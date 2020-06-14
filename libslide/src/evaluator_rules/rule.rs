@@ -66,7 +66,7 @@ impl PatternMap {
     pub fn from_str(rule: &str) -> Self {
         let split = rule.split(" -> ");
         let mut split = split
-            .map(scan)
+            .map(|toks| scan(toks).tokens)
             .map(parse_expression_pattern)
             .map(|(expr, _)| expr);
 

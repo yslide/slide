@@ -1,18 +1,28 @@
 pub mod types;
 
+use crate::diagnostics::Diagnostic;
 use types::TokenType as TT;
-use types::*;
+pub use types::*;
 
-pub fn scan<T: Into<String>>(input: T) -> Vec<Token> {
-    let mut scanner = Scanner::new(input);
+pub struct ScanResult {
+    pub tokens: Vec<Token>,
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+pub fn scan<'a, T: Into<&'a str>>(input: T) -> ScanResult {
+    let mut scanner = Scanner::new(input.into());
     scanner.scan();
-    scanner.output
+    ScanResult {
+        tokens: scanner.output,
+        diagnostics: scanner.diagnostics,
+    }
 }
 
 struct Scanner {
     pos: usize,
     input: Vec<char>,
     pub output: Vec<Token>,
+    pub diagnostics: Vec<Diagnostic>,
 }
 
 macro_rules! tok {
@@ -23,11 +33,12 @@ macro_rules! tok {
 
 impl Scanner {
     // instantiate a new scanner
-    pub fn new<T: Into<String>>(input: T) -> Scanner {
+    pub fn new(input: &str) -> Scanner {
         Scanner {
             pos: 0,
-            input: input.into().chars().collect(),
+            input: input.chars().collect(),
             output: Vec::new(),
+            diagnostics: Vec::new(),
         }
     }
 
@@ -41,6 +52,11 @@ impl Scanner {
         let ch = self.input.get(self.pos);
         self.pos += 1;
         ch
+    }
+
+    #[inline]
+    fn push_diag(&mut self, diagnostic: Diagnostic) {
+        self.diagnostics.push(diagnostic);
     }
 
     fn collect_while(&mut self, pred: fn(&char) -> bool) -> String {
@@ -88,7 +104,14 @@ impl Scanner {
             ']' => CloseBracket,
             c => Invalid(c.to_string()),
         };
-        self.output.push(tok!(ty, (start, self.pos)));
+        let span = start..self.pos;
+
+        if matches!(ty, Invalid(..)) {
+            let diag = Diagnostic::span_err(span.clone(), "Invalid token")
+                .with_note(span.clone(), "token must be mathematically significant");
+            self.push_diag(diag);
+        }
+        self.output.push(tok!(ty, span));
     }
 
     // iterates through any digits to create a token of that value
@@ -164,9 +187,10 @@ mod tests {
         $(
             #[test]
             fn $name() {
-                use crate::scanner::{scan, Span};
+                use crate::common::Span;
+                use crate::scanner::scan;
 
-                let mut tokens = scan($program);
+                let mut tokens = scan($program).tokens;
                 tokens.pop(); // EOF
 
                 // First check if token string matches.

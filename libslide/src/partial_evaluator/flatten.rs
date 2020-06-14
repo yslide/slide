@@ -161,7 +161,7 @@ mod tests {
     use std::rc::Rc;
 
     fn parse(program: &str) -> Expr {
-        let tokens = scan(program);
+        let tokens = scan(program).tokens;
         let (parsed, _) = parse_expression(tokens);
         match parsed {
             Stmt::Expr(expr) => expr,

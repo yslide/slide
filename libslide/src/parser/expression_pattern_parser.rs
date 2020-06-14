@@ -123,7 +123,7 @@ mod tests {
     #[test]
     fn common_subexpression_elimination() {
         let program = "$v * #c + $v * #c";
-        let tokens = scan(program);
+        let tokens = scan(program).tokens;
         let (parsed, _) = parse(tokens);
         let (l, r) = match (*parsed).clone() {
             ExprPat::BinaryExpr(BinaryExpr { lhs, rhs, .. }) => (lhs, rhs),

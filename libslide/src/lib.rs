@@ -1,4 +1,7 @@
-mod scanner;
+pub mod common;
+pub mod diagnostics;
+
+pub mod scanner;
 pub use scanner::scan;
 
 mod parser;

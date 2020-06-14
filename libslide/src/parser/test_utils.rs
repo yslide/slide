@@ -8,7 +8,7 @@ macro_rules! __parse {
         } else {
             pin.to_owned()
         };
-        let tokens = scan(pin);
+        let tokens = scan(pin).tokens;
         let (parsed, _) = $parser(tokens);
         assert_eq!(parsed.to_string(), pout);
     };
@@ -51,7 +51,7 @@ macro_rules! parser_error_tests {
             use crate::scanner::{scan};
             use crate::parser::{$parser};
 
-            let tokens = scan($program);
+            let tokens = scan($program).tokens;
             let (_, errors) = $parser(tokens);
             assert_eq!(errors.join("\n"), $error);
         }

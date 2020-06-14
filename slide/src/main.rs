@@ -1,3 +1,7 @@
+mod diagnostics;
+use diagnostics::emit_slide_diagnostics;
+
+use libslide::scanner::ScanResult;
 use libslide::{evaluate, parse_expression, scan, EvaluatorContext, Grammar};
 
 use std::env;
@@ -52,8 +56,18 @@ fn get_opts() -> Opts {
 
 fn main() -> Result<(), String> {
     let opts = get_opts();
+    let file = None; // currently programs can only be read from stdin
+    let program = opts.program;
 
-    let tokens = scan(opts.program);
+    let ScanResult {
+        tokens,
+        diagnostics,
+    } = scan(&*program);
+    if !diagnostics.is_empty() {
+        emit_slide_diagnostics(file, program, diagnostics);
+        std::process::exit(1);
+    }
+
     let (parse_tree, errors) = parse_expression(tokens);
     if !errors.is_empty() {
         return Err(errors.join("\n"));

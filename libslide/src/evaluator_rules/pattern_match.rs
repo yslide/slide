@@ -276,12 +276,12 @@ mod tests {
     use crate::{parse_expression, parse_expression_pattern, scan};
 
     fn parse_rule(prog: &str) -> ExprPat {
-        let (expr, _) = parse_expression_pattern(scan(prog));
+        let (expr, _) = parse_expression_pattern(scan(prog).tokens);
         expr.as_ref().clone()
     }
 
     fn parse_expr(prog: &str) -> Expr {
-        match parse_expression(scan(prog)) {
+        match parse_expression(scan(prog).tokens) {
             (Stmt::Expr(expr), _) => expr,
             _ => unreachable!(),
         }

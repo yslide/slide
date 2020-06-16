@@ -1,0 +1,40 @@
+===in
+1 + 2 + ( [ (
+===in
+
+~~~stdout
+~~~stdout
+
+~~~stderr
+error: Expected an expression, found end of file
+  |
+1 | 1 + 2 + ( [ ( 
+  |              ^ expected an expression
+  |
+
+error: Expected `)`, found end of file
+  |
+1 | 1 + 2 + ( [ ( 
+  |              ^ expected closing `)`
+  |             - help: opening `(` here
+  |
+
+error: Expected `]`, found end of file
+  |
+1 | 1 + 2 + ( [ ( 
+  |              ^ expected closing `]`
+  |           - help: opening `[` here
+  |
+
+error: Expected `)`, found end of file
+  |
+1 | 1 + 2 + ( [ ( 
+  |              ^ expected closing `)`
+  |         - help: opening `(` here
+  |
+
+~~~stderr
+
+~~~exitcode
+1
+~~~exitcode

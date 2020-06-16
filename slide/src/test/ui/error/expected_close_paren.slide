@@ -1,0 +1,20 @@
+===in
+1 + (2 * 3] - 5
+===in
+
+~~~stdout
+~~~stdout
+
+~~~stderr
+error: Expected `)`, found `]`
+  |
+1 | 1 + (2 * 3] - 5 
+  |           ^ expected closing `)`
+  |     - help: opening `(` here
+  |
+
+~~~stderr
+
+~~~exitcode
+1
+~~~exitcode

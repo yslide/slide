@@ -1,0 +1,19 @@
+===in
+1 + %
+===in
+
+~~~stdout
+~~~stdout
+
+~~~stderr
+error: Expected an expression, found `%`
+  |
+1 | 1 + % 
+  |     ^ expected an expression
+  |
+
+~~~stderr
+
+~~~exitcode
+1
+~~~exitcode

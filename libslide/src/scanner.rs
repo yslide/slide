@@ -108,7 +108,7 @@ impl Scanner {
 
         if matches!(ty, Invalid(..)) {
             let diag = Diagnostic::span_err(span.clone(), "Invalid token", None)
-                .with_note(span.clone(), "token must be mathematically significant");
+                .with_note("token must be mathematically significant");
             self.push_diag(diag);
         }
         self.output.push(tok!(ty, span));

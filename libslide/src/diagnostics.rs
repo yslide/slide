@@ -28,6 +28,7 @@ pub struct Diagnostic {
     pub title: String,
     pub msg: Option<String>,
     pub associated_diagnostics: Vec<AssociatedDiagnostic>,
+    pub unspanned_associated_diagnostics: Vec<AssociatedDiagnostic>,
 }
 
 impl Diagnostic {
@@ -44,25 +45,40 @@ impl Diagnostic {
             title: title.into(),
             msg: err.into(),
             associated_diagnostics: Vec::with_capacity(2),
+            unspanned_associated_diagnostics: Vec::with_capacity(2),
         }
     }
 
-    /// Adds a note to the diagnostic, possibly at a different span.
-    pub(crate) fn with_note<S, M>(mut self, span: S, note: M) -> Diagnostic
+    /// Adds a note to the diagnostic.
+    pub(crate) fn with_note<M>(mut self, note: M) -> Diagnostic
     where
-        S: Into<Span>,
         M: Into<String>,
     {
-        self.associated_diagnostics.push(AssociatedDiagnostic {
-            kind: DiagnosticKind::Note,
-            span: span.into(),
-            msg: note.into(),
-        });
+        self.unspanned_associated_diagnostics
+            .push(AssociatedDiagnostic {
+                kind: DiagnosticKind::Note,
+                span: self.span,
+                msg: note.into(),
+            });
+        self
+    }
+
+    /// Adds a help message to the diagnostic.
+    pub(crate) fn with_help<M>(mut self, note: M) -> Diagnostic
+    where
+        M: Into<String>,
+    {
+        self.unspanned_associated_diagnostics
+            .push(AssociatedDiagnostic {
+                kind: DiagnosticKind::Help,
+                span: self.span,
+                msg: note.into(),
+            });
         self
     }
 
     /// Adds a help message to the diagnostic, possibly at a different span.
-    pub(crate) fn with_help<S, M>(mut self, span: S, note: M) -> Diagnostic
+    pub(crate) fn with_help_note<S, M>(mut self, span: S, note: M) -> Diagnostic
     where
         S: Into<Span>,
         M: Into<String>,

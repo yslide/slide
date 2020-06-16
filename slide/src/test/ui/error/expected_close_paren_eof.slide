@@ -1,0 +1,20 @@
+===in
+1 + (2 * 3
+===in
+
+~~~stdout
+~~~stdout
+
+~~~stderr
+error: Expected `)`, found end of file
+  |
+1 | 1 + (2 * 3 
+  |           ^ expected closing `)`
+  |     - help: opening `(` here
+  |
+
+~~~stderr
+
+~~~exitcode
+1
+~~~exitcode

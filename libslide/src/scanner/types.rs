@@ -64,6 +64,36 @@ pub enum TokenType {
     EOF,
 }
 
+impl fmt::Display for TokenType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use TokenType::*;
+        write!(
+            f,
+            "{}",
+            match self {
+                Float(num) => num.to_string(),
+                Plus => "+".into(),
+                Minus => "-".into(),
+                Mult => "*".into(),
+                Div => "/".into(),
+                Mod => "%".into(),
+                Exp => "^".into(),
+                Equal => "=".into(),
+                OpenParen => "(".into(),
+                CloseParen => ")".into(),
+                OpenBracket => "[".into(),
+                CloseBracket => "]".into(),
+                Variable(s) => s.to_string(),
+                VariablePattern(s) => s.to_string(),
+                ConstPattern(s) => s.to_string(),
+                AnyPattern(s) => s.to_string(),
+                Invalid(s) => s.to_string(),
+                EOF => "end of file".into(),
+            }
+        )
+    }
+}
+
 /// Describes a token in a slide program.
 #[derive(PartialEq, Clone, Debug)]
 pub struct Token {
@@ -85,31 +115,7 @@ impl Token {
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use TokenType::*;
-        write!(
-            f,
-            "{}",
-            match &self.ty {
-                Float(num) => num.to_string(),
-                Plus => "+".into(),
-                Minus => "-".into(),
-                Mult => "*".into(),
-                Div => "/".into(),
-                Mod => "%".into(),
-                Exp => "^".into(),
-                Equal => "=".into(),
-                OpenParen => "(".into(),
-                CloseParen => ")".into(),
-                OpenBracket => "[".into(),
-                CloseBracket => "]".into(),
-                Variable(s) => s.to_string(),
-                VariablePattern(s) => s.to_string(),
-                ConstPattern(s) => s.to_string(),
-                AnyPattern(s) => s.to_string(),
-                Invalid(s) => s.to_string(),
-                EOF => "<EOF>".into(),
-            }
-        )
+        write!(f, "{}", self.ty.to_string())
     }
 }
 

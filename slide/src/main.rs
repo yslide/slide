@@ -1,8 +1,11 @@
 mod diagnostics;
 use diagnostics::emit_slide_diagnostics;
 
+use libslide::diagnostics::Diagnostic;
 use libslide::scanner::ScanResult;
-use libslide::{evaluate, parse_expression, scan, EvaluatorContext, Grammar};
+use libslide::{
+    evaluate, parse_expression, parse_expression_pattern, scan, EvaluatorContext, Grammar,
+};
 
 use std::env;
 
@@ -10,8 +13,10 @@ struct Opts {
     pub program: String,
     pub output_form: OutputForm,
     pub parse_only: bool,
+    pub expr_pat: bool,
 }
 
+#[derive(Copy, Clone)]
 enum OutputForm {
     Pretty,
     SExpression,
@@ -40,8 +45,14 @@ fn get_opts() -> Opts {
                 .long("--parse-only")
                 .help("Stop after parsing and dump the AST"),
         )
+        .arg(
+            clap::Arg::with_name("expr-pat")
+                .long("--expr-pat")
+                .help("Parse the program as an expression pattern. Implies --parse-only."),
+        )
         .get_matches();
 
+    let expr_pat = matches.is_present("expr-pat");
     Opts {
         program: matches.value_of("program").unwrap().into(),
         output_form: match matches.value_of("output-form").unwrap() {
@@ -50,45 +61,61 @@ fn get_opts() -> Opts {
             "debug" => OutputForm::Debug,
             _ => unreachable!(),
         },
-        parse_only: matches.is_present("parse-only"),
+        parse_only: matches.is_present("parse-only") || expr_pat,
+        expr_pat,
     }
 }
 
 fn main() -> Result<(), String> {
     let opts = get_opts();
+    let output_form = opts.output_form;
     let file = None; // currently programs can only be read from stdin
     let program = opts.program;
+
+    let emit_diagnostics = |diagnostics: Vec<Diagnostic>| {
+        emit_slide_diagnostics(file, program.clone(), diagnostics);
+        std::process::exit(1);
+    };
+    let emit_tree = move |obj: &dyn Grammar| {
+        println!("{}", print(obj, output_form));
+        std::process::exit(0);
+    };
 
     let ScanResult {
         tokens,
         diagnostics,
     } = scan(&*program);
     if !diagnostics.is_empty() {
-        emit_slide_diagnostics(file, program, diagnostics);
-        std::process::exit(1);
+        emit_diagnostics(diagnostics);
     }
 
-    let (parse_tree, errors) = parse_expression(tokens);
-    if !errors.is_empty() {
-        return Err(errors.join("\n"));
+    if opts.expr_pat {
+        let (parse_tree, diagnostics) = parse_expression_pattern(tokens);
+        if !diagnostics.is_empty() {
+            emit_diagnostics(diagnostics);
+        }
+        if opts.parse_only {
+            emit_tree(&parse_tree);
+        }
+        unreachable!();
     }
-    // TODO: handle errors
+    let (parse_tree, diagnostics) = parse_expression(tokens);
+
+    if !diagnostics.is_empty() {
+        emit_diagnostics(diagnostics);
+    }
 
     if opts.parse_only {
-        println!("{}", print(parse_tree, opts.output_form));
-        return Ok(());
+        emit_tree(&parse_tree);
     }
 
     let simplified = evaluate(parse_tree, EvaluatorContext::default()).unwrap();
-    println!("{}", print(simplified, opts.output_form));
+    emit_tree(&simplified);
 
     Ok(())
 }
 
-fn print<T>(obj: T, output_form: OutputForm) -> String
-where
-    T: Grammar,
-{
+fn print(obj: &dyn Grammar, output_form: OutputForm) -> String {
     match output_form {
         OutputForm::Pretty => obj.to_string(),
         OutputForm::SExpression => obj.s_form(),

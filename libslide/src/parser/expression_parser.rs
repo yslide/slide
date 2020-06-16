@@ -1,4 +1,6 @@
 use super::Parser;
+use crate::common::Span;
+use crate::diagnostics::Diagnostic;
 use crate::grammar::*;
 use crate::scanner::types::{Token, TokenType};
 use crate::utils::{hash, PeekIter, StringUtils};
@@ -6,16 +8,19 @@ use crate::utils::{hash, PeekIter, StringUtils};
 use std::collections::HashMap;
 use std::rc::Rc;
 
-pub fn parse(input: Vec<Token>) -> (Stmt, Vec<String>) {
+// pub struct ScanResult {
+//     pub tokens: Vec<Token>,
+//     pub diagnostics: Vec<Diagnostic>,
+// }
+
+pub fn parse(input: Vec<Token>) -> (Stmt, Vec<Diagnostic>) {
     let mut parser = ExpressionParser::new(input);
-    let parsed = parser.parse();
-    let errors = parser.errors().iter().map(|e| e.to_string()).collect();
-    (parsed, errors)
+    (parser.parse(), parser.diagnostics)
 }
 
 pub struct ExpressionParser {
     _input: PeekIter<Token>,
-    _errors: Vec<String>,
+    diagnostics: Vec<Diagnostic>,
     // We use an untyped hash here because we don't want to clone an Expr into the map in case it's
     // already there when using an entry API.
     // TODO: replace with Expr when raw_entry API is stabilized (see rust#56167)
@@ -32,37 +37,42 @@ impl ExpressionParser {
 }
 
 impl ExpressionParser {
-    fn parse_pattern(&mut self, name: String) -> Expr {
-        self._errors.push(format!(
-            concat!(
-                r#"The pattern "{name}" cannot be used in an expression. "#,
-                r#"Consider using "{cut_name}" as a variable instead."#
+    fn parse_pattern(&mut self, name: String, span: Span) -> Expr {
+        self.push_diag(
+            Diagnostic::span_err(
+                span,
+                "Patterns cannot be used in an expression",
+                Some("unexpected pattern".into()),
+            )
+            .with_help(
+                span,
+                format!(
+                    r#"consider using "{cut_name}" as a variable"#,
+                    cut_name = name.substring(1, name.len() - 1)
+                ),
             ),
-            name = name,
-            cut_name = name.to_string().substring(1, name.len() - 1),
-        ));
+        );
         Expr::Var(name)
     }
 }
 
 impl Parser<Stmt> for ExpressionParser {
     type Expr = Expr;
-    type Error = String;
 
     fn new(input: Vec<Token>) -> Self {
         Self {
             _input: PeekIter::new(input.into_iter()),
-            _errors: vec![],
+            diagnostics: vec![],
             seen: HashMap::new(),
         }
     }
 
-    fn errors(&self) -> &Vec<Self::Error> {
-        &self._errors
-    }
-
     fn input(&mut self) -> &mut PeekIter<Token> {
         &mut self._input
+    }
+
+    fn push_diag(&mut self, diagnostic: Diagnostic) {
+        self.diagnostics.push(diagnostic);
     }
 
     fn parse(&mut self) -> Stmt {
@@ -79,34 +89,36 @@ impl Parser<Stmt> for ExpressionParser {
         parsed
     }
 
-    fn parse_float(&mut self, f: f64) -> Self::Expr {
+    fn parse_float(&mut self, f: f64, _span: Span) -> Self::Expr {
         Self::Expr::Const(f)
     }
 
-    fn parse_variable(&mut self, name: String) -> Self::Expr {
+    fn parse_variable(&mut self, name: String, _span: Span) -> Self::Expr {
         Expr::Var(name)
     }
 
-    fn parse_var_pattern(&mut self, name: String) -> Self::Expr {
-        self.parse_pattern(name)
+    fn parse_var_pattern(&mut self, name: String, span: Span) -> Self::Expr {
+        self.parse_pattern(name, span)
     }
 
-    fn parse_const_pattern(&mut self, name: String) -> Self::Expr {
-        self.parse_pattern(name)
+    fn parse_const_pattern(&mut self, name: String, span: Span) -> Self::Expr {
+        self.parse_pattern(name, span)
     }
 
-    fn parse_any_pattern(&mut self, name: String) -> Self::Expr {
-        self.parse_pattern(name)
+    fn parse_any_pattern(&mut self, name: String, span: Span) -> Self::Expr {
+        self.parse_pattern(name, span)
     }
 
-    fn parse_open_paren(&mut self) -> Self::Expr {
-        self.input().next(); // eat open paren
-        Self::Expr::Parend(self.expr())
+    fn parse_open_paren(&mut self, _span: Span) -> Self::Expr {
+        let expr = Self::Expr::Parend(self.expr());
+        self.input().next(); // TODO: check this is close paren
+        expr
     }
 
-    fn parse_open_bracket(&mut self) -> Self::Expr {
-        self.input().next(); // eat open paren
-        Self::Expr::Bracketed(self.expr())
+    fn parse_open_bracket(&mut self, _span: Span) -> Self::Expr {
+        let expr = Self::Expr::Bracketed(self.expr());
+        self.input().next(); // TODO: check this is close bracket
+        expr
     }
 
     fn finish_expr(&mut self, expr: Self::Expr) -> Rc<Self::Expr> {
@@ -131,23 +143,6 @@ mod tests {
         variable_in_op_right:    "1 + a"
         assignment_op:           "a = 5"
         assignment_op_expr:      "a = 5 + 2 ^ 3"
-    }
-
-    parser_error_tests! {
-        parse_expression
-
-        variable_pattern:        "$a"      => concat!(r#"The pattern "$a" cannot be used in an expression. "#,
-                                                      r#"Consider using "a" as a variable instead."#)
-        const_pattern:           "#a"      => concat!(r##"The pattern "#a" cannot be used in an expression. "##,
-                                                      r#"Consider using "a" as a variable instead."#)
-        any_pattern:             "_a"      => concat!(r##"The pattern "_a" cannot be used in an expression. "##,
-                                                      r#"Consider using "a" as a variable instead."#)
-
-        multiple_errors:         "_a + $a" => concat!(r##"The pattern "_a" cannot be used in an expression. "##,
-                                                      r#"Consider using "a" as a variable instead."#,
-                                                      "\n",
-                                                      r##"The pattern "$a" cannot be used in an expression. "##,
-                                                      r#"Consider using "a" as a variable instead."#)
     }
 
     #[test]

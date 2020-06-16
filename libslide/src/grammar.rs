@@ -23,6 +23,7 @@ where
     Self: fmt::Display + From<BinaryExpr<Self>> + From<UnaryExpr<Self>>,
 {
     fn is_const(&self) -> bool;
+    fn empty() -> Self;
 }
 
 #[derive(Clone, Debug)]
@@ -181,10 +182,17 @@ impl Grammar for Rc<Expr> {
         self.as_ref().s_form()
     }
 }
+
 impl Expression for Expr {
     #[inline]
     fn is_const(&self) -> bool {
         matches!(self, Self::Const(_))
+    }
+
+    #[inline]
+    fn empty() -> Self {
+        // Variables must be named, so we can encode an unnamed variable as an empty expression.
+        Expr::Var(String::new())
     }
 }
 

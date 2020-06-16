@@ -7,12 +7,13 @@ mod expression_pattern_parser;
 pub use expression_parser::parse as parse_expression;
 pub use expression_pattern_parser::parse as parse_expression_pattern;
 
+use crate::common::Span;
+use crate::diagnostics::Diagnostic;
 use crate::grammar::*;
-use crate::scanner::types::{Token, TokenType};
+use crate::scanner::types::{Token, TokenType as TT};
 use crate::utils::PeekIter;
 
 use core::convert::TryFrom;
-use core::fmt::Display;
 use std::rc::Rc;
 
 macro_rules! binary_expr_parser {
@@ -50,29 +51,27 @@ trait Parser<T>
 where
     T: Grammar,
     Self::Expr: Expression + Clone,
-    Self::Error: Display,
 {
     type Expr;
-    type Error;
 
     fn new(input: Vec<Token>) -> Self;
-    fn errors(&self) -> &Vec<Self::Error>;
     fn input(&mut self) -> &mut PeekIter<Token>;
     fn parse(&mut self) -> T;
-    fn parse_float(&mut self, f: f64) -> Self::Expr;
-    fn parse_variable(&mut self, name: String) -> Self::Expr;
-    fn parse_var_pattern(&mut self, name: String) -> Self::Expr;
-    fn parse_const_pattern(&mut self, name: String) -> Self::Expr;
-    fn parse_any_pattern(&mut self, name: String) -> Self::Expr;
-    fn parse_open_paren(&mut self) -> Self::Expr;
-    fn parse_open_bracket(&mut self) -> Self::Expr;
+    fn parse_float(&mut self, f: f64, span: Span) -> Self::Expr;
+    fn parse_variable(&mut self, name: String, span: Span) -> Self::Expr;
+    fn parse_var_pattern(&mut self, name: String, span: Span) -> Self::Expr;
+    fn parse_const_pattern(&mut self, name: String, span: Span) -> Self::Expr;
+    fn parse_any_pattern(&mut self, name: String, span: Span) -> Self::Expr;
+    fn parse_open_paren(&mut self, span: Span) -> Self::Expr;
+    fn parse_open_bracket(&mut self, span: Span) -> Self::Expr;
     fn finish_expr(&mut self, expr: Self::Expr) -> Rc<Self::Expr>;
+    fn push_diag(&mut self, diagnostic: Diagnostic);
 
     // Default parsing implementations.
     // TODO: increase modularity of this parser
 
     fn done(&mut self) -> bool {
-        self.input().peek().map(|t| &t.ty) == Some(&TokenType::EOF)
+        self.input().peek().map(|t| &t.ty) == Some(&TT::EOF)
     }
 
     fn expr(&mut self) -> Rc<Self::Expr> {
@@ -93,6 +92,16 @@ where
     );
 
     fn num_term(&mut self) -> Rc<Self::Expr> {
+        if self.done() {
+            let span = self.input().peek().unwrap().span;
+            self.push_diag(Diagnostic::span_err(
+                span,
+                "Expected an expression, found end of file",
+                Some("expected an expression".into()),
+            ));
+            return self.finish_expr(Self::Expr::empty());
+        }
+
         let node = if let Some(Ok(op)) = self.input().peek().map(UnaryOperator::try_from) {
             self.input().next();
             UnaryExpr {
@@ -101,37 +110,37 @@ where
             }
             .into()
         } else {
-            let node = match self.input().peek().map(|t| t.ty.clone()) {
-                Some(TokenType::Float(f)) => self.parse_float(f),
-                Some(TokenType::Variable(name)) => self.parse_variable(name),
-
-                Some(TokenType::VariablePattern(name)) => self.parse_var_pattern(name),
-                Some(TokenType::ConstPattern(name)) => self.parse_const_pattern(name),
-                Some(TokenType::AnyPattern(name)) => self.parse_any_pattern(name),
-
-                Some(TokenType::OpenParen) => self.parse_open_paren(),
-                Some(TokenType::OpenBracket) => self.parse_open_bracket(),
-                _ => unreachable!(),
-            };
-            self.input().next(); // eat rest of created expression
-            node
+            let Token { ty, span } = self.input().next().unwrap();
+            match ty {
+                TT::Float(f) => self.parse_float(f, span),
+                TT::Variable(name) => self.parse_variable(name, span),
+                TT::VariablePattern(name) => self.parse_var_pattern(name, span),
+                TT::ConstPattern(name) => self.parse_const_pattern(name, span),
+                TT::AnyPattern(name) => self.parse_any_pattern(name, span),
+                TT::OpenParen => self.parse_open_paren(span),
+                TT::OpenBracket => self.parse_open_bracket(span),
+                _ => {
+                    eprintln!("{:?}", Token::new(ty, span));
+                    unreachable!();
+                }
+            }
         };
 
         match self.input().peek().map(|t| &t.ty) {
             // <node>(<other>) => <node> * (<other>)
-            Some(TokenType::OpenParen) | Some(TokenType::OpenBracket) => {
+            Some(TT::OpenParen) | Some(TT::OpenBracket) => {
                 // TODO: mark this node as synthetic
-                self.input().push_front(Token::new(TokenType::Mult, (0, 0)));
+                self.input().push_front(Token::new(TT::Mult, (0, 0)));
             }
             // <num><var> => <num> * <var>
-            Some(TokenType::Variable(_))
-            | Some(TokenType::VariablePattern(_))
-            | Some(TokenType::ConstPattern(_))
-            | Some(TokenType::AnyPattern(_))
+            Some(TT::Variable(_))
+            | Some(TT::VariablePattern(_))
+            | Some(TT::ConstPattern(_))
+            | Some(TT::AnyPattern(_))
                 if node.is_const() =>
             {
                 // TODO: mark this node as synthetic
-                self.input().push_front(Token::new(TokenType::Mult, (0, 0)))
+                self.input().push_front(Token::new(TT::Mult, (0, 0)))
             }
             _ => {}
         }

@@ -152,7 +152,16 @@ Hint: Add a
             });
         }
         content = splits.pop().unwrap(); // next content is the last split
-        clauses.push(splits.pop().unwrap()); // clause content is the second split
+        let mut clause_content = splits.pop().unwrap(); // clause content is the second split
+        if clause == &"in" {
+            // The split input always has a trailing newline that isn't intended for the test.
+            // ===in
+            // <program>
+            // ===in
+            //          ^ newline here
+            clause_content.pop();
+        }
+        clauses.push(clause_content);
     }
     let mut clauses = clauses.into_iter();
 
@@ -202,6 +211,9 @@ fn mk_bless_file(test_case: &TestCase, stdout: &str, stderr: &str, exitcode: &st
         let clause_delim = get_clause_delim(clause);
         content.push_str(&format!("{}\n", clause_delim));
         content.push_str(clause_content);
+        if clause == "in" {
+            content.push('\n');
+        }
         content.push_str(&format!("{}\n\n", clause_delim));
     };
     if !test_case.args.is_empty() {

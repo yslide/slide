@@ -8,17 +8,17 @@
 ~~~stderr
 error: Invalid token
   |
-1 | 9 * 32 @ 4 ~ 10 - 5
+1 | 9 * 32 @ 4 ~ 10 - 5 
   |        ^
-  |        - note: token must be mathematically significant
   |
+  = note: token must be mathematically significant
 
 error: Invalid token
   |
-1 | 9 * 32 @ 4 ~ 10 - 5
+1 | 9 * 32 @ 4 ~ 10 - 5 
   |            ^
-  |            - note: token must be mathematically significant
   |
+  = note: token must be mathematically significant
 
 ~~~stderr
 

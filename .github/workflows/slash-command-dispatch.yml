@@ -10,6 +10,7 @@ jobs:
         uses: peter-evans/slash-command-dispatch@v1
         with:
           token: ${{ secrets.SLIDE_WORKFLOWS_TOKEN }}
+          reactions: false
           config: >
             [
               {

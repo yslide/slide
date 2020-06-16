@@ -46,6 +46,16 @@ impl Expression for ExprPat {
     }
 
     #[inline]
+    fn paren(inner: Rc<Self>) -> Self {
+        Self::Parend(inner)
+    }
+
+    #[inline]
+    fn bracket(inner: Rc<Self>) -> Self {
+        Self::Bracketed(inner)
+    }
+
+    #[inline]
     fn empty() -> Self {
         // Patterns must be named, so we can encode an unnamed pattern as an empty expression.
         ExprPat::VarPat(String::new())

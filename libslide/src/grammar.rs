@@ -22,7 +22,16 @@ pub trait Expression
 where
     Self: fmt::Display + From<BinaryExpr<Self>> + From<UnaryExpr<Self>>,
 {
+    /// Returns whether the expression is a statically-evaluatable constant.
     fn is_const(&self) -> bool;
+
+    /// Paranthesizes `inner`.
+    fn paren(inner: Rc<Self>) -> Self;
+
+    /// Brackets `inner`.
+    fn bracket(inner: Rc<Self>) -> Self;
+
+    /// Returns an empty expression.
     fn empty() -> Self;
 }
 
@@ -187,6 +196,16 @@ impl Expression for Expr {
     #[inline]
     fn is_const(&self) -> bool {
         matches!(self, Self::Const(_))
+    }
+
+    #[inline]
+    fn paren(inner: Rc<Self>) -> Self {
+        Self::Parend(inner)
+    }
+
+    #[inline]
+    fn bracket(inner: Rc<Self>) -> Self {
+        Self::Bracketed(inner)
     }
 
     #[inline]

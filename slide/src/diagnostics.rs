@@ -22,9 +22,17 @@ pub fn emit_slide_diagnostics(file: Option<&str>, source: String, diagnostics: V
             annotation_type: main_annotation_type,
             range: diagnostic.span.into(),
         });
-        let mut footer = Vec::with_capacity(1);
         // Add the associated diagnostics as the remaining annotations for the main diagnostic.
         for associated_diagnostic in diagnostic.associated_diagnostics.iter() {
+            annotations.push(SourceAnnotation {
+                label: &associated_diagnostic.msg,
+                annotation_type: convert_diagnostic_kind(&associated_diagnostic.kind),
+                range: associated_diagnostic.span.into(),
+            });
+        }
+        // Add the unspanned associated diagnostics to the diagnostic footer.
+        let mut footer = Vec::with_capacity(1);
+        for associated_diagnostic in diagnostic.unspanned_associated_diagnostics.iter() {
             footer.push(convert_associated_diagnostic(associated_diagnostic));
         }
 

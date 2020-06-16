@@ -23,14 +23,11 @@ macro_rules! binary_expr_parser {
             use BinaryOperator::*;
 
             let mut lhs = $self.$lhs_term();
-            while let Ok(op) = $self
-                .input()
-                .peek()
-                .map_or_else(|| Err(()), BinaryOperator::try_from)
+            while let Ok(op) = BinaryOperator::try_from($self.peek())
             {
                 match op {
                     $($matching_op)+ => {
-                        $self.input().next();
+                        $self.next();
                         let bin_expr = BinaryExpr{
                             op,
                             lhs,
@@ -45,6 +42,20 @@ macro_rules! binary_expr_parser {
         }
         )*
     };
+}
+
+/// Returns a diagnostic for an unclosed delimiter.
+fn unclosed_delimiter(open: Token, expected: TT, found: Token) -> Diagnostic {
+    let mut found_str = found.to_string();
+    if !matches!(found.ty, TT::EOF) {
+        found_str = format!("`{}`", found_str);
+    }
+    Diagnostic::span_err(
+        found.span,
+        format!("Expected `{}`, found {}", expected, found_str),
+        format!("expected closing `{}`", expected),
+    )
+    .with_help_note(open.span, format!("opening `{}` here", open))
 }
 
 trait Parser<T>
@@ -62,20 +73,50 @@ where
     fn parse_var_pattern(&mut self, name: String, span: Span) -> Self::Expr;
     fn parse_const_pattern(&mut self, name: String, span: Span) -> Self::Expr;
     fn parse_any_pattern(&mut self, name: String, span: Span) -> Self::Expr;
-    fn parse_open_paren(&mut self, span: Span) -> Self::Expr;
-    fn parse_open_bracket(&mut self, span: Span) -> Self::Expr;
+    fn parse_open_paren(&mut self, open: Token) -> Self::Expr {
+        let expr = Self::Expr::paren(self.expr());
+        let closing_tok = self.next();
+        if !matches!(closing_tok.ty, TT::CloseParen) {
+            self.push_diag(unclosed_delimiter(open, TT::CloseParen, closing_tok));
+        }
+        expr
+    }
+    fn parse_open_bracket(&mut self, open: Token) -> Self::Expr {
+        let expr = Self::Expr::bracket(self.expr());
+        let closing_tok = self.next();
+        if !matches!(closing_tok.ty, TT::CloseBracket) {
+            self.push_diag(unclosed_delimiter(open, TT::CloseBracket, closing_tok));
+        }
+        expr
+    }
     fn finish_expr(&mut self, expr: Self::Expr) -> Rc<Self::Expr>;
     fn push_diag(&mut self, diagnostic: Diagnostic);
 
     // Default parsing implementations.
     // TODO: increase modularity of this parser
 
+    #[inline]
     fn done(&mut self) -> bool {
         self.input().peek().map(|t| &t.ty) == Some(&TT::EOF)
     }
 
+    #[inline]
     fn expr(&mut self) -> Rc<Self::Expr> {
         self.add_sub_term()
+    }
+
+    #[inline]
+    fn peek(&mut self) -> &Token {
+        self.input().peek().unwrap()
+    }
+
+    #[inline]
+    fn next(&mut self) -> Token {
+        if self.done() {
+            self.peek().clone()
+        } else {
+            self.input().next().unwrap()
+        }
     }
 
     binary_expr_parser!(
@@ -92,51 +133,50 @@ where
     );
 
     fn num_term(&mut self) -> Rc<Self::Expr> {
-        if self.done() {
-            let span = self.input().peek().unwrap().span;
+        let tok = self.next();
+        if matches!(tok.ty, TT::EOF) {
             self.push_diag(Diagnostic::span_err(
-                span,
+                tok.span,
                 "Expected an expression, found end of file",
                 Some("expected an expression".into()),
             ));
             return self.finish_expr(Self::Expr::empty());
         }
 
-        let node = if let Some(Ok(op)) = self.input().peek().map(UnaryOperator::try_from) {
-            self.input().next();
+        let node = if let Ok(op) = UnaryOperator::try_from(&tok) {
             UnaryExpr {
                 op,
                 rhs: self.exp_term(),
             }
             .into()
         } else {
-            let Token { ty, span } = self.input().next().unwrap();
-            match ty {
-                TT::Float(f) => self.parse_float(f, span),
-                TT::Variable(name) => self.parse_variable(name, span),
-                TT::VariablePattern(name) => self.parse_var_pattern(name, span),
-                TT::ConstPattern(name) => self.parse_const_pattern(name, span),
-                TT::AnyPattern(name) => self.parse_any_pattern(name, span),
-                TT::OpenParen => self.parse_open_paren(span),
-                TT::OpenBracket => self.parse_open_bracket(span),
+            match tok.ty {
+                TT::Float(f) => self.parse_float(f, tok.span),
+                TT::Variable(name) => self.parse_variable(name, tok.span),
+                TT::VariablePattern(name) => self.parse_var_pattern(name, tok.span),
+                TT::ConstPattern(name) => self.parse_const_pattern(name, tok.span),
+                TT::AnyPattern(name) => self.parse_any_pattern(name, tok.span),
+                TT::OpenParen => self.parse_open_paren(tok),
+                TT::OpenBracket => self.parse_open_bracket(tok),
                 _ => {
-                    eprintln!("{:?}", Token::new(ty, span));
-                    unreachable!();
+                    self.push_diag(Diagnostic::span_err(
+                        tok.span,
+                        format!("Expected an expression, found `{}`", tok.to_string()),
+                        Some("expected an expression".into()),
+                    ));
+                    return self.finish_expr(Self::Expr::empty());
                 }
             }
         };
 
-        match self.input().peek().map(|t| &t.ty) {
+        match self.peek().ty {
             // <node>(<other>) => <node> * (<other>)
-            Some(TT::OpenParen) | Some(TT::OpenBracket) => {
+            TT::OpenParen | TT::OpenBracket => {
                 // TODO: mark this node as synthetic
                 self.input().push_front(Token::new(TT::Mult, (0, 0)));
             }
             // <num><var> => <num> * <var>
-            Some(TT::Variable(_))
-            | Some(TT::VariablePattern(_))
-            | Some(TT::ConstPattern(_))
-            | Some(TT::AnyPattern(_))
+            TT::Variable(_) | TT::VariablePattern(_) | TT::ConstPattern(_) | TT::AnyPattern(_)
                 if node.is_const() =>
             {
                 // TODO: mark this node as synthetic

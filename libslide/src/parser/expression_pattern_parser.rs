@@ -58,13 +58,10 @@ impl Parser<Rc<ExprPat>> for ExpressionPatternParser {
                 "Variables cannot be used in an expression pattern",
                 Some("unexpected variable".into()),
             )
-            .with_help(
-                span,
-                format!(
-                    r##"consider using "${name}", "#{name}", or "_{name}" as a pattern"##,
-                    name = name,
-                ),
-            ),
+            .with_help(format!(
+                r##"consider using "${name}", "#{name}", or "_{name}" as a pattern"##,
+                name = name,
+            )),
         );
         Self::Expr::VarPat(name)
     }
@@ -79,18 +76,6 @@ impl Parser<Rc<ExprPat>> for ExpressionPatternParser {
 
     fn parse_any_pattern(&mut self, name: String, _span: Span) -> Self::Expr {
         Self::Expr::AnyPat(name)
-    }
-
-    fn parse_open_paren(&mut self, _span: Span) -> Self::Expr {
-        let expr = Self::Expr::Parend(self.expr());
-        self.input().next(); // TODO: check this is close paren
-        expr
-    }
-
-    fn parse_open_bracket(&mut self, _span: Span) -> Self::Expr {
-        let expr = Self::Expr::Bracketed(self.expr());
-        self.input().next(); // TODO: check this is close bracket
-        expr
     }
 
     fn finish_expr(&mut self, expr: Self::Expr) -> Rc<Self::Expr> {

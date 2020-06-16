@@ -38,10 +38,17 @@ impl Grammar for Rc<ExprPat> {
         self.as_ref().s_form()
     }
 }
+
 impl Expression for ExprPat {
     #[inline]
     fn is_const(&self) -> bool {
         matches!(self, Self::Const(_))
+    }
+
+    #[inline]
+    fn empty() -> Self {
+        // Patterns must be named, so we can encode an unnamed pattern as an empty expression.
+        ExprPat::VarPat(String::new())
     }
 }
 

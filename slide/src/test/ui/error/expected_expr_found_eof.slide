@@ -1,0 +1,19 @@
+===in
+1 + 2 * 3 / 4 ^ 
+===in
+
+~~~stdout
+~~~stdout
+
+~~~stderr
+error: Expected an expression, found end of file
+  |
+1 | 1 + 2 * 3 / 4 ^  
+  |                 ^ expected an expression
+  |
+
+~~~stderr
+
+~~~exitcode
+1
+~~~exitcode

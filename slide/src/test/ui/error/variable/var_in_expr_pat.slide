@@ -1,0 +1,24 @@
+!!!args
+--expr-pat
+!!!args
+
+===in
+1 + var
+===in
+
+~~~stdout
+~~~stdout
+
+~~~stderr
+error: Variables cannot be used in an expression pattern
+  |
+1 | 1 + var 
+  |     ^^^ unexpected variable
+  |
+  = help: consider using "$var", "#var", or "_var" as a pattern
+
+~~~stderr
+
+~~~exitcode
+1
+~~~exitcode

@@ -83,7 +83,7 @@ impl Scanner {
             }
         }
 
-        self.output.push(tok!(TT::EOF, (self.pos, self.pos)));
+        self.output.push(tok!(TT::EOF, (self.pos, self.pos + 1)));
     }
 
     // matches token with symbol and creates it: private helper function
@@ -107,7 +107,7 @@ impl Scanner {
         let span = start..self.pos;
 
         if matches!(ty, Invalid(..)) {
-            let diag = Diagnostic::span_err(span.clone(), "Invalid token")
+            let diag = Diagnostic::span_err(span.clone(), "Invalid token", None)
                 .with_note(span.clone(), "token must be mathematically significant");
             self.push_diag(diag);
         }

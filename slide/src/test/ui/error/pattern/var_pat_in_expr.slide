@@ -1,0 +1,20 @@
+===in
+1 + $var
+===in
+
+~~~stdout
+~~~stdout
+
+~~~stderr
+error: Patterns cannot be used in an expression
+  |
+1 | 1 + $var 
+  |     ^^^^ unexpected pattern
+  |
+  = help: consider using "var" as a variable
+
+~~~stderr
+
+~~~exitcode
+1
+~~~exitcode

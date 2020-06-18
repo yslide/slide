@@ -1,5 +1,3 @@
-@TODO: https://github.com/ayazhafiz/slide/issues/126
-
 ===in
 1 2 3
 ===in
@@ -8,12 +6,12 @@
 ~~~stdout
 
 ~~~stderr
-thread 'main' panicked at 'assertion failed: self.done()', libslide/src/parser/expression_parser.rs:85:9
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: Unexpected extra tokens
+  |
+1 | 1 2 3 
+  |   ^^^ not connected to a primary expression
+  |
 
-note: you found an internal slide error (ISE; it's like an ICE, but for slide)!
-
-note: we would appreciate a bug report: https://github.com/ayazhafiz/slide
 ~~~stderr
 
 ~~~exitcode

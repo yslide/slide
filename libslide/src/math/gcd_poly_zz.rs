@@ -12,8 +12,7 @@ use core::cmp::{max, min};
 ///
 /// [1]: https://www.sciencedirect.com/science/article/pii/S0747717189800045
 /// [2]: https://dl.acm.org/doi/pdf/10.1145/220346.220376
-#[allow(unused)]
-fn gcd_poly_zz_heu(mut f: Poly, mut g: Poly) -> Result<(Poly, Poly, Poly), &'static str> {
+pub fn gcd_poly_zz_heu(f: Poly, g: Poly) -> Result<(Poly, Poly, Poly), &'static str> {
     if let Some(res) = trivial_gcd(&f, &g) {
         return Ok(res);
     }

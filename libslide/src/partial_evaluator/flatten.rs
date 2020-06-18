@@ -31,6 +31,10 @@ use std::rc::Rc;
 /// 1 + 2 + 3 -> 6
 /// 1 - 5x / x -> -4
 /// ```
+///
+/// Expressions flattened to a binary operation have the following conditions:
+///
+/// - Additions and subtractions become additions
 pub fn flatten_expr(expr: &Rc<Expr>) -> Rc<Expr> {
     match expr.as_ref() {
         // #a -> #a, $a -> $a
@@ -60,7 +64,7 @@ pub fn flatten_expr(expr: &Rc<Expr>) -> Rc<Expr> {
 /// ```text
 /// 1 + 2x - 3 + x -> -2 + 3x
 /// ```
-pub fn flatten_add_or_sub(o_lhs: &Rc<Expr>, o_rhs: &Rc<Expr>, is_subtract: bool) -> Rc<Expr> {
+fn flatten_add_or_sub(o_lhs: &Rc<Expr>, o_rhs: &Rc<Expr>, is_subtract: bool) -> Rc<Expr> {
     let lhs = flatten_expr(o_lhs);
     let rhs = flatten_expr(o_rhs);
 

@@ -1,9 +1,9 @@
 ===in
-a * +(b + c)
+(x^2 + 2x + 1) / (x + 1)
 ===in
 
 ~~~stdout
-a * (b + c)
+x + 1
 ~~~stdout
 
 ~~~stderr

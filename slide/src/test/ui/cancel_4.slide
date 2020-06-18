@@ -1,0 +1,16 @@
+@TODO: should go to (x + 1) / (x - 2)
+
+===in
+(x^2 - 1) / (x^2 - 3x + 2)
+===in
+
+~~~stdout
+(x ^ 2 - 1) / (2 + x ^ 2 - x * 3)
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

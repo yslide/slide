@@ -110,6 +110,14 @@ impl Expr {
             Self::Parend(expr) | Self::Bracketed(expr) => expr.complexity(),
         }
     }
+
+    /// Gets the constant value stored in this expression, if any.
+    pub fn get_const(&self) -> Option<f64> {
+        match self {
+            Self::Const(c) => Some(*c),
+            _ => None,
+        }
+    }
 }
 
 impl Eq for Expr {}
@@ -321,20 +329,32 @@ pub struct BinaryExpr<E: Expression> {
     pub rhs: Rc<E>,
 }
 
+macro_rules! mkop {
+    ($($op_name:ident: $binop:path)*) => {
+    $(
+        pub fn $op_name<T, U>(lhs: T, rhs: U) -> Self
+        where
+            T: Into<Rc<E>>,
+            U: Into<Rc<E>>,
+        {
+            Self {
+                op: $binop,
+                lhs: lhs.into(),
+                rhs: rhs.into(),
+            }
+        }
+    )*
+    }
+}
+
 impl<E> BinaryExpr<E>
 where
     E: Expression,
 {
-    pub fn mult<T, U>(lhs: T, rhs: U) -> Self
-    where
-        T: Into<Rc<E>>,
-        U: Into<Rc<E>>,
-    {
-        Self {
-            op: BinaryOperator::Mult,
-            lhs: lhs.into(),
-            rhs: rhs.into(),
-        }
+    mkop! {
+        mult: BinaryOperator::Mult
+        div:  BinaryOperator::Div
+        exp:  BinaryOperator::Exp
     }
 }
 
@@ -347,7 +367,6 @@ macro_rules! display_binary_expr {
                 let format_arg = |arg: &Rc<$expr>| match arg.as_ref() {
                     BinaryExpr(l) => {
                         if l.op < self.op {
-                            eprintln!("{} {} {}", l.op, self.op, l.op < self.op);
                             format!("({})", l)
                         } else {
                             l.to_string()

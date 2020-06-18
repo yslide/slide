@@ -1,4 +1,4 @@
-mod flatten;
+pub mod flatten;
 mod types;
 use flatten::flatten_expr;
 pub use types::*;

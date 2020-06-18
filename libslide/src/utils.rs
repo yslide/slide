@@ -9,3 +9,6 @@ pub use iter::*;
 
 mod string;
 pub use string::*;
+
+mod test;
+pub use test::*;

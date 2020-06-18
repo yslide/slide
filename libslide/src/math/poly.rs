@@ -1,9 +1,13 @@
-#![allow(unused)] // TODO(unused)
 #![allow(clippy::should_implement_trait)]
 
+use crate::grammar::{BinaryExpr, BinaryOperator, Expr, Expression};
 use crate::math::gcd;
+use crate::partial_evaluator::flatten::flatten_expr;
+use crate::utils::{get_flattened_binary_args, unflatten_binary_expr, UnflattenStrategy};
+
 use core::cmp::{max, min};
-use core::convert::TryInto;
+use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
 #[derive(Default, Clone, Eq, PartialEq, Debug)]
 pub struct Poly {
@@ -53,6 +57,18 @@ impl Poly {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.vec.is_empty() || self.vec.iter().all(|&n| n == 0)
+    }
+
+    #[inline]
+    pub fn is_one(&self) -> bool {
+        let is_one = self.vec.last() == Some(&1);
+        for coeff in self.vec.iter().rev().skip(1) {
+            if coeff != &0 {
+                // A higher-order term has a non-zero coefficient.
+                return false;
+            }
+        }
+        is_one
     }
 
     /// Gets the degree of the polynomial.
@@ -147,7 +163,7 @@ impl Poly {
 
     /// Negates each term of the polynomial.
     #[inline]
-    fn negate(mut self) -> Self {
+    fn negate(self) -> Self {
         self.mul_scalar(-1)
     }
 
@@ -178,7 +194,7 @@ impl Poly {
     /// // (x + 2) - (3x^2 + 2x) -> -3x^2 - x + 2
     /// assert_eq!(poly![1, 2].sub(poly![3, 2, 0]), poly![-3, -1, 2]);
     /// ```
-    fn sub(mut self, mut other: Self) -> Self {
+    fn sub(mut self, other: Self) -> Self {
         if other.vec.is_empty() {
             return other.negate();
         }
@@ -254,7 +270,6 @@ impl Poly {
         let mut rem_poly = self;
         let mut d_rem = d_self;
         let mut quo = poly![];
-        let mut heu: Poly;
         loop {
             let lc_rem = rem_poly.lc();
             // Currently, this only supports integer division.
@@ -265,7 +280,7 @@ impl Poly {
                 break;
             }
             let cur_term_coeff = lc_rem / lc_other;
-            quo = quo.add_term(cur_term_coeff, (d_rem - d_other));
+            quo = quo.add_term(cur_term_coeff, d_rem - d_other);
 
             rem_poly = rem_poly.sub(
                 // Subtract (current term coeff * rhs) from the rest of polynomial we need to
@@ -317,11 +332,190 @@ impl Poly {
             res + n
         })
     }
+
+    /// Transforms an expression into a polynomial relative to some term.
+    /// If `relative_to` is not none, the constructed polynomial will be relative to that term.
+    /// Otherwise, the polynomial will be relative to the term in the expression sequence.
+    ///
+    /// If transformation is successful, the return value is a tuple of (polynomial, relative term).
+    /// Transformation may fail for a number of reasons, including the expression containing a
+    /// non-unique term, consisting of non-integer coefficients, or non-integer exponents.
+    ///
+    /// ## Examples
+    ///
+    /// ```ignore
+    /// from_expr("x + 2x^2", None) == Some(poly![2, 1, 0], Some(Var("x")))
+    /// from_expr("5", None) == Some(poly![5], None)
+    /// from_expr("x + 2x^2", Some(Var("x"))) == Some(poly![2, 1, 0], Some(Var("x")))
+    /// from_expr("y + 2y^2", Some(Var("x"))) == None
+    /// from_expr("2.5x", None) == None
+    /// from_expr("x^{2.5}", None) == None
+    /// from_expr("x^{-2}", None) == None
+    /// ```
+    pub fn from_expr(
+        expr: &Rc<Expr>,
+        relative_to: Option<&Rc<Expr>>,
+    ) -> Result<(Self, Option<Rc<Expr>>), String> {
+        // First, let's try to flatten the expression which will automatically combine terms for
+        // us. If the expr is an addition or subtraction, this will also normalize it to an
+        // addition.
+        let expr = flatten_expr(&Rc::clone(expr));
+        // Next, let's unroll the addition into its individual polynomial parts.
+        // TODO: we should really rename this, it overlaps with `flatten_expr`.
+        // TODO: we can more efficient by getting the unrolled args during flattening, skipping
+        //       this step
+        let poly_parts = get_flattened_binary_args(expr, BinaryOperator::Plus);
+
+        let mut uniq_terms = HashSet::<&Rc<Expr>>::new();
+        // Polynomial degree -> coefficient for that term
+        let mut degree_coeffs = HashMap::<usize, isize>::new();
+        if let Some(ref term) = relative_to {
+            uniq_terms.insert(term);
+        }
+        let mut konst_f64 = 0.;
+        for poly_part in poly_parts.iter() {
+            match poly_part.as_ref() {
+                Expr::Const(c) => konst_f64 += c,
+                Expr::BinaryExpr(BinaryExpr {
+                    op: BinaryOperator::Mult,
+                    lhs,
+                    rhs,
+                }) if lhs.is_const() || rhs.is_const() => {
+                    let (c_f64, term) = if lhs.is_const() {
+                        (lhs.get_const().unwrap(), rhs)
+                    } else {
+                        (rhs.get_const().unwrap(), lhs)
+                    };
+                    let coeff = c_f64 as isize;
+                    if (coeff as f64 - c_f64).abs() > std::f64::EPSILON {
+                        // Currently we only support `isize` for polynomial coefficients, so bail
+                        // out if the conversion is lossy.
+                        return Err(format!("Expected an integer coefficient for {}", poly_part));
+                    }
+
+                    // Get the raw term and exponent.
+                    let (term, pow) = term_and_pow_from_expr(term)?;
+
+                    degree_coeffs.insert(pow, coeff);
+                    uniq_terms.insert(term);
+                }
+
+                // TODO: we should probably be smarter with other terms, and even multiplication.
+                _ => {
+                    let (term, pow) = term_and_pow_from_expr(poly_part)?;
+                    // We couldn't unroll the coefficient in the above match, so make it one here.
+                    degree_coeffs.insert(pow, 1);
+                    uniq_terms.insert(term);
+                }
+            }
+
+            if uniq_terms.len() > 1 {
+                // Polynomials should be based on a singular unique term.
+                return Err(format!(
+                    "Expected a singular unique term, found {}: {:#?}",
+                    uniq_terms.len(),
+                    uniq_terms
+                ));
+            }
+        }
+
+        let konst = konst_f64 as isize;
+        if (konst as f64 - konst_f64).abs() > std::f64::EPSILON {
+            return Err(format!("Expected an integer constant, got {}", konst_f64));
+        }
+
+        let degree = degree_coeffs.keys().max();
+        match degree {
+            None => {
+                // There are no explicit terms in the polynomial, just return the constant or an
+                // empty polynomial.
+                let poly = if konst == 0 { poly![] } else { poly![konst] };
+                Ok((poly, None))
+            }
+            Some(degree) => {
+                let len = degree + 1;
+                let mut poly = vec![0; len];
+                for (pow, coeff) in degree_coeffs.into_iter() {
+                    poly[len - pow - 1] = coeff;
+                }
+                poly[len - 1] = konst;
+                Ok((
+                    Self::new(poly),
+                    uniq_terms.into_iter().next().map(Rc::clone),
+                ))
+            }
+        }
+    }
+
+    /// Converts a polynomial, relative to some term, into an expression.
+    ///
+    /// ## Examples
+    ///
+    /// ```ignore
+    /// poly![3, 2, 1].to_expr("x") == "3 * (x ^ 2) + 2 * x + 1"
+    /// ```
+    pub fn to_expr(&self, relative_to: &Rc<Expr>) -> Rc<Expr> {
+        let mut terms = Vec::with_capacity(self.vec.len());
+        for (pow, coeff) in self.vec.iter().rev().enumerate() {
+            let term = match coeff {
+                0 => {
+                    continue;
+                }
+                1 => Rc::clone(relative_to),
+                _ => Rc::new(Expr::BinaryExpr(BinaryExpr::mult(
+                    Expr::Const(*coeff as f64),
+                    Rc::clone(relative_to),
+                ))),
+            };
+
+            terms.push(match pow {
+                0 => Rc::new(Expr::Const(*coeff as f64)),
+                1 => term,
+                _ => Rc::new(Expr::BinaryExpr(BinaryExpr::exp(
+                    term,
+                    Rc::new(Expr::Const(pow as f64)),
+                ))),
+            });
+        }
+        if terms.is_empty() {
+            return Rc::new(Expr::Const(0.));
+        }
+
+        unflatten_binary_expr(
+            terms.as_ref(),
+            BinaryOperator::Plus,
+            UnflattenStrategy::Left,
+        )
+    }
+}
+
+/// Gets the term and power of an expression.
+/// Returns None if the power is not a positive integer.
+fn term_and_pow_from_expr(expr: &Rc<Expr>) -> Result<(&Rc<Expr>, usize), String> {
+    match expr.as_ref() {
+        Expr::BinaryExpr(BinaryExpr {
+            op: BinaryOperator::Exp,
+            lhs,
+            rhs,
+        }) if rhs.is_const() => {
+            let (pow_f64, term) = (rhs.get_const().unwrap(), lhs);
+            let pow = pow_f64 as usize;
+            if (pow as f64 - pow_f64).abs() > std::f64::EPSILON {
+                // And we only support integer powers in the polynomial.
+                return Err(format!("Expected a positive term degree for {}", expr));
+            }
+            Ok((term, pow))
+        }
+        // If there is no explicit exponentiation, just treat the whole expression
+        // as a term.
+        _ => Ok((expr, 1)),
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::parse_expr;
 
     #[test]
     fn add_1() {
@@ -387,5 +581,81 @@ mod test {
             poly![1, 0, -1].div(poly![1, -1]).unwrap(),
             (poly![1, 1], poly![])
         )
+    }
+
+    #[test]
+    fn is_one() {
+        let cases = [
+            (poly![1], true),
+            (poly![0, 0, 0, 0, 1], true),
+            (poly![0, 1, 0, 0, 1], false),
+            (poly![0, 0, 0, 0, 0], false),
+            (poly![2], false),
+            (poly![], false),
+        ];
+        for (poly, is_one) in cases.iter() {
+            assert_eq!(poly.is_one(), *is_one);
+        }
+    }
+
+    macro_rules! poly_from_expr_tests {
+        ($($case:ident: $expr:expr => $expected:expr)*) => {
+        $(
+            poly_from_expr_tests!($case: $expr, None => $expected);
+        )*
+        };
+
+        ($($case:ident: $expr:expr, $relative:expr => $expected:expr)*) => {
+        $(
+            #[test]
+            fn $case() {
+                let expr = parse_expr!($expr);
+                let relative: Option<&str> = $relative;
+                let has_relative = relative.is_some();
+                let rel = relative.map(|r: &str| parse_expr!(r)).unwrap_or(Rc::new(Expr::empty()));
+                let rel_opt = if has_relative { Some(&rel) } else { None };
+                let poly = Poly::from_expr(&expr, rel_opt).ok().map(|(p, t)| (p, t.map(|expr| expr.to_string())));
+                assert_eq!(poly, $expected);
+            }
+        )*
+        };
+    }
+
+    poly_from_expr_tests! {
+        empty: "0" => Some((poly![], None))
+        konst: "1 + 2" => Some((poly![3], None))
+        single_deg: "x" => Some((poly![1, 0], Some("x".to_string())))
+        multi_deg: "10 + x + x^2 + x^4 + x^8" => Some((poly![1, 0, 0, 0, 1, 0, 1, 1, 10], Some("x".to_string())))
+        with_coeff: "2x + x^3 + 10x^2 + 5x^4" => Some((poly![5, 1, 10, 2, 0], Some("x".to_string())))
+        complex_term: "2(x + y ^ z) + 5(x + y ^ z)^3" => Some((poly![5, 0, 2, 0], Some("(x + y ^ z)".to_string())))
+        multi_term: "10 + x + y^2" => None
+        // TODO: this doesn't work yet, `flatten` and/or Poly::from_expr need to be smarter about unaries
+        // add_and_sub: "10 + x - 2x^2 + 3x^4 - 4x^8" => Some((poly![1, 0, 0, 0, 1, 0, 1, 1, 10], Some("x".to_string())))
+    }
+
+    poly_from_expr_tests! {
+        relative: "10 + x + x^2 + x^4", Some("x") => Some((poly![1, 0, 1, 1, 10], Some("x".to_string())))
+        relative_fails: "10 + x + x^2 + x^4", Some("y") => None
+    }
+
+    macro_rules! poly_to_expr_tests {
+        ($($case:ident: $poly:expr, $relative:expr => $expected:expr)*) => {
+        $(
+            #[test]
+            fn $case() {
+                let rel = parse_expr!($relative);
+                let expr = $poly.to_expr(&rel);
+                assert_eq!(expr.to_string(), $expected);
+            }
+        )*
+        };
+    }
+
+    poly_to_expr_tests! {
+        to_empty: poly![], "x" => "0"
+        to_empty_all_zeros: poly![0, 0, 0, 0], "x" => "0"
+        zero_coefficient: poly![0, 10], "x" => "10"
+        one_coefficient: poly![1, 0, 1, 1, 5], "x" => "5 + x + x ^ 2 + x ^ 4"
+        larger_coefficient: poly![5, 4, 3, 2, 1], "x" => "1 + 2 * x + (3 * x) ^ 2 + (4 * x) ^ 3 + (5 * x) ^ 4"
     }
 }

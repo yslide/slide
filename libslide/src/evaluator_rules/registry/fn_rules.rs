@@ -1,4 +1,5 @@
 use crate::grammar::*;
+use crate::math::*;
 use crate::utils::*;
 
 use std::rc::Rc;
@@ -87,8 +88,38 @@ pub(super) fn multiply(expr: Rc<Expr>) -> Option<Rc<Expr>> {
 }
 
 pub(super) fn divide(expr: Rc<Expr>) -> Option<Rc<Expr>> {
-    let (l, r) = get_binary_args!(expr, BinaryOperator::Div)?;
-    Some(Rc::new(Expr::Const(l / r)))
+    match expr.as_ref() {
+        Expr::BinaryExpr(BinaryExpr {
+            op: BinaryOperator::Div,
+            lhs,
+            rhs,
+        }) => match (lhs.as_ref(), rhs.as_ref()) {
+            (Expr::Const(l), Expr::Const(r)) => Some(Rc::new(Expr::Const(l / r))),
+            _ => {
+                // Now we try to convert the numerator/denominator into polynomials and cancel them.
+                let (numerator, relative_to) = Poly::from_expr(lhs, None).ok()?;
+                let relative_to = match relative_to {
+                    Some(e) => e,
+                    // Cancelling should only work with term'd polynomials. If the expression has
+                    // no terms for whatever reason, let another rule take care of it.
+                    None => return None,
+                };
+                let (denominator, _) = Poly::from_expr(rhs, Some(&relative_to)).ok()?;
+                let (_, numerator, denominator) = gcd_poly_zz_heu(numerator, denominator).ok()?;
+
+                // Woo! The polynomials have a gcd we can cancel them with.
+                let numer_expr = numerator.to_expr(&relative_to);
+                if denominator.is_one() {
+                    Some(numer_expr)
+                } else {
+                    let denom_expr = denominator.to_expr(&relative_to);
+                    let division = BinaryExpr::div(numer_expr, denom_expr);
+                    Some(Rc::new(Expr::BinaryExpr(division)))
+                }
+            }
+        },
+        _ => None,
+    }
 }
 
 pub(super) fn modulo(expr: Rc<Expr>) -> Option<Rc<Expr>> {

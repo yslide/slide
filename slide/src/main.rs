@@ -66,7 +66,7 @@ fn get_opts() -> Opts {
     }
 }
 
-fn main() -> Result<(), String> {
+fn main_impl() -> Result<(), String> {
     let opts = get_opts();
     let output_form = opts.output_form;
     let file = None; // currently programs can only be read from stdin
@@ -120,5 +120,17 @@ fn print(obj: &dyn Grammar, output_form: OutputForm) -> String {
         OutputForm::Pretty => obj.to_string(),
         OutputForm::SExpression => obj.s_form(),
         OutputForm::Debug => format!("{:#?}", obj),
+    }
+}
+
+fn main() {
+    let out = std::panic::catch_unwind(main_impl);
+
+    if let Err(..) = out {
+        eprint!(
+            "\nnote: you found an internal slide error (ISE; it's like an ICE, but for slide)!\n"
+        );
+        eprint!("\nnote: we would appreciate a bug report: https://github.com/ayazhafiz/slide\n");
+        std::process::exit(1);
     }
 }

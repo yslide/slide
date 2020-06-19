@@ -86,7 +86,7 @@ fn mk_test_case(test_name: &str, mut content: String, bless: bool) -> Result<Tes
         let rest_content = content.split_off(line_split);
         let annotation = content;
         content = rest_content;
-        let mut annotation_parts = annotation.split(':');
+        let mut annotation_parts = annotation.splitn(1, ':');
         let annotation = annotation_parts.next().unwrap();
         let annotation_msg = annotation_parts.next().map(|s| s.trim()).unwrap_or("");
         annotations.insert(annotation.into(), annotation_msg.into());

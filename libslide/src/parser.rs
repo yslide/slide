@@ -58,6 +58,23 @@ fn unclosed_delimiter(open: Token, expected: TT, found: Token) -> Diagnostic {
     .with_help_note(open.span, format!("opening `{}` here", open))
 }
 
+/// Returns a diagnostic for extra tokens following a primary item.
+/// `extra_tokens` will be consumed in the construction of the diagnostic.
+fn extra_tokens_diag(extra_tokens: &mut PeekIter<Token>) -> Diagnostic {
+    let Span { lo, mut hi } = extra_tokens.peek().unwrap().span;
+    while let Some(tok) = extra_tokens.next() {
+        if extra_tokens.peek().unwrap().ty == TT::EOF {
+            hi = tok.span.hi;
+            break;
+        }
+    }
+    Diagnostic::span_err(
+        lo..hi,
+        "Unexpected extra tokens",
+        "not connected to a primary expression".to_string(),
+    )
+}
+
 trait Parser<T>
 where
     T: Grammar,

@@ -1,4 +1,4 @@
-use super::Parser;
+use super::{extra_tokens_diag, Parser};
 use crate::common::Span;
 use crate::diagnostics::Diagnostic;
 use crate::grammar::*;
@@ -43,7 +43,10 @@ impl Parser<Rc<ExprPat>> for ExpressionPatternParser {
 
     fn parse(&mut self) -> Rc<ExprPat> {
         let parsed = self.expr();
-        assert!(self.done());
+        if !self.done() {
+            let extra_tokens_diag = extra_tokens_diag(self.input());
+            self.push_diag(extra_tokens_diag);
+        }
         parsed
     }
 

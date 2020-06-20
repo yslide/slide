@@ -21,14 +21,14 @@ jobs:
     - name: "Squashed commits"
       if: type = pull_request
       env: BRANCH="origin/$TRAVIS_PULL_REQUEST_BRANCH"
-      script: 
+      script:
         - git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
         - git fetch origin
         - scripts/squashed
 
   allow_failures:
     - rust: nightly
-      
+
 script:
   - cargo build --verbose --all
   - scripts/check test
@@ -41,15 +41,18 @@ after_success:
   - cargo doc --document-private-items --no-deps
 
 deploy:
-  - provider: pages
+  - provider: pages:git
+    edge: true
+    token: $GITHUB_TOKEN
+    target_branch: gh-pages
+    keep_history: true
+    verbose: true
     local_dir: target/doc
     fqdn: slide-dev.ayazhafiz.com
     project_name: slide
-    skip_cleanup: true
-    github_token: $GITHUB_TOKEN
-    keep_history: true
+    name: slide-bot
+    email: vcaa1729@gmail.com
     committer_from_gh: true
     deployment_file: true
-    target_branch: gh-pages
     on:
       branch: master

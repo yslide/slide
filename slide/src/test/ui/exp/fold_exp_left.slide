@@ -1,0 +1,14 @@
+===in
+x^2 * x
+===in
+
+~~~stdout
+x ^ 3
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

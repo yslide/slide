@@ -1,0 +1,14 @@
+===in
+x^10 / x
+===in
+
+~~~stdout
+x ^ 9
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

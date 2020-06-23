@@ -1,0 +1,16 @@
+@TODO: this should be idempotent and simplify further
+
+===in
+x^(x + 2) / x^(5 + y)
+===in
+
+~~~stdout
+x ^ (x + 2 - y + 5)
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

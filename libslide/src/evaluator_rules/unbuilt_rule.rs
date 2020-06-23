@@ -39,6 +39,10 @@ pub enum UnbuiltRule {
     /// always exact and deterministic.
     S(&'static str),
 
+    /// Multiple string rules. This should be used by rules that are only fully expressed by
+    /// multiple similar transformations.
+    M(&'static [&'static str]),
+
     /// A function rule.
     F(fn(Rc<Expr>) -> Option<Rc<Expr>>),
 }

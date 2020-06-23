@@ -1,0 +1,14 @@
+===in
+x / x^2
+===in
+
+~~~stdout
+x ^ -1
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

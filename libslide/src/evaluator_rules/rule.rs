@@ -125,6 +125,10 @@ impl Rule {
     pub fn from_fn(f: fn(Rc<Expr>) -> Option<Rc<Expr>>) -> Self {
         Self::Evaluate(f)
     }
+
+    pub fn from_str(s: &str) -> Self {
+        Self::PatternMap(PatternMap::from_str(s))
+    }
 }
 
 impl Transformer<Rc<Expr>, Rc<Expr>> for Rule {

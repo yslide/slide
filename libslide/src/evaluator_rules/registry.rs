@@ -43,6 +43,16 @@ define_rules! {
                ReorderConstants: S("#a + $b -> $b + #a")
              DistributeNegation: S("-(_a - _b) -> _b - _a")
             FoldNegatedAddition: S("_a + -_b -> _a - _b")
+                  FoldExponents: M(&[
+                      "_a * _a -> _a^2",
+                      "_a * _a^_b -> _a^(_b + 1)",
+                      "_a^_b * _a -> _a^(_b + 1)",
+                      "_a^_b * _a^_c -> _a^(_b + _c)",
+                      "_a / _a^_b -> _a^(1 - _b)",
+                      "_a^_b / _a -> _a^(_b - 1)",
+                      "_a^_b / _a^_c -> _a^(_b - _c)",
+                  ])
+         ExponentiativeIdentity: S("_a^0 -> _a")
 }
 
 impl PartialOrd for RuleName {
@@ -91,6 +101,7 @@ impl RuleSet {
             // 2. A version of the (1) boostrapped with a set of rules, possibly including (1)
             //    itself.
             UnbuiltRule::S(_) => sum + 2,
+            UnbuiltRule::M(v) => sum + 2 * v.len(),
             _ => sum + 1,
         });
 
@@ -98,21 +109,28 @@ impl RuleSet {
         let mut errors: Vec<Box<dyn Error>> = Vec::new();
         let bootstrapping_rules = Self::get_bootstrapping_rules();
         let bootstrap_blacklist = Self::get_boostrap_blacklist();
+        let mut mk_str_rule =
+            |built_rules: &mut Vec<Rule>, rule_name: Option<&RuleName>, rule: &'static str| {
+                let pm = PatternMap::from_str(rule);
+                if let Some(err) = pm.validate() {
+                    errors.push(err.into());
+                    return;
+                }
+
+                if !bootstrap_blacklist.contains(&rule_name.copied()) {
+                    let bootstrapped_pm = pm.bootstrap(&bootstrapping_rules);
+                    built_rules.push(Rule::PatternMap(bootstrapped_pm));
+                }
+                built_rules.push(Rule::PatternMap(pm));
+            };
+
         for (rule_name, unbuilt_rule) in all_rules.into_iter() {
             match unbuilt_rule {
-                UnbuiltRule::S(s) => {
-                    let pm = PatternMap::from_str(s);
-                    if let Some(err) = pm.validate() {
-                        errors.push(err.into());
-                        continue;
+                UnbuiltRule::S(rule) => mk_str_rule(&mut built_rules, rule_name, rule),
+                UnbuiltRule::M(rules) => {
+                    for rule in rules.iter() {
+                        mk_str_rule(&mut built_rules, rule_name, rule);
                     }
-
-                    if !bootstrap_blacklist.contains(&rule_name.copied()) {
-                        let bootstrapped_pm = pm.bootstrap(&bootstrapping_rules);
-                        built_rules.push(Rule::PatternMap(bootstrapped_pm));
-                    }
-
-                    built_rules.push(Rule::PatternMap(pm));
                 }
                 UnbuiltRule::F(f) => built_rules.push(Rule::from_fn(*f)),
             }
@@ -147,9 +165,10 @@ impl RuleSet {
         bootstrapping_rules
             .iter()
             .map(|r| rule_set.get(r).unwrap())
-            .map(|r| match r {
-                UnbuiltRule::S(s) => Rule::PatternMap(PatternMap::from_str(s)),
-                UnbuiltRule::F(f) => Rule::from_fn(*f),
+            .flat_map(|r| match r {
+                UnbuiltRule::S(s) => vec![Rule::from_str(s)],
+                UnbuiltRule::M(m) => m.iter().map(|s| Rule::from_str(s)).collect(),
+                UnbuiltRule::F(f) => vec![Rule::from_fn(*f)],
             })
             .collect()
     }

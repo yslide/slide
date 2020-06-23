@@ -1,0 +1,14 @@
+===in
+x^(x + 2) * x^(5 + y)
+===in
+
+~~~stdout
+x ^ (x + y + 7)
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

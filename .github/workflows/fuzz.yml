@@ -1,0 +1,81 @@
+name: Fuzz
+
+on:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '0 8 * * *'
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.SLIDE_WORKFLOWS_TOKEN }}
+          repository: 'ayazhafiz/slide'
+          ref: 'master'
+
+      - name: Update fuzz files
+        run: |
+          scripts/seed_fuzz
+          git config --global user.name 'slide-bot'
+          git config --global user.email '49662722+slide-bot@users.noreply.github.com'
+          git add -A
+          git commit -m "[fuzz update] Ensure fuzz seed files" || true
+          git push || true
+          
+      - name: Cache Rust
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/sccache
+            ~/.cargo
+            ~/.rustup
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          
+      - name: Install Fuzz
+        uses: actions-rs/install@v0.1.2
+        with:
+          crate: cargo-fuzz
+          version: latest
+
+      - name: My sweatshirt is also fuzzy, can we fix that?
+        id: run
+        run: |
+          cd slide
+          EC="$(cargo fuzz run slide -- fuzz/corpus/ fuzz/seed -runs=100000 &> out.slide || echo $?)"
+          FUZZ_OUT="$(cat out.slide)"
+          JSON="$(jq -cn --arg ec "$EC" --arg out "$(echo $FUZZ_OUT | tail -30)" '{ec: $ec, fuzz_out: $out}')"
+          echo "::set-output name=matrix::$JSON"
+
+      - name: Check JSON
+        run: echo ${{ steps.run.outputs.matrix }}
+        
+      - name: Create issue
+        if: ${{ fromJson(steps.run.outputs.matrix).ec != '' }}
+        uses: maxkomarychev/oction-create-issue@v0.7.1
+        with:
+          token: ${{ secrets.SLIDE_WORKFLOWS_TOKEN }}
+          owner: ayazhafiz
+          repo: slide
+          title: "Fuzzing failure"
+          body: |
+            Daily slide fuzzing failed. Last 30 lines of the output log are as follows:
+
+            ```
+            ${{ fromJson(steps.run.outputs.matrix).fuzz_out }}
+            ```
+
+            [Command run output][2]
+            [1]: ${{ github.event.client_payload.github.payload.comment.html_url }}
+            [2]: https://github.com/ayazhafiz/slide-workflows/actions/runs/${{ github.run_id }}

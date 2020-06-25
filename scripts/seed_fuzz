@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+
+import base64
+import glob
+from os import path
+
+
+seed_dir = "slide/fuzz/seed"
+slide_tests = glob.iglob("slide/src/test/**/*.slide", recursive=True)
+num_seeds = 0
+for slide_f in slide_tests:
+    with open(slide_f, "r") as f:
+        slide_txt = f.read()
+        program = slide_txt.split("===in")[1].strip()
+        # Make the seed files unique on the slide input rather than the test
+        # case or something else.
+        seed_f = path.join(
+            seed_dir,
+            base64.b64encode(program.encode()).decode())
+        with open(seed_f, "w") as f:
+            f.write(program.strip())
+    num_seeds += 1
+
+print(f"Ensured {num_seeds} seeds.")

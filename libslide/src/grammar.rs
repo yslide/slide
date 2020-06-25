@@ -20,7 +20,7 @@ where
 }
 pub trait Expression
 where
-    Self: fmt::Display + From<BinaryExpr<Self>> + From<UnaryExpr<Self>>,
+    Self: fmt::Display + From<BinaryExpr<Self>> + From<UnaryExpr<Self>> + Ord,
 {
     /// Returns whether the expression is a statically-evaluatable constant.
     fn is_const(&self) -> bool;
@@ -133,28 +133,32 @@ impl Ord for Expr {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
             (Self::Var(a), Self::Var(b)) => a.cmp(b),
-            (Self::Var(_), Self::Const(_)) => Ordering::Less,
             (Self::Const(a), Self::Const(b)) => a.partial_cmp(b).unwrap(), // assume NaNs don't exist
-            (Self::Var(_), Self::UnaryExpr(UnaryExpr { rhs: expr, .. }))
-            | (Self::Var(_), Self::Parend(expr))
-            | (Self::Var(_), Self::Bracketed(expr))
-            | (Self::Const(_), Self::UnaryExpr(UnaryExpr { rhs: expr, .. }))
-            | (Self::Const(_), Self::Parend(expr))
-            | (Self::Const(_), Self::Bracketed(expr)) => match expr.as_ref() {
-                Self::Const(_) | Self::Var(_) => self.cmp(expr),
-                _ => Ordering::Less,
-            },
+            (Self::UnaryExpr(a), Self::UnaryExpr(b)) => a.cmp(b),
+            (Self::BinaryExpr(a), Self::BinaryExpr(b)) => a.cmp(b),
+            (Self::Parend(a), Self::Parend(b)) => a.cmp(b),
+            (Self::Bracketed(a), Self::Bracketed(b)) => a.cmp(b),
+            // Order: vars, consts, unary, binary, paren, brackets
             (Self::Const(_), Self::Var(_))
-            | (Self::UnaryExpr(_), Self::Var(_))
-            | (Self::Parend(_), Self::Var(_))
-            | (Self::Bracketed(_), Self::Var(_))
             | (Self::UnaryExpr(_), Self::Const(_))
+            | (Self::UnaryExpr(_), Self::Var(_))
+            | (Self::BinaryExpr(_), Self::UnaryExpr(_))
+            | (Self::BinaryExpr(_), Self::Const(_))
+            | (Self::BinaryExpr(_), Self::Var(_))
+            | (Self::Parend(_), Self::BinaryExpr(_))
+            | (Self::Parend(_), Self::UnaryExpr(_))
             | (Self::Parend(_), Self::Const(_))
-            | (Self::Bracketed(_), Self::Const(_)) => other.cmp(self).reverse(),
-            (Self::Var(_), Self::BinaryExpr(_)) | (Self::Const(_), Self::BinaryExpr(_)) => {
-                Ordering::Less
-            }
-            _ => Ordering::Equal,
+            | (Self::Parend(_), Self::Var(_))
+            | (Self::Bracketed(_), Self::Parend(_))
+            | (Self::Bracketed(_), Self::BinaryExpr(_))
+            | (Self::Bracketed(_), Self::UnaryExpr(_))
+            | (Self::Bracketed(_), Self::Const(_))
+            | (Self::Bracketed(_), Self::Var(_)) => Ordering::Greater,
+            (Self::Var(_), _)
+            | (Self::Const(_), _)
+            | (Self::UnaryExpr(_), _)
+            | (Self::BinaryExpr(_), _)
+            | (Self::Parend(_), _) => Ordering::Less,
         }
     }
 }
@@ -259,10 +263,10 @@ impl fmt::Display for Expr {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Debug)]
 pub enum BinaryOperator {
-    // Discrimant values exist for ease of operator partial ordering. See the `PartialOrd` impl
-    // below for more details.
+    // Discrimant values exist to describe a formal ordering, and are grouped by tens to express
+    // precedence.
     Plus = 1,
     Minus = 2,
     Mult = 10,
@@ -271,19 +275,14 @@ pub enum BinaryOperator {
     Exp = 20,
 }
 
-impl PartialOrd for BinaryOperator {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        if self == other {
-            return Some(Ordering::Equal);
-        }
+impl BinaryOperator {
+    fn precedence(&self) -> u8 {
+        (*self as u8) / 10
+    }
 
-        let (l, r) = (*self as u8 / 10, *other as u8 / 10);
-
-        match l.cmp(&r) {
-            Ordering::Less => Some(Ordering::Less),
-            Ordering::Greater => Some(Ordering::Greater),
-            _ => None,
-        }
+    fn is_associative(&self) -> bool {
+        use BinaryOperator::*;
+        matches!(self, Plus | Mult | Exp)
     }
 }
 
@@ -322,7 +321,7 @@ impl fmt::Display for BinaryOperator {
     }
 }
 
-#[derive(PartialEq, Clone, Hash, Debug)]
+#[derive(PartialEq, Eq, Clone, Hash, Debug)]
 pub struct BinaryExpr<E: Expression> {
     pub op: BinaryOperator,
     pub lhs: Rc<E>,
@@ -364,21 +363,49 @@ macro_rules! display_binary_expr {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 let mut result = String::with_capacity(128);
                 use $expr::*;
-                let format_arg = |arg: &Rc<$expr>| match arg.as_ref() {
-                    BinaryExpr(l) => {
-                        if l.op < self.op {
-                            format!("({})", l)
+                let format_arg = |arg: &Rc<$expr>, right_child: bool| match arg.as_ref() {
+                    // We want to format items like
+                    //    v--------- child op
+                    //         v---- parent op
+                    // (3 + 5) ^ 2 [1]
+                    //  3 + 5  + 2
+                    //  3 - 5  + 2
+                    //  3 * 5  + 2
+                    // and
+                    //   v---------- parent op
+                    //        v----- child op
+                    // 2 +  3 + 5
+                    // 2 - (3 + 5)
+                    // 2 * (3 + 5)
+                    //
+                    // So the idea here is as follows:
+                    // - if the child op precedence is less than the parent op, we must always
+                    //   parenthesize it ([1])
+                    // - if the op precedences are equivalent, then
+                    //   - if the child is on the LHS, we can always unwrap it
+                    //   - if the child is on the RHS, we parenthesize it unless the parent op is
+                    //     associative
+                    //
+                    // I think this is enough, but maybe we're overlooking left/right
+                    // associativity?
+                    BinaryExpr(child) => {
+                        if child.op.precedence() < self.op.precedence()
+                            || (right_child
+                                && child.op.precedence() == self.op.precedence()
+                                && !self.op.is_associative())
+                        {
+                            format!("({})", child)
                         } else {
-                            l.to_string()
+                            child.to_string()
                         }
                     }
                     expr => expr.to_string(),
                 };
                 result.push_str(&format!(
                     "{} {} {}",
-                    format_arg(&self.lhs),
+                    format_arg(&self.lhs, false),
                     self.op,
-                    format_arg(&self.rhs)
+                    format_arg(&self.rhs, true)
                 ));
                 f.write_str(&result)
             }
@@ -389,10 +416,34 @@ macro_rules! display_binary_expr {
 display_binary_expr!(<Expr>);
 display_binary_expr!(<ExprPat>);
 
-#[derive(PartialEq, Clone, Copy, Hash, Debug)]
+impl<E> PartialOrd for BinaryExpr<E>
+where
+    E: Expression,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<E> Ord for BinaryExpr<E>
+where
+    E: Expression,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.op != other.op {
+            self.op.cmp(&other.op)
+        } else if self.lhs != other.lhs {
+            self.lhs.cmp(&other.lhs)
+        } else {
+            self.rhs.cmp(&other.rhs)
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Debug)]
 pub enum UnaryOperator {
-    SignPositive,
-    SignNegative,
+    SignPositive = 1,
+    SignNegative = 2,
 }
 
 impl TryFrom<&Token> for UnaryOperator {
@@ -422,7 +473,7 @@ impl fmt::Display for UnaryOperator {
     }
 }
 
-#[derive(PartialEq, Clone, Hash, Debug)]
+#[derive(PartialEq, Eq, Clone, Hash, Debug)]
 pub struct UnaryExpr<E: Expression> {
     pub op: UnaryOperator,
     pub rhs: Rc<E>,
@@ -462,3 +513,24 @@ macro_rules! display_unary_expr {
 
 display_unary_expr!(<Expr>);
 display_unary_expr!(<ExprPat>);
+
+impl<E> PartialOrd for UnaryExpr<E>
+where
+    E: Expression,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<E> Ord for UnaryExpr<E>
+where
+    E: Expression,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.op.cmp(&other.op) {
+            Ordering::Equal => self.rhs.as_ref().cmp(&other.rhs.as_ref()),
+            ord => ord,
+        }
+    }
+}

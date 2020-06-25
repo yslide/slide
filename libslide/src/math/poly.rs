@@ -627,7 +627,7 @@ mod test {
         single_deg: "x" => Some((poly![1, 0], Some("x".to_string())))
         multi_deg: "10 + x + x^2 + x^4 + x^8" => Some((poly![1, 0, 0, 0, 1, 0, 1, 1, 10], Some("x".to_string())))
         with_coeff: "2x + x^3 + 10x^2 + 5x^4" => Some((poly![5, 1, 10, 2, 0], Some("x".to_string())))
-        complex_term: "2(x + y ^ z) + 5(x + y ^ z)^3" => Some((poly![5, 0, 2, 0], Some("(x + y ^ z)".to_string())))
+        complex_term: "2(x + y ^ z) + 5(x + y ^ z)^3" => Some((poly![5, 0, 2, 0], Some("x + y ^ z".to_string())))
         multi_term: "10 + x + y^2" => None
         // TODO: this doesn't work yet, `flatten` and/or Poly::from_expr need to be smarter about unaries
         // add_and_sub: "10 + x - 2x^2 + 3x^4 - 4x^8" => Some((poly![1, 0, 0, 0, 1, 0, 1, 1, 10], Some("x".to_string())))

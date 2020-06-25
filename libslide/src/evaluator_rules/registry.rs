@@ -41,8 +41,15 @@ define_rules! {
                 AdditiveInverse: S("_a - _a -> 0")
             SubtractiveIdentity: S("_a - 0 -> _a")
                ReorderConstants: S("#a + $b -> $b + #a")
-             DistributeNegation: S("-(_a - _b) -> _b - _a")
+             DistributeNegation: M(&[
+                      "-(_a - _b) -> _b - _a",
+                      "_a - (_b - _c) -> _a - _b + _c",
+                  ])
             FoldNegatedAddition: S("_a + -_b -> _a - _b")
+                   FoldDivision: M(&[
+                      "_a * 1 / _b -> _a / _b",
+                      "_a * (1 / _b) -> _a / _b",
+                  ])
                   FoldExponents: M(&[
                       "_a * _a -> _a^2",
                       "_a * _a^_b -> _a^(_b + 1)",

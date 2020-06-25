@@ -35,7 +35,9 @@ pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Result<Expr, Box<dyn Erro
     }
     while seen.insert(expr_hash) {
         for rule in &built_rules {
+            // eprintln!("{}\n\t{}", rule, simplified_expr.s_form());
             simplified_expr = rule.transform(simplified_expr);
+            // eprintln!("\t{}", simplified_expr.s_form());
         }
         expr_hash = hash(&simplified_expr);
     }
@@ -145,7 +147,9 @@ mod tests {
     #[test]
     fn remove_rule() {
         let parsed = parse("1 - 2 + 3 * 4");
-        let ctxt = EvaluatorContext::default().with_blacklist([RuleName::Add].to_vec());
+        let ctxt = EvaluatorContext::default()
+            .with_blacklist([RuleName::Add].to_vec())
+            .always_flatten(false);
         let evaluated = evaluate(parsed, ctxt).unwrap();
         assert_eq!(evaluated.to_string(), "-1 + 12".to_string());
     }

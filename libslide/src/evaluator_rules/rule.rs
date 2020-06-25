@@ -17,7 +17,7 @@ pub struct PatternMap {
 
 impl fmt::Display for PatternMap {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} -> {}", self.from.to_string(), self.to.to_string())
+        write!(f, "{} -> {}", self.from, self.to)
     }
 }
 
@@ -28,7 +28,6 @@ pub struct UnresolvedMapping {
 }
 
 impl fmt::Display for UnresolvedMapping {
-    #[rustfmt::skip]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut missing_pats = self
             .unresolved_pats
@@ -40,14 +39,13 @@ impl fmt::Display for UnresolvedMapping {
 
         write!(
             f,
-r#"Could not resolve pattern map
-{}"{}"
-Specifically, source "{}" is missing pattern(s) {} present in target "{}""#,
+            r#"Could not resolve pattern map
+{}"{from} -> {to}"
+Specifically, source "{from}" is missing pattern(s) {pats} present in target "{to}""#,
             indent("\n", 4),
-            self.map,
-            self.map.from,
-            missing_pats,
-            self.map.to
+            from = self.map.from,
+            to = self.map.to,
+            pats = missing_pats,
         )
     }
 }

@@ -3,7 +3,7 @@ name: Fuzz
 on:
   schedule:
     # * is a special character in YAML so you have to quote this string
-    - cron:  '0 8 * * *'
+    - cron:  '0 */6 * * *'
 
 jobs:
   fuzz:
@@ -23,7 +23,7 @@ jobs:
           git config --global user.email '49662722+slide-bot@users.noreply.github.com'
           git add -A
           git commit -m "[fuzz update] Ensure fuzz seed files" || true
-          git push || true
+          git push --force || true
           
       - name: Cache Rust
         uses: actions/cache@v2
@@ -40,8 +40,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
-          profile: minimal
+          toolchain: nightly
           
       - name: Install Fuzz
         uses: actions-rs/install@v0.1.2

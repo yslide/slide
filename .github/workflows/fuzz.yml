@@ -2,8 +2,7 @@ name: Fuzz
 
 on:
   schedule:
-    # * is a special character in YAML so you have to quote this string
-    - cron:  '0 */6 * * *'
+    - cron:  '0 */1 * * *'
 
 jobs:
   fuzz:
@@ -41,16 +40,11 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
-          
-      - name: Install Fuzz
-        uses: actions-rs/install@v0.1.2
-        with:
-          crate: cargo-fuzz
-          version: latest
 
       - name: My sweatshirt is also fuzzy, can we fix that?
         id: run
         run: |
+          cargo install cargo-fuzz
           cd slide
           EC="$(cargo fuzz run slide -- fuzz/corpus/ fuzz/seed -runs=100000 &> out.slide || echo $?)"
           FUZZ_OUT="$(cat out.slide)"

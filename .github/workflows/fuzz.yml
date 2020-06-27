@@ -18,8 +18,6 @@ jobs:
       - name: Update fuzz files
         run: |
           scripts/seed_fuzz
-          git config --global user.name 'slide-bot'
-          git config --global user.email '49662722+slide-bot@users.noreply.github.com'
           git add -A
           git commit -m "[fuzz update] Ensure fuzz seed files" || true
           git push --force || true

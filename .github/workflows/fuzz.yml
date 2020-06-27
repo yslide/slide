@@ -70,6 +70,6 @@ jobs:
             ${{ fromJson(steps.run.outputs.matrix).fuzz_out }}
             ```
 
-            [Command run output][2]
-            [1]: ${{ github.event.client_payload.github.payload.comment.html_url }}
-            [2]: https://github.com/ayazhafiz/slide-workflows/actions/runs/${{ github.run_id }}
+            [Command run output][1]
+            
+            [1]: https://github.com/ayazhafiz/slide-workflows/actions/runs/${{ github.run_id }}

@@ -57,7 +57,7 @@ fn main() {
         eprint!(
             "\nnote: you found an internal slide error (ISE; it's like an ICE, but for slide)!\n"
         );
-        eprint!("\nnote: we would appreciate a bug report: https://github.com/ayazhafiz/slide\n");
+        eprint!("\nnote: we would appreciate a bug report: https://github.com/yslide/slide\n");
         std::process::exit(2);
     }
 }

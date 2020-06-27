@@ -1,5 +1,5 @@
 # Contributing 
-[![Good-first-Issue](https://img.shields.io/github/issues/ayazhafiz/slide/good%20first%20issue?style=flat-square)](https://github.com/ayazhafiz/slide/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) [![Github help-wanted](https://img.shields.io/github/issues/ayazhafiz/slide/help%20wanted?style=flat-square)](https://github.com/ayazhafiz/slide/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
+[![Good-first-Issue](https://img.shields.io/github/issues/yslide/slide/good%20first%20issue?style=flat-square)](https://github.com/yslide/slide/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) [![Github help-wanted](https://img.shields.io/github/issues/yslide/slide/help%20wanted?style=flat-square)](https://github.com/yslide/slide/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
 <br/>
 Contributions of all kinds to slide are warmly welcomed. Here's an overview of the code base of a slide and how
 to contribute!
@@ -47,6 +47,6 @@ Slide bot would then comment `3` on your issue!
 ## Where do I start?
 Take a look at the slide [design doc](docs/DESIGN.md) for a general overview of slides architecture.
 Every contribution no matter how little matters. With that said, refer to the issues marked as good
-[first issue](https://github.com/ayazhafiz/slide/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) or 
-[help wanted](https://github.com/ayazhafiz/slide/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%2)
+[first issue](https://github.com/yslide/slide/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) or 
+[help wanted](https://github.com/yslide/slide/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%2)
 to begin contributing to slide.

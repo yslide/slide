@@ -17,6 +17,6 @@ jobs:
                 "command": "slide",
                 "permission": "none",
                 "issue_type": "both",
-                "repository": "ayazhafiz/slide-workflows"
+                "repository": "yslide/slide-workflows"
               }
             ]

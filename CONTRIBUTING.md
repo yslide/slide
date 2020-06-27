@@ -1,11 +1,14 @@
 # Contributing 
 [![Good-first-Issue](https://img.shields.io/github/issues/yslide/slide/good%20first%20issue?style=flat-square)](https://github.com/yslide/slide/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) [![Github help-wanted](https://img.shields.io/github/issues/yslide/slide/help%20wanted?style=flat-square)](https://github.com/yslide/slide/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
+
 <br/>
+
 Contributions of all kinds to slide are warmly welcomed. Here's an overview of the code base of a slide and how
-to contribute!
+to contribute.
 
 ## Building
-Slide is super easy to build. To setup a simple environment do the following:
+slide is easy to build. To setup a simple environment do the following:
+
 ```
 git clone {insert slide repo here}
 cargo build
@@ -18,6 +21,11 @@ git push
 This should allow you to create a fork of slide and push to your own github account! From here, you
 can create a pull request with slide's development branch to make your awesome changes available to
 all slide users!
+
+## Documentation
+
+Development documentation for slide, including documentation of private items, can be found in a
+rustdoc at [slide-dev.ayazhafiz.com](https://slide-dev.ayazhafiz.com/libslide).
 
 ## Issues
 Issues are filed similar to any open source project. Create a new issue with the proposed

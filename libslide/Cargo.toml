@@ -1,7 +1,12 @@
 [package]
 name = "libslide"
-version = "0.0.0"
+description = "Library for slide, a static expression optimizer."
+version = "0.0.1"
 authors = ["ayazhafiz <ayaz.hafiz.1@gmail.com>"]
+license-file = "../LICENSE"
+readme = "../README.md"
+workspace = ".."
+repository = "https://github.com/yslide/slide"
 edition = "2018"
 
 [features]

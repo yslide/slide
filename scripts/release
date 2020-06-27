@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# Creates a slide release.
+#
+# Usage:
+#       scripts/release <both|slide|libslide> <version>
+# 
+# Dependencies:
+#       cargo-bump
+#
+# NB: Do not run this directly on master; instead, run it on a separate branch and create a PR.
+#     Then tagged the rebased commit after the PR is closed.
+
+if [ "$(git rev-parse --abbrev-ref HEAD)" = "master" ]; then
+  echo "Please run a separate branch."
+  exit 1
+fi
+
+ROUTE=$1
+UPDATE_V="ex -s -c '1,5s/version = .*/version = \"$2\"/|x' Cargo.toml"
+
+if [ "$ROUTE" = "slide" ] || [ "$ROUTE" = "both" ]; then
+  pushd slide
+  eval "$UPDATE_V"
+  popd
+fi
+
+if [ "$ROUTE" = "libslide" ] || [ "$ROUTE" = "both" ]; then
+  pushd libslide
+  eval "$UPDATE_V"
+  popd
+fi

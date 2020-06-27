@@ -1,5 +1,4 @@
 dist: bionic
-os: linux
 
 language: rust
 cache: cargo
@@ -11,12 +10,15 @@ jobs:
     - name: "Stable"
       if: type != pull_request
       rust: stable
+      env: CHANNEL="stable"
     - name: "Beta"
       if: type != pull_request
       rust: beta
+      env: CHANNEL="beta"
     - name: "Nightly"
       if: type != pull_request
       rust: nightly
+      env: CHANNEL="nightly"
 
     - name: "Squashed commits"
       if: type = pull_request
@@ -25,6 +27,17 @@ jobs:
         - git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
         - git fetch origin
         - scripts/squashed
+
+    - name: "Linux release"
+      if: tag IS present
+      rust: stable
+      os: linux
+      env: CHANNEL="stable"
+    - name: "MacOS release"
+      if: tag IS present
+      rust: stable
+      os: osx
+      env: CHANNEL="stable"
 
   allow_failures:
     - rust: nightly
@@ -38,6 +51,22 @@ script:
   - scripts/check lintformat
 
 after_success:
+  - |
+    if [ "$TRAVIS_BRANCH" == "master" ] && [ "$CHANNEL" == "stable" ]; then
+      cargo doc --document-private-items
+    fi
+    if ([ "$TRAVIS_BRANCH" == "master" ] || [ ! -z "$TRAVIS_TAG" ]) && 
+        [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+      cargo built --release
+      if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+        mv target/release/slide slide-x86_64-linux
+        export DEPLOY_FILE="slide-x86_64-linux"
+      else
+        mv target/release/slide slide-x86_64-apple-darwin
+        export DEPLOY_FILE="slide-x86_64-apple-darwin"
+      fi
+    fi
+
   - cargo doc --document-private-items --no-deps
 
 deploy:
@@ -56,3 +85,9 @@ deploy:
     deployment_file: true
     on:
       branch: master
+  - provider: releases
+    edge: true
+    token: $GITHUB_TOKEN
+    file: $DEPLOY_FILE
+    on:
+      tags: true

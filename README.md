@@ -15,11 +15,27 @@ slide should be able emit the lowered expression `x`.
 One of slide's design goals is compilation as a platform, where optimizations are configurable
 plugins.
 
-Slide is not yet ready for use. All contributions are warmly welcomed.
+slide is ready for very early use. Binaries can be downloaded from the [repository
+releases](https://github.com/yslide/slide/releases) or installed with `cargo`:
 
-## Development
+```
+cargo install slide --version 0.0.1
+# This should set slide in your path; for usage information, try
+slide --help
+```
 
-Development documentation for slide, including documentation of private items, can be found in a
-rustdoc at [slide-dev.ayazhafiz.com](https://slide-dev.ayazhafiz.com/libslide).
+Lots of features are still incomplete; please
+[file an issue](https://github.com/yslide/slide/issues/new) when you see something that could be
+improved. This is one of the best (and easiest!) ways to contribute to slide.
 
-More development details will be added later.
+All contributions are warmly welcomed. For more information, including how to contribute to the
+development of slide, see our [contribution docs](./CONTRIBUTING.md).
+
+## libslide
+
+The slide project exposes its library publicly, providing an API you can embed in your other Rust
+apps. To add `libslide` to your project, ensure the following in your `Cargo.toml`:
+
+```
+libslide = "0.0.1"
+```

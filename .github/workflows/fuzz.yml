@@ -2,7 +2,7 @@ name: Fuzz
 
 on:
   schedule:
-    - cron:  '0 */1 * * *'
+    - cron:  '0 */6 * * *'
 
 jobs:
   fuzz:
@@ -47,13 +47,10 @@ jobs:
         run: |
           cargo install cargo-fuzz
           cd slide
-          EC="$(cargo fuzz run slide -- fuzz/corpus/ fuzz/seed -runs=100000 &> out.slide || echo $?)"
+          EC="$(cargo fuzz run slide -- fuzz/corpus/ fuzz/seed -runs=500000 &> out.slide || echo $?)"
           FUZZ_OUT="$(cat out.slide | tail -30)"
           JSON="$(jq -cn --arg ec "$EC" --arg out "$FUZZ_OUT" '{ec: $ec, fuzz_out: $out}')"
           echo "::set-output name=matrix::$JSON"
-
-      - name: Check JSON
-        run: echo ${{ steps.run.outputs.matrix }}
         
       - name: Create issue
         if: ${{ fromJson(steps.run.outputs.matrix).ec != '' }}

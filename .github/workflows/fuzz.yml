@@ -49,7 +49,12 @@ jobs:
           cd slide
           EC="$(cargo fuzz run slide -- fuzz/corpus/ fuzz/seed -runs=500000 &> out.slide || echo $?)"
           FUZZ_OUT="$(cat out.slide | tail -30)"
-          JSON="$(jq -cn --arg ec "$EC" --arg out "$FUZZ_OUT" '{ec: $ec, fuzz_out: $out}')"
+          RE_CRASH_FILE="(fuzz/artifacts/slide/crash-[0-9a-zA-Z]+)"
+          if [[ "$FUZZ_OUT" =~ $RE_CRASH_FILE ]]; then
+            FILE="${BASH_REMATCH[1]}"
+            DL_CASE="$(curl --upload-file "$FILE" https://transfer.sh/hello.txt)"
+          fi
+          JSON="$(jq -cn --arg ec "$EC" --arg out "$FUZZ_OUT" --arg dl_case "$DL_CASE" '{ec: $ec, fuzz_out: $out, dl_case: $dl_case}')"
           echo "::set-output name=matrix::$JSON"
         
       - name: Create issue
@@ -66,6 +71,8 @@ jobs:
             ```
             ${{ fromJson(steps.run.outputs.matrix).fuzz_out }}
             ```
+
+            Download this test case at ${{ fromJson(steps.run.outputs.matrix).dl_case }}
 
             [Command run output][1]
             

@@ -1,6 +1,7 @@
 pub mod types;
 
 use crate::diagnostics::Diagnostic;
+use strtod::strtod;
 use types::TokenType as TT;
 pub use types::*;
 
@@ -123,7 +124,9 @@ impl Scanner {
             float_str.push(*self.next().unwrap());
             float_str.push_str(&self.collect_while(|c| c.is_digit(10)));
         }
-        let float = float_str.parse::<f64>().unwrap();
+        // TODO(https://github.com/rust-lang/rust/issues/31407): rustc's float parser may drop some
+        // valid float literals. For now, use an external parser.
+        let float = strtod(&float_str).unwrap();
 
         self.output.push(tok!(TT::Float(float), (start, self.pos)));
     }

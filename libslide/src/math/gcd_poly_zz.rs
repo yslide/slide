@@ -132,6 +132,7 @@ pub fn gcd_poly_zz_heu(f: Poly, g: Poly) -> Result<(Poly, Poly, Poly), &'static 
 }
 
 #[cfg(feature = "benchmark-internals")]
+/// Tries to calculate the GCD of two integer polynomials using a heuristic.
 pub fn _gcd_poly_zz_heu<T, U>(f: T, g: U) -> Result<(Poly, Poly, Poly), &'static str>
 where
     T: Into<Poly>,

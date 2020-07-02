@@ -143,7 +143,7 @@ impl Transformer<Rc<Expr>, Rc<Expr>> for Rule {
     ///
     /// Examples:
     ///
-    /// ```rust, ignore
+    /// ```ignore
     /// "$x + 0 -> $x".try_apply("x + 0")  // Some(x)
     /// "$x + 0 -> $x".try_apply("x + 1")  // None
     /// "$x + 0 -> $x".try_apply("x")      // None

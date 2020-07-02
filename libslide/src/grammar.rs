@@ -1,3 +1,5 @@
+//! The primary libslide IR.
+
 mod pattern;
 mod transformer;
 pub use pattern::*;
@@ -10,6 +12,7 @@ use core::convert::TryFrom;
 use core::fmt;
 use std::rc::Rc;
 
+/// Describes a top-level item in the libslide grammar.
 pub trait Grammar
 where
     Self: fmt::Display + fmt::Debug,
@@ -18,6 +21,7 @@ where
     /// For example, 1 + 1 -> (+ 1 1).
     fn s_form(&self) -> String;
 }
+
 pub trait Expression
 where
     Self: fmt::Display + From<BinaryExpr<Self>> + From<UnaryExpr<Self>> + Ord,

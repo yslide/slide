@@ -1,3 +1,8 @@
+//! User-facing slide diagnostics.
+//!
+//! The diagnostics module demarshalls [libslide diagnostics][libslide::diagnostics] into a form
+//! pleasant for standard output.
+
 use libslide::diagnostics::{AssociatedDiagnostic, Diagnostic, DiagnosticKind};
 
 use annotate_snippets::{

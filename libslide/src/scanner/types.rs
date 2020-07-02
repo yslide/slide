@@ -1,66 +1,63 @@
-// A definition of a token - used in the scanner
-// Written by Luke Bhan, 2/19/2020
-//
-//
+//! Definitions of types used in the libslide scanner.
 
 use crate::common::Span;
 use core::fmt;
 
+/// The type of a [Token][Token].
 #[derive(PartialEq, Clone, Debug)]
 pub enum TokenType {
-    // Stores a floating point number as dp
+    /// Stores a scanned number in double precision.
     Float(f64),
 
-    // Identifies addition
+    /// + symbol
     Plus,
 
-    // Identifies subtraction
+    /// - symbol
     Minus,
 
-    // Identifies multiplication
+    /// * symbol
     Mult,
 
-    // Identifies division
+    /// / symbol
     Div,
 
-    // Identifies modulo
+    /// % symbol
     Mod,
 
-    // Identifies exponent
+    /// ^ symbol
     Exp,
 
-    // Identifies an equal sign
+    /// = symbol
     Equal,
 
-    // open parentheses (
+    /// ( symbol
     OpenParen,
 
-    // close parentheses )
+    /// ) symbol
     CloseParen,
 
-    // open bracket [
+    /// [ symbol
     OpenBracket,
 
-    // close bracket ]
-    //
+    /// ] symbol
     CloseBracket,
 
-    // variable name
+    /// A variable name.
     Variable(String),
 
-    // a variable pattern, of form $name
+    /// A variable pattern, of form $name.
     VariablePattern(String),
 
-    // a constant pattern, of form #name
+    /// A constant pattern, of form #name.
     ConstPattern(String),
 
-    // an any pattern, of form #name
+    /// An any pattern, of form #name.
     AnyPattern(String),
 
-    // invalid token
+    /// An invalid token.
     Invalid(String),
 
-    // end of file
+    /// End of file.
     EOF,
 }
 
@@ -97,11 +94,14 @@ impl fmt::Display for TokenType {
 /// Describes a token in a slide program.
 #[derive(PartialEq, Clone, Debug)]
 pub struct Token {
+    /// The type of the token.
     pub ty: TokenType,
+    /// The source span of the token.
     pub span: Span,
 }
 
 impl Token {
+    /// Creates a new token.
     pub fn new<S>(ty: TokenType, span: S) -> Self
     where
         S: Into<Span>,

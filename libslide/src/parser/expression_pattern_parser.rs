@@ -8,6 +8,7 @@ use crate::utils::{hash, PeekIter};
 use std::collections::HashMap;
 use std::rc::Rc;
 
+/// Parses a tokenized slide expression pattern, emitting the result and any diagnostics.
 pub fn parse(input: Vec<Token>) -> (Rc<ExprPat>, Vec<Diagnostic>) {
     let mut parser = ExpressionPatternParser::new(input);
     (parser.parse(), parser.diagnostics)

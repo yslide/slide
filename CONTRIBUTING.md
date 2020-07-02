@@ -1,10 +1,16 @@
 # Contributing 
-[![Good-first-Issue](https://img.shields.io/github/issues/yslide/slide/good%20first%20issue?style=flat-square)](https://github.com/yslide/slide/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) [![Github help-wanted](https://img.shields.io/github/issues/yslide/slide/help%20wanted?style=flat-square)](https://github.com/yslide/slide/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
-
-<br/>
+[![Good-first-Issue](https://img.shields.io/github/issues/yslide/slide/good%20first%20issue)](https://github.com/yslide/slide/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
+[![Github help-wanted](https://img.shields.io/github/issues/yslide/slide/help%20wanted)](https://github.com/yslide/slide/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
 
 Contributions of all kinds to slide are warmly welcomed. Here's an overview of the code base of a slide and how
 to contribute.
+
+## Issues
+
+Issues are filed similar to other open source projects. If the issue is a bug, please add the exact
+steps required to reproduce the bug so that we can resolve it faster. To showcase an error with
+slide's processing of a program, you can use [slide bot](#slide-bot). Filing issues are certainly
+an underrated part of any project, and we appreciate all issues of any magnitude!
 
 ## Building
 slide is easy to build. To setup a simple environment do the following:
@@ -27,15 +33,12 @@ all slide users!
 Development documentation for slide, including documentation of private items, can be found in a
 rustdoc at [slide-dev.ayazhafiz.com](https://slide-dev.ayazhafiz.com/libslide).
 
-## Issues
-Issues are filed similar to any open source project. Create a new issue with the proposed
-feature or bug, add labels and submit. If the issue is a bug make sure you add the exact steps
-required to reproduce the bug so that it can be solved efficiently. Also, to showcase a broken
-expression, you can use [slide bot](#slide-bot) (see below). Filing issues are certainly an underrated part of any open source project and we appreciate all issues of any magnitude!
-
 ## Testing 
+
 Generally, each change to slide should include tests. See [slide tests](./slide/src/test/README.md) for testing instructions.
+
 ### Ladder
+
 Slide has its own development tool called [ladder](slide/src/test) that makes it easy to test for both errors and proper simplifications. It automatically
 tests all "cargo test" unit tests implemented. The entire test system is described under slide/src/test. Basically, one just
 has to create a file with their issue number and add their expected input/output in the same file using delimeters. Please 

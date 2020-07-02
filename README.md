@@ -4,6 +4,10 @@
 
 # slide
 
+[![Build Status](https://travis-ci.com/yslide/slide.svg?branch=master)](https://travis-ci.com/yslide/slide)
+[![Crates.io](https://img.shields.io/crates/v/slide)](https://crates.io/crates/slide)
+[![Github help-wanted](https://img.shields.io/github/issues/yslide/slide/help%20wanted)](https://github.com/yslide/slide/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
+
 slide is an static expression optimizer. Given an expression like
 
 ```

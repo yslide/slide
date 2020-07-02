@@ -1,3 +1,12 @@
+//! libslide's diagnostic module.
+//!
+//! libslide does not emit user-facing diagnostic information itself, so the diagnostics returned
+//! by libslide should be
+//!
+//! - as complete as possible, so that a consumer can process as little or as much information as
+//!   they want
+//! - easily transformable into some output form by downstream customers (namely the slide app)
+
 use crate::common::Span;
 
 /// The kind of a slide diagnostic.
@@ -16,18 +25,29 @@ pub enum DiagnosticKind {
 
 /// A secondary diagnostic associated with a primary `Diagnostic`.
 pub struct AssociatedDiagnostic {
+    /// The diagnostic kind.
     pub kind: DiagnosticKind,
+    /// Source location for which the diagnostic is applicable.
     pub span: Span,
+    /// Diagnostic message.
     pub msg: String,
 }
 
 /// A diagnostic for slide source code.
 pub struct Diagnostic {
+    /// The diagnostic kind.
     pub kind: DiagnosticKind,
+    /// Source location for which the diagnostic is applicable.
     pub span: Span,
+    /// A summarizing title for the diagnostic.
     pub title: String,
+    /// Diagnostic message.
     pub msg: Option<String>,
+    /// Any additional diagnostics associated with this one.
+    /// The additional diagnostics may or may not cover the same span as this one.
     pub associated_diagnostics: Vec<AssociatedDiagnostic>,
+    /// Any additional diagnostics associated with this one, not explicitly covering any span.
+    /// Implicitly, these diagnostics cover the span of the primary one.
     pub unspanned_associated_diagnostics: Vec<AssociatedDiagnostic>,
 }
 

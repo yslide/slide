@@ -1,3 +1,5 @@
+//! Tokenizes slide programs and produces lexing diagnostics.
+
 pub mod types;
 
 use crate::diagnostics::Diagnostic;
@@ -5,11 +7,15 @@ use strtod::strtod;
 use types::TokenType as TT;
 pub use types::*;
 
+/// Describes the result of tokenizing a slide program.
 pub struct ScanResult {
+    /// Tokens of the program.
     pub tokens: Vec<Token>,
+    /// Lexing diagnostics encountered while scanning the program.
     pub diagnostics: Vec<Diagnostic>,
 }
 
+/// Scans and tokenizes a string-like slide program.
 pub fn scan<'a, T: Into<&'a str>>(input: T) -> ScanResult {
     let mut scanner = Scanner::new(input.into());
     scanner.scan();
@@ -33,7 +39,7 @@ macro_rules! tok {
 }
 
 impl Scanner {
-    // instantiate a new scanner
+    /// Instantiate a new scanner.
     pub fn new(input: &str) -> Scanner {
         Scanner {
             pos: 0,
@@ -87,7 +93,7 @@ impl Scanner {
         self.output.push(tok!(TT::EOF, (self.pos, self.pos + 1)));
     }
 
-    // matches token with symbol and creates it: private helper function
+    /// Matches a symbol with a token and creates it.
     fn scan_symbol(&mut self) {
         use TokenType::*;
         let start = self.pos;
@@ -115,7 +121,7 @@ impl Scanner {
         self.output.push(tok!(ty, span));
     }
 
-    // iterates through any digits to create a token of that value
+    /// Scans through the content of a number to create a token of that value.
     fn scan_num(&mut self) {
         let start = self.pos;
 
@@ -182,9 +188,9 @@ impl Scanner {
 
 #[cfg(test)]
 mod tests {
-    // Tests the Scanner's output against a humanized string representation of the expected tokens.
-    // See [Token]'s impl of Display for more details.
-    // [Token]: src/scanner/types.rs
+    /// Tests the Scanner's output against a humanized string representation of the expected tokens.
+    /// See [Token]'s impl of Display for more details.
+    /// [Token]: src/scanner/types.rs
     macro_rules! scanner_tests {
         ($($name:ident: $program:expr, $format_str:expr)*) => {
         $(

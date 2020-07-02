@@ -56,7 +56,9 @@ For example
 Slide bot would then comment `3` on your issue!
 
 ## Where do I start?
-Take a look at the slide [design doc](docs/DESIGN.md) for a general overview of slides architecture.
+
+Take a look at the [libslide docs](https://slide-dev.ayazhafiz.com/libslide) for a general overview
+of slide's architecture.
 Every contribution no matter how little matters. With that said, refer to the issues marked as good
 [first issue](https://github.com/yslide/slide/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) or 
 [help wanted](https://github.com/yslide/slide/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%2)

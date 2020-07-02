@@ -9,8 +9,10 @@ use core::cmp::{max, min};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+/// A polynomial in integer space Z.
 #[derive(Default, Clone, Eq, PartialEq, Debug)]
 pub struct Poly {
+    /// Underlying polynomial coefficient representation.
     pub vec: Vec<isize>,
 }
 
@@ -26,7 +28,7 @@ impl From<&Vec<isize>> for Poly {
     }
 }
 
-/// Creates a new polynomial.
+/// Creates a new [Poly][Poly].
 ///
 /// # Examples:
 ///
@@ -46,19 +48,23 @@ macro_rules! poly {
 }
 
 impl Poly {
+    /// Creates a new [Poly][Poly] from a vector of coefficients, in decreasing order of degree.
     pub fn new(vec: Vec<isize>) -> Self {
         Self { vec }
     }
 
+    /// Creates an empty [Poly][Poly].
     pub fn empty() -> Self {
         Self::new(vec![])
     }
 
+    /// Returns whether the polynomial is equivalent to 0.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.vec.is_empty() || self.vec.iter().all(|&n| n == 0)
     }
 
+    /// Returns whether the polynomial is equivalent to 1.
     #[inline]
     pub fn is_one(&self) -> bool {
         let is_one = self.vec.last() == Some(&1);
@@ -71,7 +77,7 @@ impl Poly {
         is_one
     }
 
-    /// Gets the degree of the polynomial.
+    /// Returns the degree of the polynomial.
     #[inline]
     pub fn deg(&self) -> isize {
         self.vec.len() as isize - 1

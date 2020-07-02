@@ -1,8 +1,9 @@
 use crate::evaluator_rules::RuleName;
 
+/// A context for evaluating a slide program.
 pub struct EvaluatorContext {
     /// Rules that should not be included in the evaluation of an expression.
-    pub(crate) rule_blacklist: Vec<RuleName>,
+    pub(crate) rule_denylist: Vec<RuleName>,
 
     /// Whether an expression should always be flattened before it is further evaluated.
     pub(crate) always_flatten: bool,
@@ -11,21 +12,23 @@ pub struct EvaluatorContext {
 impl Default for EvaluatorContext {
     fn default() -> Self {
         Self {
-            rule_blacklist: vec![],
+            rule_denylist: vec![],
             always_flatten: true,
         }
     }
 }
 
 impl EvaluatorContext {
-    pub fn with_blacklist<T>(mut self, rule_blacklist: T) -> Self
+    /// Set rules to exclude in evaluation.
+    pub fn with_denylist<T>(mut self, rule_denylist: T) -> Self
     where
         T: Into<Vec<RuleName>>,
     {
-        self.rule_blacklist = rule_blacklist.into();
+        self.rule_denylist = rule_denylist.into();
         self
     }
 
+    /// Whether expressions should always be flattened during evaluation.
     pub fn always_flatten(mut self, flatten: bool) -> Self {
         self.always_flatten = flatten;
         self

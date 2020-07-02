@@ -45,6 +45,7 @@ fn binary_gcd<N: Unsigned + PrimInt>(mut u: N, mut v: N) -> N {
 }
 
 #[cfg(feature = "benchmark-internals")]
+/// Calculates GCD using a binary algorithm.
 pub fn _binary_gcd<N: Unsigned + PrimInt>(u: N, v: N) -> N {
     binary_gcd(u, v)
 }
@@ -65,6 +66,7 @@ fn euclidean_gcd<N: Unsigned + PrimInt>(mut u: N, mut v: N) -> N {
 }
 
 #[cfg(feature = "benchmark-internals")]
+/// Calculates GCD using the Euclidean algorithm.
 pub fn _euclidean_gcd<N: Unsigned + PrimInt>(u: N, v: N) -> N {
     euclidean_gcd(u, v)
 }

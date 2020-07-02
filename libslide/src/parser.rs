@@ -1,3 +1,6 @@
+//! Parses slide programs into the slide [`grammar`][crate::grammar] IR and produces semantic
+//! diagnostics.
+
 #[macro_use]
 pub mod test_utils; // this **must** be first since macro import order matters!
 

@@ -8,11 +8,7 @@ use crate::utils::{hash, PeekIter, StringUtils};
 use std::collections::HashMap;
 use std::rc::Rc;
 
-// pub struct ScanResult {
-//     pub tokens: Vec<Token>,
-//     pub diagnostics: Vec<Diagnostic>,
-// }
-
+/// Parses a tokenized slide program, emitting the result and any diagnostics.
 pub fn parse(input: Vec<Token>) -> (Stmt, Vec<Diagnostic>) {
     let mut parser = ExpressionParser::new(input);
     (parser.parse(), parser.diagnostics)

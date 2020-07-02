@@ -1,3 +1,5 @@
+//! libslide's heavy-lifting optimizer, applying simplification rules on the libslide IR.
+
 pub mod flatten;
 mod types;
 use flatten::flatten_expr;
@@ -15,7 +17,7 @@ use std::rc::Rc;
 /// The evaluation may be partial, as some values (like variables) may be unknown.
 pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Result<Expr, Box<dyn Error>> {
     let mut rule_set = RuleSet::default();
-    for rule in ctxt.rule_blacklist {
+    for rule in ctxt.rule_denylist {
         rule_set.remove(rule)
     }
     let built_rules = rule_set.build()?;
@@ -35,9 +37,7 @@ pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Result<Expr, Box<dyn Erro
     }
     while seen.insert(expr_hash) {
         for rule in &built_rules {
-            // eprintln!("{}\n\t{}", rule, simplified_expr.s_form());
             simplified_expr = rule.transform(simplified_expr);
-            // eprintln!("\t{}", simplified_expr.s_form());
         }
         expr_hash = hash(&simplified_expr);
     }
@@ -148,7 +148,7 @@ mod tests {
     fn remove_rule() {
         let parsed = parse("1 - 2 + 3 * 4");
         let ctxt = EvaluatorContext::default()
-            .with_blacklist([RuleName::Add].to_vec())
+            .with_denylist([RuleName::Add].to_vec())
             .always_flatten(false);
         let evaluated = evaluate(parsed, ctxt).unwrap();
         assert_eq!(evaluated.to_string(), "-1 + 12".to_string());

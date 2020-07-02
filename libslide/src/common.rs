@@ -1,3 +1,5 @@
+//! Common types used by libslide.
+
 /// Describes the character span of a substring in a text.
 ///
 /// For example, in "abcdef", "bcd" has the span (1, 4).

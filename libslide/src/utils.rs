@@ -1,3 +1,5 @@
+//! Library utilities.
+
 mod grammar;
 pub use grammar::*;
 

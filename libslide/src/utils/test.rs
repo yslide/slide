@@ -1,4 +1,6 @@
+/// Parses an expression.
 #[macro_export]
+#[doc(hidden)]
 macro_rules! parse_expr {
     ($expr:expr) => {{
         use crate::grammar::*;
@@ -8,7 +10,6 @@ macro_rules! parse_expr {
         let (parsed, _) = parse_expression(tokens);
         match parsed {
             Stmt::Expr(expr) => Rc::new(expr),
-            // TODO: see below
             _ => unreachable!(),
         }
     }};

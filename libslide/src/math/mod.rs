@@ -10,6 +10,8 @@
 //! [evaluation rules]: crate::evaluator_rules
 //! [partial_evaluator]: crate::partial_evaluator
 
+mod fraction;
+
 mod gcd;
 pub use gcd::*;
 

@@ -19,6 +19,8 @@ slide should be able emit the lowered expression `x`.
 One of slide's design goals is compilation as a platform, where optimizations are configurable
 plugins.
 
+## Usage
+
 slide is ready for very early use. Binaries can be downloaded from the [repository
 releases](https://github.com/yslide/slide/releases) or installed with `cargo`:
 
@@ -27,6 +29,13 @@ cargo install slide --version 0.0.1
 # This should set slide in your path; for usage information, try
 slide --help
 ```
+
+### Editor Support
+
+slide supports integration with some text editors, providing seamless analysis and simplification of
+mathematical expressions in documents. For more information, see the [editor](./editor) directory.
+
+## Contributing
 
 Lots of features are still incomplete; please
 [file an issue](https://github.com/yslide/slide/issues/new) when you see something that could be

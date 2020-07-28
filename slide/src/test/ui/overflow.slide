@@ -1,0 +1,16 @@
+@TODO: fix poor precision on overflow
+
+===in
+2^200
+===in
+
+~~~stdout
+1606938044258990300000000000000000000000000000000000000000000
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

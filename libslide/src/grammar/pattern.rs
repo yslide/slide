@@ -17,27 +17,8 @@ pub enum ExprPat {
     Bracketed(Rc<Self>),
 }
 
-impl Grammar for ExprPat {
-    fn s_form(&self) -> String {
-        match self {
-            Self::Const(konst) => konst.to_string(),
-            Self::VarPat(pat) | Self::ConstPat(pat) | Self::AnyPat(pat) => pat.to_string(),
-            Self::BinaryExpr(BinaryExpr { op, lhs, rhs }) => {
-                format!("({} {} {})", op.to_string(), lhs.s_form(), rhs.s_form())
-            }
-            Self::UnaryExpr(UnaryExpr { op, rhs }) => {
-                format!("({} {})", op.to_string(), rhs.s_form())
-            }
-            Self::Parend(inner) => format!("({})", inner.s_form()),
-            Self::Bracketed(inner) => format!("[{}]", inner.s_form()),
-        }
-    }
-}
-impl Grammar for Rc<ExprPat> {
-    fn s_form(&self) -> String {
-        self.as_ref().s_form()
-    }
-}
+impl Grammar for ExprPat {}
+impl Grammar for Rc<ExprPat> {}
 
 impl Expression for ExprPat {
     #[inline]
@@ -111,24 +92,6 @@ impl From<BinaryExpr<Self>> for ExprPat {
 impl From<UnaryExpr<Self>> for ExprPat {
     fn from(unary_expr: UnaryExpr<Self>) -> Self {
         Self::UnaryExpr(unary_expr)
-    }
-}
-
-impl fmt::Display for ExprPat {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use ExprPat::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                Const(num) => num.to_string(),
-                VarPat(var) | ConstPat(var) | AnyPat(var) => var.to_string(),
-                BinaryExpr(binary_expr) => binary_expr.to_string(),
-                UnaryExpr(unary_expr) => unary_expr.to_string(),
-                Parend(expr) => format!("({})", expr.to_string()),
-                Bracketed(expr) => format!("[{}]", expr.to_string()),
-            }
-        )
     }
 }
 

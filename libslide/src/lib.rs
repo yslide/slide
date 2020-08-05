@@ -221,6 +221,10 @@ pub use grammar::Grammar;
 
 mod math;
 
+pub(crate) mod emit;
+pub use emit::Emit;
+pub use emit::EmitFormat;
+
 #[cfg(feature = "benchmark-internals")]
 pub use math::*;
 

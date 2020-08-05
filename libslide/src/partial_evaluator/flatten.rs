@@ -491,6 +491,7 @@ mod tests {
     use super::flatten_expr;
     use crate::grammar::*;
     use crate::utils::normalize;
+    use crate::Emit;
     use crate::{parse_expression, scan};
 
     use std::rc::Rc;
@@ -533,7 +534,7 @@ mod tests {
             let expr = parse(split.next().unwrap());
             let expected_flattened = split.next().unwrap();
 
-            let flattened = normalize(flatten_expr(&Rc::from(expr))).s_form();
+            let flattened = normalize(flatten_expr(&Rc::from(expr))).emit_s_expression();
 
             assert_eq!(flattened, expected_flattened);
         }

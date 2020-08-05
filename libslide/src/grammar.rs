@@ -5,26 +5,23 @@ mod transformer;
 pub use pattern::*;
 pub use transformer::*;
 
+use crate::emit::Emit;
 use crate::scanner::types::{Token, TokenType};
 
 use core::cmp::Ordering;
 use core::convert::TryFrom;
-use core::fmt;
 use std::rc::Rc;
 
 /// Describes a top-level item in the libslide grammar.
 pub trait Grammar
 where
-    Self: fmt::Display + fmt::Debug,
+    Self: Emit,
 {
-    /// Returns the S-expression form of this expression.
-    /// For example, 1 + 1 -> (+ 1 1).
-    fn s_form(&self) -> String;
 }
 
 pub trait Expression
 where
-    Self: fmt::Display + From<BinaryExpr<Self>> + From<UnaryExpr<Self>> + Ord,
+    Self: Emit + From<BinaryExpr<Self>> + From<UnaryExpr<Self>> + Ord,
 {
     /// Returns whether the expression is a statically-evaluatable constant.
     fn is_const(&self) -> bool;
@@ -45,14 +42,7 @@ pub enum Stmt {
     Assignment(Assignment),
 }
 
-impl Grammar for Stmt {
-    fn s_form(&self) -> String {
-        match self {
-            Self::Expr(expr) => expr.s_form(),
-            Self::Assignment(Assignment { var, rhs }) => format!("(= {} {})", var, rhs.s_form()),
-        }
-    }
-}
+impl Grammar for Stmt {}
 
 impl From<Expr> for Stmt {
     fn from(expr: Expr) -> Self {
@@ -66,30 +56,10 @@ impl From<Assignment> for Stmt {
     }
 }
 
-impl fmt::Display for Stmt {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use Stmt::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                Expr(expr) => expr.to_string(),
-                Assignment(asgn) => asgn.to_string(),
-            }
-        )
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct Assignment {
     pub var: String,
     pub rhs: Rc<Expr>,
-}
-
-impl fmt::Display for Assignment {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} = {}", self.var, self.rhs)
-    }
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -103,6 +73,9 @@ pub enum Expr {
     /// An expression wrapped in brackets
     Bracketed(Rc<Self>),
 }
+
+impl Grammar for Expr {}
+impl Grammar for Rc<Expr> {}
 
 impl Expr {
     pub fn complexity(&self) -> u8 {
@@ -186,28 +159,6 @@ impl core::hash::Hash for Expr {
     }
 }
 
-impl Grammar for Expr {
-    fn s_form(&self) -> String {
-        match self {
-            Self::Const(konst) => konst.to_string(),
-            Self::Var(var) => var.to_string(),
-            Self::BinaryExpr(BinaryExpr { op, lhs, rhs }) => {
-                format!("({} {} {})", op.to_string(), lhs.s_form(), rhs.s_form())
-            }
-            Self::UnaryExpr(UnaryExpr { op, rhs }) => {
-                format!("({} {})", op.to_string(), rhs.s_form())
-            }
-            Self::Parend(inner) => format!("({})", inner.s_form()),
-            Self::Bracketed(inner) => format!("[{}]", inner.s_form()),
-        }
-    }
-}
-impl Grammar for Rc<Expr> {
-    fn s_form(&self) -> String {
-        self.as_ref().s_form()
-    }
-}
-
 impl Expression for Expr {
     #[inline]
     fn is_const(&self) -> bool {
@@ -249,24 +200,6 @@ impl From<UnaryExpr<Self>> for Expr {
     }
 }
 
-impl fmt::Display for Expr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use Expr::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                Const(num) => num.to_string(),
-                Var(var) => var.to_string(),
-                BinaryExpr(binary_expr) => binary_expr.to_string(),
-                UnaryExpr(unary_expr) => unary_expr.to_string(),
-                Parend(expr) => format!("({})", expr.to_string()),
-                Bracketed(expr) => format!("[{}]", expr.to_string()),
-            }
-        )
-    }
-}
-
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Debug)]
 pub enum BinaryOperator {
     // Discrimant values exist to describe a formal ordering, and are grouped by tens to express
@@ -280,11 +213,11 @@ pub enum BinaryOperator {
 }
 
 impl BinaryOperator {
-    fn precedence(&self) -> u8 {
+    pub(crate) fn precedence(&self) -> u8 {
         (*self as u8) / 10
     }
 
-    fn is_associative(&self) -> bool {
+    pub(crate) fn is_associative(&self) -> bool {
         use BinaryOperator::*;
         matches!(self, Plus | Mult | Exp)
     }
@@ -304,24 +237,6 @@ impl TryFrom<&Token> for BinaryOperator {
             TokenType::Exp => Ok(Exp),
             _ => Err(()),
         }
-    }
-}
-
-impl fmt::Display for BinaryOperator {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use BinaryOperator::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                Plus => "+",
-                Minus => "-",
-                Mult => "*",
-                Div => "/",
-                Mod => "%",
-                Exp => "^",
-            }
-        )
     }
 }
 
@@ -360,65 +275,6 @@ where
         exp:  BinaryOperator::Exp
     }
 }
-
-macro_rules! display_binary_expr {
-    (<$expr:ident>) => {
-        impl fmt::Display for BinaryExpr<$expr> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                let mut result = String::with_capacity(128);
-                use $expr::*;
-                let format_arg = |arg: &Rc<$expr>, right_child: bool| match arg.as_ref() {
-                    // We want to format items like
-                    //    v--------- child op
-                    //         v---- parent op
-                    // (3 + 5) ^ 2 [1]
-                    //  3 + 5  + 2
-                    //  3 - 5  + 2
-                    //  3 * 5  + 2
-                    // and
-                    //   v---------- parent op
-                    //        v----- child op
-                    // 2 +  3 + 5
-                    // 2 - (3 + 5)
-                    // 2 * (3 + 5)
-                    //
-                    // So the idea here is as follows:
-                    // - if the child op precedence is less than the parent op, we must always
-                    //   parenthesize it ([1])
-                    // - if the op precedences are equivalent, then
-                    //   - if the child is on the LHS, we can always unwrap it
-                    //   - if the child is on the RHS, we parenthesize it unless the parent op is
-                    //     associative
-                    //
-                    // I think this is enough, but maybe we're overlooking left/right
-                    // associativity?
-                    BinaryExpr(child) => {
-                        if child.op.precedence() < self.op.precedence()
-                            || (right_child
-                                && child.op.precedence() == self.op.precedence()
-                                && !self.op.is_associative())
-                        {
-                            format!("({})", child)
-                        } else {
-                            child.to_string()
-                        }
-                    }
-                    expr => expr.to_string(),
-                };
-                result.push_str(&format!(
-                    "{} {} {}",
-                    format_arg(&self.lhs, false),
-                    self.op,
-                    format_arg(&self.rhs, true)
-                ));
-                f.write_str(&result)
-            }
-        }
-    };
-}
-
-display_binary_expr!(<Expr>);
-display_binary_expr!(<ExprPat>);
 
 impl<E> PartialOrd for BinaryExpr<E>
 where
@@ -463,20 +319,6 @@ impl TryFrom<&Token> for UnaryOperator {
     }
 }
 
-impl fmt::Display for UnaryOperator {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use UnaryOperator::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                SignPositive => "+",
-                SignNegative => "-",
-            }
-        )
-    }
-}
-
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
 pub struct UnaryExpr<E: Expression> {
     pub op: UnaryOperator,
@@ -497,26 +339,6 @@ where
         }
     }
 }
-
-macro_rules! display_unary_expr {
-    (<$expr:ident>) => {
-        impl fmt::Display for UnaryExpr<$expr> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                let mut result = String::with_capacity(128);
-                use $expr::*;
-                let format_arg = |arg: &Rc<$expr>| match arg.as_ref() {
-                    BinaryExpr(l) => format!("({})", l),
-                    expr => expr.to_string(),
-                };
-                result.push_str(&format!("{}{}", self.op, format_arg(&self.rhs)));
-                f.write_str(&result)
-            }
-        }
-    };
-}
-
-display_unary_expr!(<Expr>);
-display_unary_expr!(<ExprPat>);
 
 impl<E> PartialOrd for UnaryExpr<E>
 where

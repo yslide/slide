@@ -1,4 +1,5 @@
-use slide::{run_slide, Opts, OutputForm};
+use libslide::EmitFormat;
+use slide::{run_slide, Opts};
 use std::env;
 
 fn get_opts() -> Opts {
@@ -33,10 +34,11 @@ fn get_opts() -> Opts {
     let expr_pat = matches.is_present("expr-pat");
     Opts {
         program: matches.value_of("program").unwrap().into(),
-        output_form: match matches.value_of("output-form").unwrap() {
-            "pretty" => OutputForm::Pretty,
-            "s-expression" => OutputForm::SExpression,
-            "debug" => OutputForm::Debug,
+        // TODO: we should consolidate emit_format and output-form before any stable release.
+        emit_format: match matches.value_of("output-form").unwrap() {
+            "pretty" => EmitFormat::Pretty,
+            "s-expression" => EmitFormat::SExpression,
+            "debug" => EmitFormat::Debug,
             _ => unreachable!(),
         },
         parse_only: matches.is_present("parse-only") || expr_pat,

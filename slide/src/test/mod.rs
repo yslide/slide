@@ -65,10 +65,7 @@ fn get_clause_delim(clause: &str) -> String {
 
 /// Returns whether a clause can be auto-generated with --bless.
 fn can_be_blessed(clause: &str) -> bool {
-    match clause {
-        "exitcode" | "stdout" | "stderr" => true,
-        _ => false,
-    }
+    matches!(clause, "exitcode" | "stdout" | "stderr")
 }
 
 /// Returns the command to bless a test file.

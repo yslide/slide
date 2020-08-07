@@ -43,12 +43,17 @@ jobs:
     - rust: nightly
 
 script:
+  # Ensure slide builds
   - cargo build --verbose --all
   - scripts/check test
   - rustup component add clippy || cargo install --git
     https://github.com/rust-lang/rust-clippy/ --force clippy
   - rustup component add rustfmt
   - scripts/check lintformat
+  # Ensure fuzzer builds
+  - pushd slide/fuzz
+  - cargo build
+  - popd
 
 after_success:
   - |

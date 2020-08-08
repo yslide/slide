@@ -1,0 +1,19 @@
+!!!args
+--parse-only
+-o latex
+!!!args
+
+===in
+a - a
+===in
+
+~~~stdout
+a - a
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

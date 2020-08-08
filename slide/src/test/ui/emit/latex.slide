@@ -1,0 +1,19 @@
+!!!args
+--parse-only
+-o latex
+!!!args
+
+===in
+[1 + (5 / 10)] + 2
+===in
+
+~~~stdout
+\left\[1 + \left\(5 / 10\right\)\right\] + 2
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

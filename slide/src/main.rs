@@ -17,7 +17,7 @@ fn get_opts() -> Opts {
                 .short("o")
                 .default_value("pretty")
                 .takes_value(true)
-                .possible_values(&["pretty", "s-expression", "debug"]),
+                .possible_values(&["pretty", "s-expression", "latex", "debug"]),
         )
         .arg(
             clap::Arg::with_name("parse-only")
@@ -38,6 +38,7 @@ fn get_opts() -> Opts {
         emit_format: match matches.value_of("output-form").unwrap() {
             "pretty" => EmitFormat::Pretty,
             "s-expression" => EmitFormat::SExpression,
+            "latex" => EmitFormat::Latex,
             "debug" => EmitFormat::Debug,
             _ => unreachable!(),
         },

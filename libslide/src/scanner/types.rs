@@ -51,7 +51,7 @@ pub enum TokenType {
     /// A constant pattern, of form #name.
     ConstPattern(String),
 
-    /// An any pattern, of form #name.
+    /// An any pattern, of form _name.
     AnyPattern(String),
 
     /// An invalid token.

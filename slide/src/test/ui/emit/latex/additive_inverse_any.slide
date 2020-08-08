@@ -1,0 +1,19 @@
+!!!args
+--parse-only
+-o latex
+!!!args
+
+===in
+(a * b) - (a * b)
+===in
+
+~~~stdout
+\left\(a * b\right\) - \left\(a * b\right\)
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

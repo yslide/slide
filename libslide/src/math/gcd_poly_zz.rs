@@ -69,7 +69,7 @@ pub fn gcd_poly_zz_heu(f: Poly, g: Poly) -> Result<(Poly, Poly, Poly), &'static 
                 }
                 Err(e) => return Err(e),
             }
-            if r.is_empty() {
+            if r.is_zero() {
                 match g.clone().div(heu_poly.clone()) {
                     Ok(q) => {
                         _cfg2 = q.0;
@@ -77,7 +77,7 @@ pub fn gcd_poly_zz_heu(f: Poly, g: Poly) -> Result<(Poly, Poly, Poly), &'static 
                     }
                     Err(e) => return Err(e),
                 }
-                if r.is_empty() {
+                if r.is_zero() {
                     heu_poly = heu_poly.mul_scalar(gcd_val);
                     return Ok((heu_poly, _cff2, _cfg2));
                 }
@@ -90,7 +90,7 @@ pub fn gcd_poly_zz_heu(f: Poly, g: Poly) -> Result<(Poly, Poly, Poly), &'static 
                 }
                 Err(e) => return Err(e),
             }
-            if r.is_empty() {
+            if r.is_zero() {
                 match g.clone().div(heu_poly.clone()) {
                     Ok(q) => {
                         _cfg2 = q.0;
@@ -98,7 +98,7 @@ pub fn gcd_poly_zz_heu(f: Poly, g: Poly) -> Result<(Poly, Poly, Poly), &'static 
                     }
                     Err(e) => return Err(e),
                 }
-                if r.is_empty() {
+                if r.is_zero() {
                     heu_poly = heu_poly.mul_scalar(gcd_val);
                     return Ok((heu_poly, cff_poly, _cfg2));
                 }
@@ -111,7 +111,7 @@ pub fn gcd_poly_zz_heu(f: Poly, g: Poly) -> Result<(Poly, Poly, Poly), &'static 
                 }
                 Err(e) => return Err(e),
             }
-            if r.is_empty() {
+            if r.is_zero() {
                 match f.clone().div(heu_poly.clone()) {
                     Ok(q) => {
                         _cff2 = q.0;
@@ -119,7 +119,7 @@ pub fn gcd_poly_zz_heu(f: Poly, g: Poly) -> Result<(Poly, Poly, Poly), &'static 
                     }
                     Err(e) => return Err(e),
                 }
-                if r.is_empty() {
+                if r.is_zero() {
                     heu_poly = heu_poly.mul_scalar(gcd_val);
                     return Ok((heu_poly, _cff2, cfg_poly));
                 }
@@ -143,7 +143,7 @@ where
 
 /// Returns the GCD of a polynomial's term coefficients.
 fn poly_coeffs_gcd(p: &Poly) -> usize {
-    if p.is_empty() {
+    if p.is_zero() {
         return 0;
     }
     let mut cont: usize = p.vec[0] as usize;
@@ -175,7 +175,7 @@ fn poly_extract_common(mut f: Poly, mut g: Poly) -> (isize, Poly, Poly) {
 
 /// Handles trivial polynomial GCD cases, namely if one polynomial is empty.
 fn trivial_gcd(f: &Poly, g: &Poly) -> Option<(Poly, Poly, Poly)> {
-    match (f.is_empty(), g.is_empty()) {
+    match (f.is_zero(), g.is_zero()) {
         (true, true) => Some((poly![], poly![], poly![])),
         (false, true) => Some((f.clone(), poly![], poly![])),
         (true, false) => Some((g.clone(), poly![], poly![])),

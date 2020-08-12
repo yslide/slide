@@ -5,14 +5,16 @@ use crate::math::gcd;
 use crate::partial_evaluator::flatten::flatten_expr;
 use crate::utils::{get_flattened_binary_args, unflatten_binary_expr, UnflattenStrategy};
 
-use core::cmp::{max, min};
+use core::cmp::max;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 /// A polynomial in integer space Z.
+/// TODO: Currently, this container only services polynomials with non-negative degrees.
 #[derive(Default, Clone, Eq, PartialEq, Debug)]
 pub struct Poly {
     /// Underlying polynomial coefficient representation.
+    /// The degree of each coefficient is its index in the vector.
     pub vec: Vec<isize>,
 }
 
@@ -33,7 +35,7 @@ impl From<&Vec<isize>> for Poly {
 /// # Examples:
 ///
 /// ```ignore
-/// poly![1, 2, -4]; // x^2 + 2x - 4
+/// poly![-4, 2, 1]; // x^2 + 2x - 4
 /// poly![]; // empty polynomial
 /// ```
 #[macro_export]
@@ -48,7 +50,8 @@ macro_rules! poly {
 }
 
 impl Poly {
-    /// Creates a new [Poly][Poly] from a vector of coefficients, in decreasing order of degree.
+    /// Creates a new [Poly][Poly] from a vector of coefficients, with the degree of each
+    /// coefficient being its index in the vector.
     pub fn new(vec: Vec<isize>) -> Self {
         Self { vec }
     }
@@ -60,15 +63,15 @@ impl Poly {
 
     /// Returns whether the polynomial is equivalent to 0.
     #[inline]
-    pub fn is_empty(&self) -> bool {
+    pub fn is_zero(&self) -> bool {
         self.vec.is_empty() || self.vec.iter().all(|&n| n == 0)
     }
 
     /// Returns whether the polynomial is equivalent to 1.
     #[inline]
     pub fn is_one(&self) -> bool {
-        let is_one = self.vec.last() == Some(&1);
-        for coeff in self.vec.iter().rev().skip(1) {
+        let is_one = self.vec.first() == Some(&1);
+        for coeff in self.vec.iter().skip(1) {
             if coeff != &0 {
                 // A higher-order term has a non-zero coefficient.
                 return false;
@@ -79,8 +82,8 @@ impl Poly {
 
     /// Returns the degree of the polynomial.
     #[inline]
-    pub fn deg(&self) -> isize {
-        self.vec.len() as isize - 1
+    pub fn deg(&self) -> usize {
+        self.vec.len().saturating_sub(1)
     }
 
     /// Returns the [primitive polynomial] of `self` over the integers.
@@ -89,12 +92,12 @@ impl Poly {
     ///
     /// ```ignore
     /// // 6x^2 + 4x + 2 -> 3x^2 + 2x + 1
-    /// assert_eq!(poly![6, 4, 2], poly![3, 2, 1]);
+    /// assert_eq!(poly![2, 4, 6], poly![1, 2, 3]);
     /// ```
     ///
     /// [primitive polynomial]: https://en.wikipedia.org/wiki/Primitive_part_and_content
     pub fn primitive(self) -> Self {
-        if self.is_empty() {
+        if self.is_zero() {
             return self;
         }
         let largest_gcd = self
@@ -117,32 +120,18 @@ impl Poly {
     ///
     /// ```ignore
     /// // (x + 2) + 3x^2 -> 3x^2 + x + 2
-    /// assert_eq!(poly![1, 2].add_term(3, 2), poly![3, 1, 2]);
+    /// assert_eq!(poly![2, 1].add_term(3, 2), poly![2, 1, 3]);
     /// ```
-    fn add_term(mut self, coeff: isize, pow: isize) -> Self {
+    fn add_term(mut self, coeff: isize, pow: usize) -> Self {
         if coeff == 0 {
             return self;
         }
 
-        let deg = self.deg();
-        if pow == deg {
-            // (x^2 + 2x + 3) + x^2
-            self.vec[0] += coeff;
-        } else if pow >= deg {
-            // (x^2 + 2x + 3) + x^4
-            // [1, 2, 3] -> [3, 2, 1] -> [3, 2, 1, 0] :: [1] -> [3, 2, 1, 0, 4] -> [1, 0, 1, 2, 3]
-            let extra_needed = pow - self.deg() - 1;
-            let extended = self
-                .vec
-                .into_iter()
-                .rev()
-                .chain(vec![0; extra_needed as usize].into_iter())
-                .chain(vec![coeff].into_iter());
-            self.vec = extended.rev().collect();
-        } else {
-            // (x^2 + 2x + 3) + 2x
-            self.vec[(deg - pow) as usize] += coeff;
+        while self.vec.is_empty() || self.deg() < pow {
+            self.vec.push(0);
         }
+        self.vec[pow as usize] += coeff;
+
         self
     }
 
@@ -152,25 +141,19 @@ impl Poly {
     ///
     /// ```ignore
     /// // (x + 2) * 3x^2 -> 3x^3 + 6x^2
-    /// assert_eq!(poly![1, 2].mul_term(3, 2), poly![3, 6, 0, 0]);
+    /// assert_eq!(poly![2, 1].mul_term(3, 2), poly![0, 0, 6, 3]);
     /// ```
-    fn mul_term(mut self, coeff: isize, pow: isize) -> Self {
-        if coeff == 0 || self.is_empty() {
+    fn mul_term(mut self, coeff: isize, pow: usize) -> Self {
+        if coeff == 0 || self.is_zero() {
             return Poly::empty();
         }
         for term in self.vec.iter_mut() {
             *term *= coeff;
         }
         for _ in 0..pow {
-            self.vec.push(0);
+            self.vec.insert(0, 0);
         }
         self
-    }
-
-    /// Negates each term of the polynomial.
-    #[inline]
-    fn negate(self) -> Self {
-        self.mul_scalar(-1)
     }
 
     /// Multiplies each term in the polynomial by a scalar.
@@ -198,57 +181,24 @@ impl Poly {
     ///
     /// ```ignore
     /// // (x + 2) - (3x^2 + 2x) -> -3x^2 - x + 2
-    /// assert_eq!(poly![1, 2].sub(poly![3, 2, 0]), poly![-3, -1, 2]);
+    /// assert_eq!(poly![2, 1].sub(poly![0, 2, 3]), poly![2, -1, -3]);
     /// ```
     fn sub(mut self, other: Self) -> Self {
-        if other.vec.is_empty() {
-            return other.negate();
+        while self.deg() < other.deg() {
+            self.vec.push(0);
         }
-        if other.vec.is_empty() {
-            return self;
+        for i in 0..other.vec.len() {
+            self.vec[i] -= other.vec[i];
         }
-        let d_self = self.deg();
-        let d_other = other.deg();
-        if d_self == d_other {
-            for i in (0..self.vec.len()).rev() {
-                self.vec[i] -= other.vec[i];
-            }
-            self.truncate_zeros()
-        } else {
-            let mut lhs = self.vec;
-            let mut rhs = other.vec;
-            let extra_terms = (d_self as isize - d_other as isize).abs() as usize;
-            let mut new_poly: Poly;
-            if d_self > d_other {
-                // (x^2 + x + 1) - (x + 1)
-                new_poly = Poly::new(lhs[..extra_terms].to_vec()); // push extra terms not in `other`
-                lhs = lhs[extra_terms..].to_vec();
-            } else {
-                // (x + 1) - (x^2 + x + 1)
-                new_poly = Poly::new(rhs[..extra_terms].to_vec()).negate(); // push extra terms not in `self`
-                rhs = rhs[extra_terms..].to_vec();
-            }
-            for i in 0..min(lhs.len(), rhs.len()) {
-                lhs[i] -= rhs[i];
-            }
-            new_poly.vec.append(&mut lhs);
-
-            new_poly.truncate_zeros()
-        }
+        self.truncate_zeros()
     }
 
     /// Removes leading zero terms in a polynomial.
     #[inline]
     fn truncate_zeros(mut self) -> Self {
-        let mut count = 0;
-        for i in &self.vec {
-            if *i == 0 {
-                count += 1;
-            } else {
-                break;
-            }
+        while self.vec.last() == Some(&0) {
+            self.vec.pop();
         }
-        self.vec = self.vec.into_iter().skip(count).collect();
         self
     }
 
@@ -259,15 +209,15 @@ impl Poly {
     ///
     /// ```ignore
     /// // (x^2 - 4) / (x + 2) -> ((x - 2), 0)
-    /// assert_eq!(poly![1, 0, -4].div(poly![1, 2]), Ok((poly![1, -2], poly![])));
+    /// assert_eq!(poly![-4, 0, 1].div(poly![2, 1]), Ok((poly![-2, 1], poly![])));
     ///
     /// // (x^2 - 2x) / (x + 1) -> ((x - 3), 3)
-    /// assert_eq!(poly![1, 0, -2].div(poly![1, 1]), Ok((poly![1, -3], poly![3])));
+    /// assert_eq!(poly![-2, 0, 1].div(poly![1, 1]), Ok((poly![-3, 1], poly![3])));
     /// ```
     pub fn div(self, other: Poly) -> Result<(Self, Self), &'static str> {
         let d_self = self.deg();
         let d_other = other.deg();
-        if other.vec.is_empty() {
+        if other.is_zero() {
             return Err("Cannot divide by a 0 polynomial");
         } else if d_self < d_other {
             return Ok((poly![], Poly::new(self.vec)));
@@ -320,7 +270,7 @@ impl Poly {
     /// If the polynomial is empty, the leading coefficient is 0.
     #[inline]
     pub fn lc(&self) -> isize {
-        *self.vec.get(0).unwrap_or(&0)
+        *self.vec.last().unwrap_or(&0)
     }
 
     /// Evaluates the polynomial at a value `x`.
@@ -329,11 +279,11 @@ impl Poly {
     ///
     /// ```ignore
     /// // (x^2 - 4)(1) -> -3
-    /// assert_eq!(poly![1, 0, -4].eval(1), -3);
+    /// assert_eq!(poly![-4, 0, 1].eval(1), -3);
     /// ```
     #[inline]
     pub fn eval(&self, x: isize) -> isize {
-        self.vec.iter().fold(0, |mut res, &n| {
+        self.vec.iter().rev().fold(0, |mut res, &n| {
             res *= x;
             res + n
         })
@@ -350,9 +300,9 @@ impl Poly {
     /// ## Examples
     ///
     /// ```ignore
-    /// from_expr("x + 2x^2", None) == Some(poly![2, 1, 0], Some(Var("x")))
+    /// from_expr("x + 2x^2", None) == Some(poly![0, 1, 2], Some(Var("x")))
     /// from_expr("5", None) == Some(poly![5], None)
-    /// from_expr("x + 2x^2", Some(Var("x"))) == Some(poly![2, 1, 0], Some(Var("x")))
+    /// from_expr("x + 2x^2", Some(Var("x"))) == Some(poly![0, 1, 2], Some(Var("x")))
     /// from_expr("y + 2y^2", Some(Var("x"))) == None
     /// from_expr("2.5x", None) == None
     /// from_expr("x^{2.5}", None) == None
@@ -432,19 +382,17 @@ impl Poly {
 
         let degree = degree_coeffs.keys().max();
         match degree {
-            None => {
-                // There are no explicit terms in the polynomial, just return the constant or an
-                // empty polynomial.
-                let poly = if konst == 0 { poly![] } else { poly![konst] };
-                Ok((poly, None))
-            }
+            // There are no explicit terms in the polynomial, just return the constant or an
+            // empty polynomial.
+            None if konst != 0 => Ok((poly![konst], None)),
+            None => Ok((poly![], None)),
             Some(degree) => {
                 let len = degree + 1;
                 let mut poly = vec![0; len];
+                poly[0] = konst;
                 for (pow, coeff) in degree_coeffs.into_iter() {
-                    poly[len - pow - 1] = coeff;
+                    poly[pow] = coeff;
                 }
-                poly[len - 1] = konst;
                 Ok((
                     Self::new(poly),
                     uniq_terms.into_iter().next().map(Rc::clone),
@@ -453,16 +401,16 @@ impl Poly {
         }
     }
 
-    /// Converts a polynomial, relative to some term, into an expression.
+    /// Converts a [Poly][Poly] polynomial, relative to some term, into an expression.
     ///
     /// ## Examples
     ///
     /// ```ignore
-    /// poly![3, 2, 1].to_expr("x") == "3 * (x ^ 2) + 2 * x + 1"
+    /// poly![1, 2, 3].to_expr("x") == "3 * (x ^ 2) + 2 * x + 1"
     /// ```
     pub fn to_expr(&self, relative_to: &Rc<Expr>) -> Rc<Expr> {
         let mut terms = Vec::with_capacity(self.vec.len());
-        for (pow, coeff) in self.vec.iter().rev().enumerate() {
+        for (pow, coeff) in self.vec.iter().enumerate() {
             let term = match coeff {
                 0 => {
                     continue;
@@ -525,66 +473,66 @@ mod test {
 
     #[test]
     fn add_1() {
-        assert_eq!(poly![2, -1].add_term(2, 4), poly![2, 0, 0, 2, -1]);
+        assert_eq!(poly![-1, 2].add_term(2, 4), poly![-1, 2, 0, 0, 2]);
     }
 
     #[test]
     fn add_2() {
-        assert_eq!(poly![2, -1].add_term(2, 1), poly![4, -1]);
+        assert_eq!(poly![-1, 2].add_term(2, 1), poly![-1, 4]);
     }
 
     #[test]
     fn add_3() {
-        assert_eq!(poly![3, 0, 5].add_term(2, 1), poly![3, 2, 5]);
+        assert_eq!(poly![5, 0, 3].add_term(2, 1), poly![5, 2, 3]);
     }
 
     #[test]
     fn mul_1() {
-        assert_eq!(poly![3, 0, 5].mul_term(0, 2), poly![]);
+        assert_eq!(poly![5, 0, 3].mul_term(0, 2), poly![]);
     }
 
     #[test]
     fn mul_2() {
-        assert_eq!(poly![3, 0, 5].mul_term(2, 2), poly![6, 0, 10, 0, 0]);
+        assert_eq!(poly![5, 0, 3].mul_term(2, 2), poly![0, 0, 10, 0, 6]);
     }
 
     #[test]
     fn sub_1() {
-        assert_eq!(poly![3, 0, 5].sub(poly![1, 0, 1]), poly![2, 0, 4]);
+        assert_eq!(poly![5, 0, 3].sub(poly![1, 0, 1]), poly![4, 0, 2]);
     }
 
     #[test]
     fn sub_2() {
-        assert_eq!(poly![1, 0, -1].sub(poly![1, -2]), poly![1, -1, 1]);
+        assert_eq!(poly![-1, 0, 1].sub(poly![-2, 1]), poly![1, -1, 1]);
     }
 
     #[test]
     fn sub_3() {
-        assert_eq!(poly![1, 0, -1].sub(poly![1, -1, 0]), poly![1, -1]);
+        assert_eq!(poly![-1, 0, 1].sub(poly![0, -1, 1]), poly![-1, 1]);
     }
 
     #[test]
     fn sub_4() {
-        assert_eq!(poly![1, 0, -1].sub(poly![2, 3]), poly![1, -2, -4]);
+        assert_eq!(poly![-1, 0, 1].sub(poly![3, 2]), poly![-4, -2, 1]);
     }
 
     #[test]
     fn sub_5() {
-        assert_eq!(poly![2, 3].sub(poly![1, 0, -1]), poly![-1, 2, 4]);
+        assert_eq!(poly![3, 2].sub(poly![-1, 0, 1]), poly![4, 2, -1]);
     }
 
     #[test]
     fn div_1() {
         assert_eq!(
-            poly![1, 0, -1].div(poly![2, -4]).unwrap(),
-            (poly![], poly![1, 0, -1])
+            poly![-1, 0, 1].div(poly![-4, 2]).unwrap(),
+            (poly![], poly![-1, 0, 1])
         );
     }
 
     #[test]
     fn div_2() {
         assert_eq!(
-            poly![1, 0, -1].div(poly![1, -1]).unwrap(),
+            poly![-1, 0, 1].div(poly![-1, 1]).unwrap(),
             (poly![1, 1], poly![])
         )
     }
@@ -593,8 +541,8 @@ mod test {
     fn is_one() {
         let cases = [
             (poly![1], true),
-            (poly![0, 0, 0, 0, 1], true),
-            (poly![0, 1, 0, 0, 1], false),
+            (poly![1, 0, 0, 0, 0], true),
+            (poly![1, 0, 0, 1, 0], false),
             (poly![0, 0, 0, 0, 0], false),
             (poly![2], false),
             (poly![], false),
@@ -630,17 +578,17 @@ mod test {
     poly_from_expr_tests! {
         empty: "0" => Some((poly![], None))
         konst: "1 + 2" => Some((poly![3], None))
-        single_deg: "x" => Some((poly![1, 0], Some("x".to_string())))
-        multi_deg: "10 + x + x^2 + x^4 + x^8" => Some((poly![1, 0, 0, 0, 1, 0, 1, 1, 10], Some("x".to_string())))
-        with_coeff: "2x + x^3 + 10x^2 + 5x^4" => Some((poly![5, 1, 10, 2, 0], Some("x".to_string())))
-        complex_term: "2(x + y ^ z) + 5(x + y ^ z)^3" => Some((poly![5, 0, 2, 0], Some("x + y ^ z".to_string())))
+        single_deg: "x" => Some((poly![0,1], Some("x".to_string())))
+        multi_deg: "10 + x + x^2 + x^4 + x^8" => Some((poly![10, 1, 1, 0, 1, 0, 0, 0, 1], Some("x".to_string())))
+        with_coeff: "2x + x^3 + 10x^2 + 5x^4" => Some((poly![0, 2, 10, 1, 5], Some("x".to_string())))
+        complex_term: "2(x + y ^ z) + 5(x + y ^ z)^3" => Some((poly![0, 2, 0, 5], Some("x + y ^ z".to_string())))
         multi_term: "10 + x + y^2" => None
         // TODO: this doesn't work yet, `flatten` and/or Poly::from_expr need to be smarter about unaries
         // add_and_sub: "10 + x - 2x^2 + 3x^4 - 4x^8" => Some((poly![1, 0, 0, 0, 1, 0, 1, 1, 10], Some("x".to_string())))
     }
 
     poly_from_expr_tests! {
-        relative: "10 + x + x^2 + x^4", Some("x") => Some((poly![1, 0, 1, 1, 10], Some("x".to_string())))
+        relative: "10 + x + x^2 + x^4", Some("x") => Some((poly![10, 1, 1, 0, 1], Some("x".to_string())))
         relative_fails: "10 + x + x^2 + x^4", Some("y") => None
     }
 
@@ -660,8 +608,8 @@ mod test {
     poly_to_expr_tests! {
         to_empty: poly![], "x" => "0"
         to_empty_all_zeros: poly![0, 0, 0, 0], "x" => "0"
-        zero_coefficient: poly![0, 10], "x" => "10"
-        one_coefficient: poly![1, 0, 1, 1, 5], "x" => "5 + x + x ^ 2 + x ^ 4"
-        larger_coefficient: poly![5, 4, 3, 2, 1], "x" => "1 + 2 * x + (3 * x) ^ 2 + (4 * x) ^ 3 + (5 * x) ^ 4"
+        zero_coefficient: poly![10, 0], "x" => "10"
+        one_coefficient: poly![5, 1, 1, 0, 1], "x" => "5 + x + x ^ 2 + x ^ 4"
+        larger_coefficient: poly![1, 2, 3, 4, 5], "x" => "1 + 2 * x + (3 * x) ^ 2 + (4 * x) ^ 3 + (5 * x) ^ 4"
     }
 }

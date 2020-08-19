@@ -94,39 +94,35 @@ fn flatten_add_or_sub(o_lhs: &Rc<Expr>, o_rhs: &Rc<Expr>, is_subtract: bool) -> 
     let base_args = [lhs, rhs];
     args.extend(base_args.iter());
 
-    // Number of arguments we need to visit before we hit the negative (subtracted) side of this
-    // expression. This is only relevant if `is_subtract` is true.
-    let mut args_before_neg = 1;
+    // If this is not a subtraction, the first two args are both on the add side.
+    let mut args_before_sub = if is_subtract { 1 } else { 2 };
 
     while let Some(arg) = args.pop_front() {
-        let is_neg = is_subtract && args_before_neg == 0;
-        args_before_neg -= 1;
+        let sub_side = args_before_sub <= 0;
+        args_before_sub -= 1;
+
+        let arg = unwrap_expr(arg);
 
         match arg.as_ref() {
             Expr::Const(konst) => {
-                if is_neg {
+                if sub_side {
                     coeff -= konst;
                 } else {
                     coeff += konst;
                 }
             }
+            // `flatten` will always normalize add/sub expressions to add, so we only have to
+            // handle that.
             Expr::BinaryExpr(BinaryExpr { op, lhs, rhs }) if op == &BinaryOperator::Plus => {
-                // Note: addition is commutative, so we add the nested terms to list of terms we
-                // should flatten.
-                // If we're on the negative side of the original expression, the nested terms should
-                // also be negated and are added to the back. Otherwise they are positive and are
-                // added to the front.
-                if is_neg {
-                    // If we're on the negative side of the expression, add the terms to the back
-                    // since they should also be negated.
+                if sub_side {
+                    // 1 - (2 + 3) -> 1 - 2 - 3; add both operands to the sub side.
                     args.push_back(lhs);
                     args.push_back(rhs);
                 } else {
-                    // If we're on the positive side of the expression, the terms should also be
-                    // positive.
+                    // 1 + (2 + 3) -> 1 + 2 + 3
                     args.push_front(lhs);
                     args.push_front(rhs);
-                    args_before_neg += 2;
+                    args_before_sub += 2;
                 }
             }
             _ => {
@@ -134,7 +130,7 @@ fn flatten_add_or_sub(o_lhs: &Rc<Expr>, o_rhs: &Rc<Expr>, is_subtract: bool) -> 
                 // (e.g. a variable or an exponentiation), so add it as a term.
                 // TODO: see if we can handle other things more granularly
                 let entry = terms.entry(arg).or_insert(0.);
-                if is_neg {
+                if sub_side {
                     *entry -= 1.;
                 } else {
                     *entry += 1.;
@@ -517,6 +513,8 @@ mod tests {
         "1 - 2 + 3 -> 2",
         "a - a + 1 -> 1",
         "a + 1 - 1 -> a",
+        // TODO: (- (- c)) -> c
+        "a - (b - c) -> (+ (+ a (- b)) (- (- c)))",
         "10 * 2x / 5 / 2 / 4x -> (* 0.5 (^ x 2))",
         "x * 2 / y / (5 / (x / y)) -> (* (* 0.4 (^ x 2)) (^ y -2))",
         "x * x -> (^ x 2)",

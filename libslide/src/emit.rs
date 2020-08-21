@@ -23,6 +23,18 @@ pub enum EmitFormat {
     Debug,
 }
 
+impl From<String> for EmitFormat {
+    fn from(ef: String) -> Self {
+        match ef.as_ref() {
+            "pretty" => EmitFormat::Pretty,
+            "s-expression" => EmitFormat::SExpression,
+            "latex" => EmitFormat::Latex,
+            "debug" => EmitFormat::Debug,
+            _ => unreachable!(),
+        }
+    }
+}
+
 /// Implements the emission of a type in an [EmitFormat][EmitFormat].
 pub trait Emit
 where

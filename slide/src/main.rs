@@ -1,8 +1,9 @@
-use libslide::EmitFormat;
-use slide::{run_slide, Opts};
+use slide::{run_slide, Opts, SlideResult};
 use std::env;
+use std::io::Write;
+use termcolor::{BufferedStandardStream, ColorChoice, WriteColor};
 
-fn get_opts() -> Opts {
+fn get_opts(color: bool) -> Opts {
     let matches = clap::App::new(clap::crate_name!())
         .version(clap::crate_version!())
         .about(clap::crate_description!())
@@ -35,22 +36,35 @@ fn get_opts() -> Opts {
     Opts {
         program: matches.value_of("program").unwrap().into(),
         // TODO: we should consolidate emit_format and output-form before any stable release.
-        emit_format: match matches.value_of("output-form").unwrap() {
-            "pretty" => EmitFormat::Pretty,
-            "s-expression" => EmitFormat::SExpression,
-            "latex" => EmitFormat::Latex,
-            "debug" => EmitFormat::Debug,
-            _ => unreachable!(),
-        },
+        emit_format: matches.value_of("output-form").unwrap().into(),
         parse_only: matches.is_present("parse-only") || expr_pat,
         expr_pat,
-        no_emit: false,
+        color,
     }
 }
 
-fn main_impl() -> Result<(), String> {
-    let opts = get_opts();
-    std::process::exit(run_slide(opts))
+fn main_impl() -> Result<(), Box<dyn std::error::Error>> {
+    let mut ch_stdout = BufferedStandardStream::stdout(ColorChoice::Auto);
+    let mut ch_stderr = BufferedStandardStream::stderr(ColorChoice::Auto);
+    let use_color = atty::is(atty::Stream::Stderr) && ch_stderr.supports_color();
+
+    let opts = get_opts(use_color);
+    let SlideResult {
+        code,
+        stdout,
+        stderr,
+    } = run_slide(opts);
+
+    if !stdout.is_empty() {
+        writeln!(&mut ch_stdout, "{}", stdout)?;
+        ch_stdout.flush()?;
+    }
+    if !stderr.is_empty() {
+        write!(&mut ch_stderr, "{}", stderr)?;
+        ch_stderr.flush()?;
+    }
+
+    std::process::exit(code)
 }
 
 fn main() {

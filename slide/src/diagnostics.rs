@@ -9,13 +9,16 @@ use annotate_snippets::{
     display_list::{DisplayList, FormatOptions},
     snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
 };
-use std::io::Write;
-use termcolor::{BufferedStandardStream, ColorChoice, WriteColor};
 
-pub fn emit_slide_diagnostics(file: Option<&str>, source: String, diagnostics: Vec<Diagnostic>) {
+pub fn emit_slide_diagnostics(
+    file: Option<&str>,
+    source: String,
+    diagnostics: Vec<Diagnostic>,
+    color: bool,
+) -> String {
     let source = source + " "; // we might emit an EOF diagnostic, so add extra space.
-    let mut stderr = BufferedStandardStream::stderr(ColorChoice::Auto);
-    let can_color = atty::is(atty::Stream::Stderr) && stderr.supports_color();
+
+    let mut emitted_diagnostics = String::new();
 
     for diagnostic in diagnostics {
         let main_annotation_type = convert_diagnostic_kind(&diagnostic.kind);
@@ -56,12 +59,13 @@ pub fn emit_slide_diagnostics(file: Option<&str>, source: String, diagnostics: V
                 annotations,
             }],
             opt: FormatOptions {
-                color: can_color,
+                color,
                 ..Default::default()
             },
         };
-        writeln!(&mut stderr, "{}\n", DisplayList::from(snippet)).unwrap();
+        emitted_diagnostics.push_str(&format!("{}\n\n", DisplayList::from(snippet)));
     }
+    emitted_diagnostics
 }
 
 /// Converts a slide AssociatedDiagnostic to a SourceAnnotation.

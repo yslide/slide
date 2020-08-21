@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width" />
+    <meta charset="UTF-8" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@primer/css/dist/primer.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/styles/github-gist.min.css"
+    />
+
+    <style>
+      .markdown-body {
+        margin: 0 auto;
+      }
+
+      .options {
+        display: flex;
+        flex-wrap: wrap;
+      }
+
+      .options > div {
+        margin-right: 30px;
+      }
+
+      input:disabled + label {
+        opacity: 0.5;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"
+      integrity="sha512-qoCTmFwBtCPvFhA+WAqatSOrghwpDhFHxwAGh+cppWonXbHA09nG1z5zi4/NGnp8dUhXiVrzA6EnKgJA+fyrpw=="
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
+    <article
+      id="app"
+      class="markdown-body col-12 col-md-10 col-xl-6 m-6 mx-auto"
+    >
+      <div class="pagehead">
+        <h1>Slide</h1>
+      </div>
+
+      <form>
+        <h2>Input</h2>
+        <pre
+          id="slide-input"
+          contenteditable="true"
+          @input="onInput"
+        ><code></code></pre>
+
+        <h3>Options</h3>
+        <div class="form-group">
+          <div class="form-group-header">
+            <label for="example-select">Emit format</label>
+          </div>
+          <div class="form-group-body">
+            <select
+              id="emit-format"
+              name="emit-mode"
+              class="form-select"
+              v-model="emitFormat"
+            >
+              <option v-for="option in emitFormatOptions" v-bind:value="option">
+                {{ option }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-checkbox">
+          <label>
+            <input
+              id="parse-only"
+              name="parse-only"
+              type="checkbox"
+              class="form-checkbox-details-trigger"
+              v-model="parseOnly"
+            />
+            Parse only
+            <span class="form-checkbox-details text-normal ml-4">
+              <label>
+                <input
+                  id="expr-pat"
+                  name="expr-pat"
+                  type="checkbox"
+                  v-model="exprPat"
+                />
+                Parse expression pattern
+              </label>
+            </span>
+          </label>
+        </div>
+      </form>
+
+      <button type="submit" class="btn btn-md btn-primary">
+        slide!
+      </button>
+
+      <h2>Output</h2>
+      <pre id="slide-output"><code></code></pre>
+    </article>
+
+    <script>
+      const queryParams = new URLSearchParams(window.location.search);
+      const input = queryParams.get("input")
+        ? LZString.decompressFromEncodedURIComponent(queryParams.get("input"))
+        : "x(x + 2 * 3) / (x + 6)";
+      const emitFormat = queryParams.get("emit-format") || "pretty";
+      const parseOnly = queryParams.get("parse-only") === "true";
+      const exprPat = queryParams.get("expr-pat") === "true";
+      new Vue({
+        el: "#app",
+        data: {
+          input,
+          emitFormatOptions: ["pretty", "s-expression", "debug"],
+          emitFormat,
+          parseOnly,
+          exprPat
+        },
+        created() {
+          document.querySelector("#slide-input").innerText = this.input;
+        },
+        updated() {
+          this.updateUrl();
+        },
+        methods: {
+          updateUrl() {
+            const queryParams = new URLSearchParams(window.location.search);
+            queryParams.set(
+              "input",
+              LZString.compressToEncodedURIComponent(this.input)
+            );
+            queryParams.set("emit-format", this.emitFormat);
+            queryParams.set("parse-only", this.parseOnly);
+            queryParams.set("expr-pat", this.exprPat);
+            const curUrl = `${window.location.pathname}?${queryParams}`;
+            history.replaceState(null, "", curUrl);
+          },
+
+          onInput({ target }) {
+            this.input = target.innerText;
+            this.updateUrl();
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

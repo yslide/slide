@@ -5,6 +5,10 @@ from argparse import RawTextHelpFormatter
 import os
 import sys
 import subprocess
+import threading
+
+
+UI_PORT = "8000"
 
 
 def test(args, runner_args):
@@ -29,6 +33,17 @@ def test(args, runner_args):
 
     process = subprocess.run(cargo_args, env=env)
     sys.exit(process.returncode)
+
+
+def www(args, _unknown):
+    os.chdir('www')
+    threading.Thread(
+        target=lambda: subprocess.run(["python3", "-m", "http.server"]),
+        daemon=True).start()
+    os.chdir('../')
+    print(f"Serving slide on http://localhost:{UI_PORT}...")
+
+    subprocess.run(["./scripts/build_wasm", "--watch"])
 
 
 def bench(args, _unknown):
@@ -113,6 +128,20 @@ test_parser.add_argument(
 This only affects system tests."""
 )
 test_parser.set_defaults(handler=test)
+
+www_parser = sub_parsers.add_parser(
+    "www",
+    help="Start slide UI server",
+    formatter_class=RawTextHelpFormatter,
+    description=f"""
+Start slide UI server at http://localhost:{UI_PORT}.
+
+Compiles slide to wasm and spins up a server to host the static slide UI under.
+This is useful for development; changes to slide are watched for recompilation,
+and changes to the UI can be instantly refreshed.
+"""
+)
+www_parser.set_defaults(handler=www)
 
 bench_parser = sub_parsers.add_parser(
     "bench",

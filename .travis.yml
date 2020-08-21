@@ -57,8 +57,15 @@ script:
 
 after_success:
   - |
-    if [ "$TRAVIS_BRANCH" == "master" ] && [ "$CHANNEL" == "stable" ]; then
-      cargo doc --document-private-items
+    if [ "$TRAVIS_BRANCH" == "master" ]; then
+      if [ "$CHANNEL" == "stable" ]; then
+        export DEPLOY_DOCS=1
+        cargo doc --document-private-items
+      elif [ "$CHANNEL" == "nightly" ]; then
+        export DEPLOY_UI=1
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        scripts/build_wasm
+      fi
     fi
     if [ ! -z "$TRAVIS_TAG" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
       cargo build --release
@@ -74,6 +81,7 @@ after_success:
   - cargo doc --document-private-items --no-deps
 
 deploy:
+  # Documentation
   - provider: pages:git
     edge: true
     token: $GITHUB_TOKEN
@@ -89,6 +97,25 @@ deploy:
     deployment_file: true
     on:
       branch: master
+      condition: $DEPLOY_DOCS = 1
+  # Web UI
+  - provider: pages:git
+    edge: true
+    token: $GITHUB_TOKEN
+    repo: yslide/yslide.github.io
+    target_branch: master
+    keep_history: true
+    verbose: true
+    local_dir: www/
+    fqdn: slide-dev.ayazhafiz.com
+    project_name: slide
+    name: slide-bot
+    email: vcaa1729@gmail.com
+    committer_from_gh: true
+    deployment_file: true
+    on:
+      branch: master
+  # Binary releases
   - provider: releases
     edge: true
     token: $GITHUB_TOKEN

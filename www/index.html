@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width" />
+    <meta charset="UTF-8" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@primer/css/dist/primer.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/styles/github-gist.min.css"
+    />
+
+    <style>
+      /** Ansi -> HTML styles for use in coloring error messages. */
+      .ansi-black-fg {
+        color: #282c34;
+      }
+      .ansi-red-fg {
+        color: #e06c75;
+      }
+      .ansi-green-fg {
+        color: #98c379;
+      }
+      .ansi-yellow-fg {
+        color: #d19a66;
+      }
+      .ansi-blue-fg {
+        color: #61afef;
+      }
+      .ansi-magenta-fg {
+        color: #c678dd;
+      }
+      .ansi-cyan-fg {
+        color: #56b6c2;
+      }
+      .ansi-white-fg {
+        color: #abb2bf;
+      }
+      .ansi-bright-black-fg {
+        color: #5c6370;
+      }
+      .ansi-bright-red-fg {
+        color: #e06c75;
+      }
+      .ansi-bright-green-fg {
+        color: #98c379;
+      }
+      .ansi-bright-yellow-fg {
+        color: #d19a66;
+      }
+      .ansi-bright-blue-fg {
+        color: #61afef;
+      }
+      .ansi-bright-magenta-fg {
+        color: #c678dd;
+      }
+      .ansi-bright-cyan-fg {
+        color: #56b6c2;
+      }
+      .ansi-bright-white-fg {
+        color: #ffffff;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"
+      integrity="sha512-qoCTmFwBtCPvFhA+WAqatSOrghwpDhFHxwAGh+cppWonXbHA09nG1z5zi4/NGnp8dUhXiVrzA6EnKgJA+fyrpw=="
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/ansi_up@4.0.4/ansi_up.min.js"></script>
+  </head>
+  <body>
+    <article
+      id="app"
+      class="markdown-body col-12 col-md-10 col-xl-6 m-6 mx-auto"
+    >
+      <div class="pagehead">
+        <h1><a href="https://github.com/yslide/slide">slide</a></h1>
+      </div>
+
+      <form>
+        <h2>Input</h2>
+        <pre
+          id="slide-input"
+          contenteditable="true"
+          @input="onInput"
+        ><code></code></pre>
+
+        <h3>Options</h3>
+        <div class="form-group">
+          <div class="form-group-header">
+            <label for="example-select">Emit format</label>
+          </div>
+          <div class="form-group-body">
+            <select
+              id="emit-format"
+              name="emit-mode"
+              class="form-select"
+              v-model="emitFormat"
+            >
+              <option v-for="option in emitFormatOptions" v-bind:value="option">
+                {{ option }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-checkbox">
+          <label>
+            <input
+              id="parse-only"
+              name="parse-only"
+              type="checkbox"
+              class="form-checkbox-details-trigger"
+              v-model="parseOnly"
+            />
+            Parse only
+            <span class="form-checkbox-details text-normal ml-4">
+              <label>
+                <input
+                  id="expr-pat"
+                  name="expr-pat"
+                  type="checkbox"
+                  v-model="exprPat"
+                />
+                Parse expression pattern
+              </label>
+            </span>
+          </label>
+        </div>
+      </form>
+
+      <button
+        type="submit"
+        class="btn btn-md btn-primary"
+        v-on:click="runSlide"
+      >
+        slide!
+      </button>
+
+      <h2>Output</h2>
+      <pre id="slide-output" v-html="output"><code></code></pre>
+    </article>
+
+    <script type="module">
+      import init, { run_slide_wasm } from "./js/slide.js";
+
+      // The wasm build of slide must be loaded and initialized before
+      // run_slide_wasm can be used. Kick off the initialization promise here,
+      // and await it in `runSlide` to ensure that we never try to execute a
+      // program prematurely.
+      const slideWasmInit = init();
+
+      const ansi = new AnsiUp();
+      ansi.use_classes = true;
+
+      const DEFAULT_EXAMPLE = "x(x + 2 * 3) / (x + 6)";
+      const queryParams = new URLSearchParams(window.location.search);
+      const input = queryParams.get("input")
+        ? LZString.decompressFromEncodedURIComponent(queryParams.get("input"))
+        : DEFAULT_EXAMPLE;
+      const emitFormat = queryParams.get("emit-format") || "pretty";
+      const parseOnly = queryParams.get("parse-only") === "true";
+      const exprPat = queryParams.get("expr-pat") === "true";
+
+      new Vue({
+        el: "#app",
+        data: {
+          input,
+          output: "",
+          emitFormatOptions: ["pretty", "s-expression", "debug"],
+          emitFormat,
+          parseOnly,
+          exprPat
+        },
+        created() {
+          document.querySelector("#slide-input").innerText = this.input;
+        },
+        updated() {
+          this.updateUrl();
+        },
+        methods: {
+          updateUrl() {
+            const queryParams = new URLSearchParams(window.location.search);
+            queryParams.set(
+              "input",
+              LZString.compressToEncodedURIComponent(this.input)
+            );
+            queryParams.set("emit-format", this.emitFormat);
+            queryParams.set("parse-only", this.parseOnly);
+            queryParams.set("expr-pat", this.exprPat);
+            const curUrl = `${window.location.pathname}?${queryParams}`;
+            history.replaceState(null, "", curUrl);
+          },
+
+          onInput({ target }) {
+            this.input = target.innerText;
+            this.updateUrl();
+          },
+
+          async runSlide() {
+            await slideWasmInit;
+
+            const slideOpts = {
+              program: this.input,
+              emit_format: this.emitFormat,
+              parse_only: this.parseOnly,
+              expr_pat: this.exprPat,
+              color: true
+            };
+
+            const { stdout, stderr } = run_slide_wasm(slideOpts);
+
+            this.output = ansi.ansi_to_html(`${stdout}${stderr}`);
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

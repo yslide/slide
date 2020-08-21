@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# Compiles slide to wasm.
+#
+# Usage:
+#       scripts/build_wasm <options>
+#
+# Options:
+#       --watch   recompile on changes to slide rust code
+# 
+# Dependencies:
+#       wasm-pack
+#       cargo-watch (optional, for --watch)
+
+CMD="wasm-pack build --no-typescript --release -t web -d ../www/js slide -- --features=wasm && rm www/LICENSE"
+
+if [ "$1" = "--watch" ]; then
+  cargo watch -w libslide -w slide -s "$CMD"
+else
+  eval $CMD
+fi

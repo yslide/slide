@@ -9,12 +9,21 @@ workspace = ".."
 repository = "https://github.com/yslide/slide"
 edition = "2018"
 
+[lib]
+# For wasm :-)
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 libslide = { path = "../libslide" }
 clap = "2.33.1"
 annotate-snippets = { version = "0.9.0", features = ["color"] }
 termcolor = "1.1.0"
 atty = "0.2.14"
+
+# For feature wasm
+wasm-bindgen = { version = "0.2.67", optional = true, features = ["serde-serialize"] }
+wee_alloc = { version = "0.4.5", optional = true }
+serde = { version = "1.0.114", optional = true, features = ["derive"] }
 
 [[test]]
 name = "system_tests"
@@ -24,3 +33,6 @@ harness = false
 [dev-dependencies]
 libtest-mimic = { git = "https://github.com/ayazhafiz/libtest-mimic", branch = "master" }
 difference = "2.0.0"
+
+[features]
+wasm = ["wasm-bindgen", "wee_alloc", "serde"]

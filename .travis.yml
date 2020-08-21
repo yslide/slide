@@ -65,6 +65,8 @@ after_success:
         export DEPLOY_UI=1
         curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
         scripts/build_wasm
+        rm www/js/.gitignore
+        rm www/js/package.json
       fi
     fi
     if [ ! -z "$TRAVIS_TAG" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
@@ -107,7 +109,6 @@ deploy:
     keep_history: true
     verbose: true
     local_dir: www/
-    fqdn: slide-dev.ayazhafiz.com
     project_name: slide
     name: slide-bot
     email: vcaa1729@gmail.com
@@ -115,6 +116,7 @@ deploy:
     deployment_file: true
     on:
       branch: master
+      condition: $DEPLOY_UI = 1
   # Binary releases
   - provider: releases
     edge: true

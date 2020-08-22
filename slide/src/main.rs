@@ -60,7 +60,7 @@ fn main_impl() -> Result<(), Box<dyn std::error::Error>> {
         ch_stdout.flush()?;
     }
     if !stderr.is_empty() {
-        write!(&mut ch_stderr, "{}", stderr)?;
+        writeln!(&mut ch_stderr, "{}", stderr)?;
         ch_stderr.flush()?;
     }
 

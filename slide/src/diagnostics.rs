@@ -18,9 +18,10 @@ pub fn emit_slide_diagnostics(
 ) -> String {
     let source = source + " "; // we might emit an EOF diagnostic, so add extra space.
 
+    let last_i = diagnostics.len() - 1;
     let mut emitted_diagnostics = String::new();
 
-    for diagnostic in diagnostics {
+    for (i, diagnostic) in diagnostics.into_iter().enumerate() {
         let main_annotation_type = convert_diagnostic_kind(&diagnostic.kind);
         let mut annotations = Vec::with_capacity(diagnostic.associated_diagnostics.len() + 1);
         // The first annotation always points to the code that generated this diagnostic.
@@ -63,7 +64,8 @@ pub fn emit_slide_diagnostics(
                 ..Default::default()
             },
         };
-        emitted_diagnostics.push_str(&format!("{}\n\n", DisplayList::from(snippet)));
+        let suffix = if i != last_i { "\n" } else { "" };
+        emitted_diagnostics.push_str(&format!("{}\n{}", DisplayList::from(snippet), suffix));
     }
     emitted_diagnostics
 }

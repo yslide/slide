@@ -7,12 +7,14 @@
       rel="stylesheet"
       href="https://unpkg.com/@primer/css/dist/primer.css"
     />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/styles/github-gist.min.css"
-    />
 
     <style>
+      pre.inner {
+        padding: 0;
+        font-size: 100%;
+        margin: 0;
+      }
+
       /** Ansi -> HTML styles for use in coloring error messages. */
       .ansi-black-fg {
         color: #282c34;
@@ -73,77 +75,95 @@
     <script src="https://cdn.jsdelivr.net/npm/ansi_up@4.0.4/ansi_up.min.js"></script>
   </head>
   <body>
-    <article
-      id="app"
-      class="markdown-body col-12 col-md-10 col-xl-6 m-6 mx-auto"
-    >
-      <div class="pagehead">
-        <h1><a href="https://github.com/yslide/slide">slide</a></h1>
-      </div>
-
-      <form>
-        <h2>Input</h2>
-        <pre
-          id="slide-input"
-          contenteditable="true"
-          @input="onInput"
-        ><code></code></pre>
-
-        <h3>Options</h3>
-        <div class="form-group">
-          <div class="form-group-header">
-            <label for="example-select">Emit format</label>
-          </div>
-          <div class="form-group-body">
-            <select
-              id="emit-format"
-              name="emit-mode"
-              class="form-select"
-              v-model="emitFormat"
-            >
-              <option v-for="option in emitFormatOptions" v-bind:value="option">
-                {{ option }}
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-checkbox">
-          <label>
-            <input
-              id="parse-only"
-              name="parse-only"
-              type="checkbox"
-              class="form-checkbox-details-trigger"
-              v-model="parseOnly"
-            />
-            Parse only
-            <span class="form-checkbox-details text-normal ml-4">
-              <label>
-                <input
-                  id="expr-pat"
-                  name="expr-pat"
-                  type="checkbox"
-                  v-model="exprPat"
-                />
-                Parse expression pattern
-              </label>
-            </span>
-          </label>
-        </div>
-      </form>
-
-      <button
-        type="submit"
-        class="btn btn-md btn-primary"
-        v-on:click="runSlide"
+    <div class="d-flex flex-column flex-row flex-items-center">
+      <article
+        id="app"
+        class="markdown-body col-10 col-md-10 col-xl-6 mb-5 my-md-4 my-lg-8"
       >
-        slide!
-      </button>
+        <div class="pagehead">
+          <h1 class="d-flex flex-row flex-items-center">
+            <a href="https://github.com/yslide/slide">slide</a>
+            <a
+              href="https://github.com/yslide/slide/commit/831651"
+              class="ml-2 mt-2 Label Label--green"
+              >831651</a
+            >
+          </h1>
+        </div>
 
-      <h2>Output</h2>
-      <pre id="slide-output" v-html="output"><code></code></pre>
-    </article>
+        <form>
+          <h2>Input</h2>
+          <pre><pre
+            id="slide-input"
+            class="inner"
+            contenteditable="true"
+            spellcheck="false"
+            @input="onInput"
+          ><code></code></pre></pre>
+
+          <details>
+            <summary>Options</summary>
+            <div class="border bg-blue-light px-3 mt-2">
+              <div class="form-group">
+                <div class="form-group-header">
+                  <label for="example-select">Emit format</label>
+                </div>
+                <div class="form-group-body">
+                  <select
+                    id="emit-format"
+                    name="emit-mode"
+                    class="form-select"
+                    v-model="emitFormat"
+                  >
+                    <option
+                      v-for="option in emitFormatOptions"
+                      v-bind:value="option"
+                    >
+                      {{ option }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-checkbox">
+                <label>
+                  <input
+                    id="parse-only"
+                    name="parse-only"
+                    type="checkbox"
+                    class="form-checkbox-details-trigger"
+                    v-model="parseOnly"
+                  />
+                  Parse only
+                  <span class="form-checkbox-details text-normal ml-4">
+                    <label>
+                      <input
+                        id="expr-pat"
+                        name="expr-pat"
+                        type="checkbox"
+                        v-model="exprPat"
+                      />
+                      Parse expression pattern
+                    </label>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </details>
+        </form>
+
+        <button
+          type="submit"
+          class="btn btn-md btn-primary"
+          v-on:click="runSlide"
+        >
+          slide!
+        </button>
+
+        <h2>Output</h2>
+        <pre><pre id="slide-output" class="inner" v-html="output"><code></code></pre></pre>
+      </article>
+    </div>
 
     <script type="module">
       import init, { run_slide_wasm } from "./js/slide.js";

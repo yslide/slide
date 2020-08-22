@@ -21,7 +21,10 @@ plugins.
 
 ## Usage
 
-slide is ready for very early use. Binaries can be downloaded from the [repository
+slide is ready for very early use. The easiest way to try out slide is via our
+[web UI](https://yslide.github.io).
+
+Binaries can be downloaded from the [repository
 releases](https://github.com/yslide/slide/releases) or installed with `cargo`:
 
 ```

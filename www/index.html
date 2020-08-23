@@ -83,10 +83,8 @@
         <div class="pagehead">
           <h1 class="d-flex flex-row flex-items-center">
             <a href="https://github.com/yslide/slide">slide</a>
-            <a
-              href="https://github.com/yslide/slide/commit/831651"
-              class="ml-2 mt-2 Label Label--green"
-              >831651</a
+            <a v-bind:href="commitUrl" class="ml-2 mt-2 Label Label--green"
+              >{{ commit.substring(0, 6) }}</a
             >
           </h1>
         </div>
@@ -162,6 +160,7 @@
 
         <h2>Output</h2>
         <pre><pre id="slide-output" class="inner" v-html="output"><code></code></pre></pre>
+        <a v-bind:href="bugReportUrl" v-if="ranOnce">Report a bug</a>
       </article>
     </div>
 
@@ -178,6 +177,8 @@
       ansi.use_classes = true;
 
       const DEFAULT_EXAMPLE = "x(x + 2 * 3) / (x + 6)";
+      const BASE_ISSUE_URL = "https://github.com/yslide/slide/issues/new";
+
       const queryParams = new URLSearchParams(window.location.search);
       const input = queryParams.get("input")
         ? LZString.decompressFromEncodedURIComponent(queryParams.get("input"))
@@ -189,12 +190,20 @@
       new Vue({
         el: "#app",
         data: {
+          commit: "d7638020131347361ea31d98fe571337845b3661",
           input,
           output: "",
           emitFormatOptions: ["pretty", "s-expression", "debug"],
           emitFormat,
           parseOnly,
-          exprPat
+          exprPat,
+          bugReportUrl: BASE_ISSUE_URL,
+          ranOnce: false
+        },
+        computed: {
+          commitUrl() {
+            return `https://github.com/yslide/slide/commit/${this.commit}`;
+          }
         },
         created() {
           document.querySelector("#slide-input").innerText = this.input;
@@ -235,6 +244,44 @@
             const { stdout, stderr } = run_slide_wasm(slideOpts);
 
             this.output = ansi.ansi_to_html(`${stdout}${stderr}`);
+            this.ranOnce = true;
+            this.updateUrl();
+            this.updateBugReportUrl(slideOpts);
+          },
+
+          updateBugReportUrl(slideOpts) {
+            const optsStr = JSON.stringify(
+              slideOpts,
+              ["emit_format", "parse_only", "expr_pat"],
+              2
+            );
+            const body = `[slide playground](${window.location})
+
+Given the input
+
+\`\`\`
+${this.input}
+\`\`\`
+
+slide emits
+
+<pre>${this.output}</pre>
+
+with the options
+
+\`\`\`json
+${optsStr}
+\`\`\`
+
+on commit ${this.commit}.
+
+## Expected result
+
+<!-- Fill in this part! -->`;
+
+            const queryParams = new URLSearchParams();
+            queryParams.set("body", body);
+            this.bugReportUrl = `${BASE_ISSUE_URL}?${queryParams}`;
           }
         }
       });

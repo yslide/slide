@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# Builds the slide web UI.
+#
+# Usage:
+#       scripts/build_www
+
+scripts/build_wasm
+
+COMMIT_TAG="$(git log --format=%H -1)"
+sed -i '' "s/commit: \".*\",/commit: \"$COMMIT_TAG\",/g" www/index.html
+
+rm www/js/.gitignore
+rm www/js/package.json

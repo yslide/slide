@@ -63,14 +63,7 @@ after_success:
         cargo doc --document-private-items
       elif [ "$CHANNEL" == "nightly" ]; then
         export DEPLOY_UI=1
-        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-        scripts/build_wasm
-        rm www/js/.gitignore
-        rm www/js/package.json
-        OLD_COMMIT_TAG=$([[ $(cat www/index.html) =~ slide/commit/([a-zA-Z0-9]*) ]] && \
-                         echo ${BASH_REMATCH[1]})
-        COMMIT_TAG=$(git log --format=%h -1)
-        sed -i '' "s/$OLD_COMMIT_TAG/$COMMIT_TAG/g" www/index.html
+        scripts/build_www
       fi
     fi
     if [ ! -z "$TRAVIS_TAG" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then

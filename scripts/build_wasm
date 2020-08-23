@@ -9,8 +9,12 @@
 #       --watch   recompile on changes to slide rust code
 # 
 # Dependencies:
-#       wasm-pack
+#       wasm-pack (installs if missing)
 #       cargo-watch (optional, for --watch)
+
+if ! command -v wasm-pack &> /dev/null; then
+  curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+fi
 
 CMD="wasm-pack build --no-typescript --release -t web -d ../www/js slide -- --features=wasm && rm www/LICENSE"
 

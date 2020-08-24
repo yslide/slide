@@ -8,7 +8,7 @@ xar = (1 + 10 / [2])
 ===in
 
 ~~~stdout
-xar = \left\(1 + 10 / \left\[2\right\]\right\)
+$xar = \left\(1 + 10 / \left\[2\right\]\right\)$
 ~~~stdout
 
 ~~~stderr

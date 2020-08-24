@@ -8,7 +8,7 @@
 ===in
 
 ~~~stdout
-\left\(a + 0\right\) - a
+$\left\(a + 0\right\) - a$
 ~~~stdout
 
 ~~~stderr

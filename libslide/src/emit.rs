@@ -43,11 +43,15 @@ where
     Self: fmt::Display + fmt::Debug,
 {
     /// Emit `self` with the given [EmitFormat][EmitFormat].
+    ///
+    /// NB: This is a multiplexer of the corresponding `emit_` methods present on [Emit][Emit],
+    /// except for [EmitFormat::Latex][EmitFormat::Latex], which is emitted via
+    /// [emit_wrapped_latex][EmitFormat::emit_wrapped_latex].
     fn emit(&self, form: EmitFormat) -> String {
         match form {
             EmitFormat::Pretty => self.emit_pretty(),
             EmitFormat::SExpression => self.emit_s_expression(),
-            EmitFormat::Latex => self.emit_latex(),
+            EmitFormat::Latex => self.emit_wrapped_latex(),
             EmitFormat::Debug => self.emit_debug(),
         }
     }
@@ -67,6 +71,11 @@ where
 
     /// Emit `self` with the [LaTeX emit format][EmitFormat::Latex]
     fn emit_latex(&self) -> String;
+
+    /// Same as [emit_latex][Emit::emit_latex], but wraps the latex code in inline math mode.
+    fn emit_wrapped_latex(&self) -> String {
+        format!("${}$", self.emit_latex())
+    }
 }
 
 #[inline]
@@ -218,7 +227,15 @@ impl Emit for BinaryOperator {
     }
 
     fn emit_latex(&self) -> String {
-        self.emit_pretty()
+        match self {
+            Self::Plus => "+",
+            Self::Minus => "-",
+            Self::Mult => "*",
+            Self::Div => "/",
+            Self::Mod => "\\mod",
+            Self::Exp => "^",
+        }
+        .to_owned()
     }
 }
 

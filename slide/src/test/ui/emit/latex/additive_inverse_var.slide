@@ -8,7 +8,7 @@ a - a
 ===in
 
 ~~~stdout
-a - a
+$a - a$
 ~~~stdout
 
 ~~~stderr

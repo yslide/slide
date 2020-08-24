@@ -8,7 +8,7 @@
 ===in
 
 ~~~stdout
-6 / 2 / a
+$6 / 2 / a$
 ~~~stdout
 
 ~~~stderr

@@ -8,7 +8,7 @@
 ===in
 
 ~~~stdout
-\left\[1 + \left\(5 / 10\right\)\right\] + 2
+$\left\[1 + \left\(5 / 10\right\)\right\] + 2$
 ~~~stdout
 
 ~~~stderr

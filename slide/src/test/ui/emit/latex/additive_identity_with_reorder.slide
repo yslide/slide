@@ -8,7 +8,7 @@
 ===in
 
 ~~~stdout
-0 + a + 0
+$0 + a + 0$
 ~~~stdout
 
 ~~~stderr

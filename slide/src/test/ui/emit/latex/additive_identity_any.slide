@@ -8,7 +8,7 @@
 ===in
 
 ~~~stdout
-\left\(a * b\right\) + 0
+$\left\(a * b\right\) + 0$
 ~~~stdout
 
 ~~~stderr

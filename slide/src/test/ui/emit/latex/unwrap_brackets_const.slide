@@ -8,7 +8,7 @@
 ===in
 
 ~~~stdout
-\left\[1\right\]
+$\left\[1\right\]$
 ~~~stdout
 
 ~~~stderr

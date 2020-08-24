@@ -8,7 +8,7 @@ a + 1 - 1
 ===in
 
 ~~~stdout
-a + 1 - 1
+$a + 1 - 1$
 ~~~stdout
 
 ~~~stderr

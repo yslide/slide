@@ -8,7 +8,7 @@
 ===in
 
 ~~~stdout
-$\left\(a * b\right\) - \left\(a * b\right\)$
+$\left(a * b\right) - \left(a * b\right)$
 ~~~stdout
 
 ~~~stderr

@@ -159,6 +159,14 @@
         </button>
 
         <h2>Output</h2>
+        <div>
+          <img
+            v-bind:src="latexEmitImgUrl"
+            alt="Latex emit"
+            v-show="showLatexEmitImg"
+            class="mb-2 ml-3"
+          />
+        </div>
         <pre><pre id="slide-output" class="inner" v-html="output"><code></code></pre></pre>
         <a v-bind:href="bugReportUrl" v-if="ranOnce">Report a bug</a>
       </article>
@@ -193,12 +201,14 @@
           commit: "d7638020131347361ea31d98fe571337845b3661",
           input,
           output: "",
-          emitFormatOptions: ["pretty", "s-expression", "debug"],
+          emitFormatOptions: ["pretty", "latex", "s-expression", "debug"],
           emitFormat,
           parseOnly,
           exprPat,
           bugReportUrl: BASE_ISSUE_URL,
-          ranOnce: false
+          ranOnce: false,
+          latexEmitImgUrl: "",
+          showLatexEmitImg: false
         },
         computed: {
           commitUrl() {
@@ -241,12 +251,13 @@
               color: true
             };
 
-            const { stdout, stderr } = run_slide_wasm(slideOpts);
+            const { code, stdout, stderr } = run_slide_wasm(slideOpts);
 
             this.output = ansi.ansi_to_html(`${stdout}${stderr}`);
             this.ranOnce = true;
             this.updateUrl();
             this.updateBugReportUrl(slideOpts);
+            this.updateLatexEmitImg(code);
           },
 
           updateBugReportUrl(slideOpts) {
@@ -282,6 +293,15 @@ on commit ${this.commit}.
             const queryParams = new URLSearchParams();
             queryParams.set("body", body);
             this.bugReportUrl = `${BASE_ISSUE_URL}?${queryParams}`;
+          },
+
+          updateLatexEmitImg(code) {
+            this.showLatexEmitImg = code === 0 && this.emitFormat === "latex";
+            if (this.showLatexEmitImg) {
+              // slice(1, -1) to strip inline math mode: $<expr>$
+              const latex = encodeURIComponent(this.output.slice(1, -1));
+              this.latexEmitImgUrl = `https://latex.codecogs.com/gif.latex?${latex}`;
+            }
           }
         }
       });

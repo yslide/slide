@@ -1,7 +1,10 @@
 //! The primary libslide IR.
 
+#[macro_use]
+mod intern;
 mod pattern;
 mod transformer;
+pub use intern::*;
 pub use pattern::*;
 pub use transformer::*;
 
@@ -10,7 +13,6 @@ use crate::scanner::types::{Token, TokenType};
 
 use core::cmp::Ordering;
 use core::convert::TryFrom;
-use std::rc::Rc;
 
 /// Describes a top-level item in the libslide grammar.
 pub trait Grammar
@@ -19,33 +21,16 @@ where
 {
 }
 
-pub trait Expression
-where
-    Self: Emit + From<BinaryExpr<Self>> + From<UnaryExpr<Self>> + Ord,
-{
-    /// Returns whether the expression is a statically-evaluatable constant.
-    fn is_const(&self) -> bool;
-
-    /// Paranthesizes `inner`.
-    fn paren(inner: Rc<Self>) -> Self;
-
-    /// Brackets `inner`.
-    fn bracket(inner: Rc<Self>) -> Self;
-
-    /// Returns an empty expression.
-    fn empty() -> Self;
-}
-
 #[derive(Clone, Debug)]
 pub enum Stmt {
-    Expr(Expr),
+    Expr(InternedExpr),
     Assignment(Assignment),
 }
 
 impl Grammar for Stmt {}
 
-impl From<Expr> for Stmt {
-    fn from(expr: Expr) -> Self {
+impl From<InternedExpr> for Stmt {
+    fn from(expr: InternedExpr) -> Self {
         Stmt::Expr(expr)
     }
 }
@@ -59,23 +44,22 @@ impl From<Assignment> for Stmt {
 #[derive(Clone, Debug)]
 pub struct Assignment {
     pub var: String,
-    pub rhs: Rc<Expr>,
+    pub rhs: InternedExpr,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Expr {
     Const(f64),
     Var(String),
-    BinaryExpr(BinaryExpr<Self>),
-    UnaryExpr(UnaryExpr<Self>),
+    BinaryExpr(BinaryExpr<InternedExpr>),
+    UnaryExpr(UnaryExpr<InternedExpr>),
     /// An expression wrapped in parentheses
-    Parend(Rc<Self>),
+    Parend(InternedExpr),
     /// An expression wrapped in brackets
-    Bracketed(Rc<Self>),
+    Bracketed(InternedExpr),
 }
 
 impl Grammar for Expr {}
-impl Grammar for Rc<Expr> {}
 
 impl Expr {
     pub fn complexity(&self) -> u8 {
@@ -159,44 +143,21 @@ impl core::hash::Hash for Expr {
     }
 }
 
-impl Expression for Expr {
-    #[inline]
-    fn is_const(&self) -> bool {
-        matches!(self, Self::Const(_))
-    }
-
-    #[inline]
-    fn paren(inner: Rc<Self>) -> Self {
-        Self::Parend(inner)
-    }
-
-    #[inline]
-    fn bracket(inner: Rc<Self>) -> Self {
-        Self::Bracketed(inner)
-    }
-
-    #[inline]
-    fn empty() -> Self {
-        // Variables must be named, so we can encode an unnamed variable as an empty expression.
-        Expr::Var(String::new())
-    }
-}
-
 impl From<f64> for Expr {
     fn from(f: f64) -> Self {
         Self::Const(f)
     }
 }
 
-impl From<BinaryExpr<Self>> for Expr {
-    fn from(binary_expr: BinaryExpr<Self>) -> Self {
-        Self::BinaryExpr(binary_expr)
+impl From<BinaryExpr<InternedExpr>> for InternedExpr {
+    fn from(binary_expr: BinaryExpr<InternedExpr>) -> Self {
+        intern_expr!(Expr::BinaryExpr(binary_expr))
     }
 }
 
-impl From<UnaryExpr<Self>> for Expr {
-    fn from(unary_expr: UnaryExpr<Self>) -> Self {
-        Self::UnaryExpr(unary_expr)
+impl From<UnaryExpr<InternedExpr>> for InternedExpr {
+    fn from(unary_expr: UnaryExpr<InternedExpr>) -> Self {
+        intern_expr!(Expr::UnaryExpr(unary_expr))
     }
 }
 
@@ -241,10 +202,10 @@ impl TryFrom<&Token> for BinaryOperator {
 }
 
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
-pub struct BinaryExpr<E: Expression> {
+pub struct BinaryExpr<E: InternedExpression> {
     pub op: BinaryOperator,
-    pub lhs: Rc<E>,
-    pub rhs: Rc<E>,
+    pub lhs: E,
+    pub rhs: E,
 }
 
 macro_rules! mkop {
@@ -252,8 +213,8 @@ macro_rules! mkop {
     $(
         pub fn $op_name<T, U>(lhs: T, rhs: U) -> Self
         where
-            T: Into<Rc<E>>,
-            U: Into<Rc<E>>,
+            T: Into<E>,
+            U: Into<E>,
         {
             Self {
                 op: $binop,
@@ -267,7 +228,7 @@ macro_rules! mkop {
 
 impl<E> BinaryExpr<E>
 where
-    E: Expression,
+    E: InternedExpression,
 {
     mkop! {
         mult: BinaryOperator::Mult
@@ -278,7 +239,7 @@ where
 
 impl<E> PartialOrd for BinaryExpr<E>
 where
-    E: Expression,
+    E: InternedExpression,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -287,7 +248,7 @@ where
 
 impl<E> Ord for BinaryExpr<E>
 where
-    E: Expression,
+    E: InternedExpression,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.op != other.op {
@@ -320,18 +281,18 @@ impl TryFrom<&Token> for UnaryOperator {
 }
 
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
-pub struct UnaryExpr<E: Expression> {
+pub struct UnaryExpr<E: InternedExpression> {
     pub op: UnaryOperator,
-    pub rhs: Rc<E>,
+    pub rhs: E,
 }
 
 impl<E> UnaryExpr<E>
 where
-    E: Expression,
+    E: InternedExpression,
 {
     pub fn negate<T>(expr: T) -> Self
     where
-        T: Into<Rc<E>>,
+        T: Into<E>,
     {
         Self {
             op: UnaryOperator::SignNegative,
@@ -342,7 +303,7 @@ where
 
 impl<E> PartialOrd for UnaryExpr<E>
 where
-    E: Expression,
+    E: InternedExpression,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -351,11 +312,11 @@ where
 
 impl<E> Ord for UnaryExpr<E>
 where
-    E: Expression,
+    E: InternedExpression,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.op.cmp(&other.op) {
-            Ordering::Equal => self.rhs.as_ref().cmp(&other.rhs.as_ref()),
+            Ordering::Equal => self.rhs.cmp(&other.rhs),
             ord => ord,
         }
     }

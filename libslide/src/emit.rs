@@ -3,7 +3,6 @@
 use crate::grammar::*;
 
 use core::fmt;
-use std::rc::Rc;
 
 /// The format in which a slide grammar should be emitted.
 #[derive(Copy, Clone)]
@@ -85,7 +84,7 @@ macro_rules! fmt_emit_impl {
     ($S:path) => {
         impl core::fmt::Display for $S {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                write!(f, "{}", self.emit_pretty(),)
+                write!(f, "{}", self.emit_pretty())
             }
         }
     };
@@ -189,20 +188,6 @@ impl Emit for Expr {
     }
 }
 
-impl Emit for Rc<Expr> {
-    fn emit_pretty(&self) -> String {
-        self.as_ref().emit_pretty()
-    }
-
-    fn emit_s_expression(&self) -> String {
-        self.as_ref().emit_s_expression()
-    }
-
-    fn emit_latex(&self) -> String {
-        self.as_ref().emit_latex()
-    }
-}
-
 fmt_emit_impl!(BinaryOperator);
 impl Emit for BinaryOperator {
     fn emit_pretty(&self) -> String {
@@ -265,9 +250,9 @@ macro_rules! format_binary_operand {
 }
 
 macro_rules! display_binary_expr {
-    (<$expr:ident>) => {
-        fmt_emit_impl!(BinaryExpr<$expr>);
-        impl Emit for BinaryExpr<$expr> {
+    ($iexpr:ident, $expr:ident) => {
+        fmt_emit_impl!(BinaryExpr<$iexpr>);
+        impl Emit for BinaryExpr<$iexpr> {
             fn emit_pretty(&self) -> String {
                 format!(
                     "{} {} {}",
@@ -288,8 +273,8 @@ macro_rules! display_binary_expr {
         }
     };
 }
-display_binary_expr!(<Expr>);
-display_binary_expr!(<ExprPat>);
+display_binary_expr!(InternedExpr, Expr);
+display_binary_expr!(InternedExprPat, ExprPat);
 
 fmt_emit_impl!(UnaryOperator);
 impl Emit for UnaryOperator {
@@ -307,11 +292,11 @@ impl Emit for UnaryOperator {
 }
 
 macro_rules! display_unary_expr {
-    (<$expr:ident>) => {
-        fmt_emit_impl!(UnaryExpr<$expr>);
-        impl Emit for UnaryExpr<$expr> {
+    ($iexpr:ident, $expr:ident) => {
+        fmt_emit_impl!(UnaryExpr<$iexpr>);
+        impl Emit for UnaryExpr<$iexpr> {
             fn emit_pretty(&self) -> String {
-                let format_arg = |arg: &Rc<$expr>| match arg.as_ref() {
+                let format_arg = |arg: &$iexpr| match arg.as_ref() {
                     $expr::BinaryExpr(l) => format!("({})", l),
                     expr => expr.emit_pretty(),
                 };
@@ -319,7 +304,7 @@ macro_rules! display_unary_expr {
             }
 
             fn emit_latex(&self) -> String {
-                let format_arg = |arg: &Rc<$expr>| match arg.as_ref() {
+                let format_arg = |arg: &$iexpr| match arg.as_ref() {
                     $expr::BinaryExpr(l) => latex_wrap!((l)),
                     expr => expr.emit_latex(),
                 };
@@ -328,8 +313,8 @@ macro_rules! display_unary_expr {
         }
     };
 }
-display_unary_expr!(<Expr>);
-display_unary_expr!(<ExprPat>);
+display_unary_expr!(InternedExpr, Expr);
+display_unary_expr!(InternedExprPat, ExprPat);
 
 fmt_emit_impl!(ExprPat);
 impl Emit for ExprPat {
@@ -374,19 +359,5 @@ impl Emit for ExprPat {
             Self::Parend(inner) => latex_wrap!((inner.emit_latex())),
             Self::Bracketed(inner) => latex_wrap!([inner.emit_latex()]),
         }
-    }
-}
-
-impl Emit for Rc<ExprPat> {
-    fn emit_pretty(&self) -> String {
-        self.as_ref().emit_pretty()
-    }
-
-    fn emit_s_expression(&self) -> String {
-        self.as_ref().emit_s_expression()
-    }
-
-    fn emit_latex(&self) -> String {
-        self.as_ref().emit_latex()
     }
 }

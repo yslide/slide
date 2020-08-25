@@ -8,7 +8,7 @@
 ===in
 
 ~~~stdout
-$+\left\(b + c\right\)$
+$+\left(b + c\right)$
 ~~~stdout
 
 ~~~stderr

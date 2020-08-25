@@ -15,7 +15,7 @@ pub enum EmitFormat {
     /// For example, `1+1` is output as `(+ 1 1)`.
     SExpression,
     /// LaTeX output form.
-    /// For example, `(1 + 1)` is output as `\left\(1 + 1\right\)`.
+    /// For example, `(1 + 1)` is output as `\left(1 + 1\right)`.
     /// NB: this is not yet implemented.
     Latex,
     /// Slide internal debug form.
@@ -111,10 +111,10 @@ macro_rules! normal_wrap {
 
 macro_rules! latex_wrap {
     (($expr:expr)) => {
-        format!("\\left\\({}\\right\\)", $expr)
+        format!("\\left({}\\right)", $expr)
     };
     ([$expr:expr]) => {
-        format!("\\left\\[{}\\right\\]", $expr)
+        format!("\\left[{}\\right]", $expr)
     };
 }
 

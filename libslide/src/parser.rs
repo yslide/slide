@@ -17,12 +17,11 @@ use crate::scanner::types::{Token, TokenType as TT};
 use crate::utils::PeekIter;
 
 use core::convert::TryFrom;
-use std::rc::Rc;
 
 macro_rules! binary_expr_parser {
     ($self:ident $($name:ident: lhs=$lhs_term:ident, rhs=$rhs_term:ident, op=[$($matching_op:tt)+])*) => {
         $(
-        fn $name(&mut $self) -> Rc<Self::Expr> {
+        fn $name(&mut $self) -> Self::Expr {
             use BinaryOperator::*;
 
             let mut lhs = $self.$lhs_term();
@@ -31,12 +30,11 @@ macro_rules! binary_expr_parser {
                 match op {
                     $($matching_op)+ => {
                         $self.next();
-                        let bin_expr = BinaryExpr{
+                        lhs = BinaryExpr {
                             op,
                             lhs,
                             rhs: $self.$rhs_term(),
                         }.into();
-                        lhs = $self.finish_expr(bin_expr);
                     }
                     _ => break,
                 }
@@ -81,7 +79,7 @@ fn extra_tokens_diag(extra_tokens: &mut PeekIter<Token>) -> Diagnostic {
 trait Parser<T>
 where
     T: Grammar,
-    Self::Expr: Expression + Clone,
+    Self::Expr: InternedExpression,
 {
     type Expr;
 
@@ -109,7 +107,6 @@ where
         }
         expr
     }
-    fn finish_expr(&mut self, expr: Self::Expr) -> Rc<Self::Expr>;
     fn push_diag(&mut self, diagnostic: Diagnostic);
 
     // Default parsing implementations.
@@ -121,7 +118,7 @@ where
     }
 
     #[inline]
-    fn expr(&mut self) -> Rc<Self::Expr> {
+    fn expr(&mut self) -> Self::Expr {
         self.add_sub_term()
     }
 
@@ -152,7 +149,7 @@ where
         exp_term:            lhs = num_term,            rhs = exp_term,            op = [Exp]
     );
 
-    fn num_term(&mut self) -> Rc<Self::Expr> {
+    fn num_term(&mut self) -> Self::Expr {
         let tok = self.next();
         if matches!(tok.ty, TT::EOF) {
             self.push_diag(Diagnostic::span_err(
@@ -160,7 +157,7 @@ where
                 "Expected an expression, found end of file",
                 Some("expected an expression".into()),
             ));
-            return self.finish_expr(Self::Expr::empty());
+            return Self::Expr::empty();
         }
 
         let node = if let Ok(op) = UnaryOperator::try_from(&tok) {
@@ -184,7 +181,7 @@ where
                         format!("Expected an expression, found `{}`", tok.to_string()),
                         Some("expected an expression".into()),
                     ));
-                    return self.finish_expr(Self::Expr::empty());
+                    Self::Expr::empty()
                 }
             }
         };
@@ -205,7 +202,7 @@ where
             _ => {}
         }
 
-        self.finish_expr(node)
+        node
     }
 }
 

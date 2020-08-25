@@ -3,13 +3,10 @@ use crate::common::Span;
 use crate::diagnostics::Diagnostic;
 use crate::grammar::*;
 use crate::scanner::types::Token;
-use crate::utils::{hash, PeekIter};
-
-use std::collections::HashMap;
-use std::rc::Rc;
+use crate::utils::PeekIter;
 
 /// Parses a tokenized slide expression pattern, emitting the result and any diagnostics.
-pub fn parse(input: Vec<Token>) -> (Rc<ExprPat>, Vec<Diagnostic>) {
+pub fn parse(input: Vec<Token>) -> (InternedExprPat, Vec<Diagnostic>) {
     let mut parser = ExpressionPatternParser::new(input);
     (parser.parse(), parser.diagnostics)
 }
@@ -17,20 +14,15 @@ pub fn parse(input: Vec<Token>) -> (Rc<ExprPat>, Vec<Diagnostic>) {
 pub struct ExpressionPatternParser {
     _input: PeekIter<Token>,
     diagnostics: Vec<Diagnostic>,
-    // We use an untyped hash here because we don't want to clone an Expr into the map in case it's
-    // already there when using an entry API.
-    // TODO: replace with Expr when raw_entry API is stabilized (see rust#56167)
-    seen: HashMap<u64, Rc<ExprPat>>,
 }
 
-impl Parser<Rc<ExprPat>> for ExpressionPatternParser {
-    type Expr = ExprPat;
+impl Parser<InternedExprPat> for ExpressionPatternParser {
+    type Expr = InternedExprPat;
 
     fn new(input: Vec<Token>) -> Self {
         Self {
             _input: PeekIter::new(input.into_iter()),
             diagnostics: vec![],
-            seen: HashMap::new(),
         }
     }
 
@@ -42,7 +34,7 @@ impl Parser<Rc<ExprPat>> for ExpressionPatternParser {
         self.diagnostics.push(diagnostic);
     }
 
-    fn parse(&mut self) -> Rc<ExprPat> {
+    fn parse(&mut self) -> InternedExprPat {
         let parsed = self.expr();
         if !self.done() {
             let extra_tokens_diag = extra_tokens_diag(self.input());
@@ -52,7 +44,7 @@ impl Parser<Rc<ExprPat>> for ExpressionPatternParser {
     }
 
     fn parse_float(&mut self, f: f64, _span: Span) -> Self::Expr {
-        Self::Expr::Const(f)
+        intern_expr_pat!(ExprPat::Const(f))
     }
 
     fn parse_variable(&mut self, name: String, span: Span) -> Self::Expr {
@@ -67,27 +59,19 @@ impl Parser<Rc<ExprPat>> for ExpressionPatternParser {
                 name = name,
             )),
         );
-        Self::Expr::VarPat(name)
+        intern_expr_pat!(ExprPat::VarPat(name))
     }
 
     fn parse_var_pattern(&mut self, name: String, _span: Span) -> Self::Expr {
-        Self::Expr::VarPat(name)
+        intern_expr_pat!(ExprPat::VarPat(name))
     }
 
     fn parse_const_pattern(&mut self, name: String, _span: Span) -> Self::Expr {
-        Self::Expr::ConstPat(name)
+        intern_expr_pat!(ExprPat::ConstPat(name))
     }
 
     fn parse_any_pattern(&mut self, name: String, _span: Span) -> Self::Expr {
-        Self::Expr::AnyPat(name)
-    }
-
-    fn finish_expr(&mut self, expr: Self::Expr) -> Rc<Self::Expr> {
-        let p = self
-            .seen
-            .entry(hash(&expr))
-            .or_insert_with(|| Rc::new(expr));
-        Rc::clone(p)
+        intern_expr_pat!(ExprPat::AnyPat(name))
     }
 }
 

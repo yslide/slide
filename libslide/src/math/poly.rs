@@ -1,13 +1,12 @@
 #![allow(clippy::should_implement_trait)]
 
-use crate::grammar::{BinaryExpr, BinaryOperator, Expr, Expression};
+use crate::grammar::{BinaryExpr, BinaryOperator, Expr, InternedExpr, InternedExpression};
 use crate::math::gcd;
 use crate::partial_evaluator::flatten::flatten_expr;
 use crate::utils::{get_flattened_binary_args, unflatten_binary_expr, UnflattenStrategy};
 
 use core::cmp::max;
 use std::collections::{HashMap, HashSet};
-use std::rc::Rc;
 
 /// A polynomial in integer space Z.
 /// TODO: Currently, this container only services polynomials with non-negative degrees.
@@ -309,24 +308,24 @@ impl Poly {
     /// from_expr("x^{-2}", None) == None
     /// ```
     pub fn from_expr(
-        expr: &Rc<Expr>,
-        relative_to: Option<&Rc<Expr>>,
-    ) -> Result<(Self, Option<Rc<Expr>>), String> {
+        expr: InternedExpr,
+        relative_to: Option<InternedExpr>,
+    ) -> Result<(Self, Option<InternedExpr>), String> {
         // First, let's try to flatten the expression which will automatically combine terms for
         // us. If the expr is an addition or subtraction, this will also normalize it to an
         // addition.
-        let expr = flatten_expr(&Rc::clone(expr));
+        let expr = flatten_expr(expr);
         // Next, let's unroll the addition into its individual polynomial parts.
         // TODO: we should really rename this, it overlaps with `flatten_expr`.
         // TODO: we can more efficient by getting the unrolled args during flattening, skipping
         //       this step
         let poly_parts = get_flattened_binary_args(expr, BinaryOperator::Plus);
 
-        let mut uniq_terms = HashSet::<&Rc<Expr>>::new();
+        let mut uniq_terms = HashSet::<InternedExpr>::new();
         // Polynomial degree -> coefficient for that term
         let mut degree_coeffs = HashMap::<usize, isize>::new();
         if let Some(ref term) = relative_to {
-            uniq_terms.insert(term);
+            uniq_terms.insert(*term);
         }
         let mut konst_f64 = 0.;
         for poly_part in poly_parts.iter() {
@@ -350,7 +349,7 @@ impl Poly {
                     }
 
                     // Get the raw term and exponent.
-                    let (term, pow) = term_and_pow_from_expr(term)?;
+                    let (term, pow) = term_and_pow_from_expr(*term)?;
 
                     degree_coeffs.insert(pow, coeff);
                     uniq_terms.insert(term);
@@ -358,7 +357,7 @@ impl Poly {
 
                 // TODO: we should probably be smarter with other terms, and even multiplication.
                 _ => {
-                    let (term, pow) = term_and_pow_from_expr(poly_part)?;
+                    let (term, pow) = term_and_pow_from_expr(*poly_part)?;
                     // We couldn't unroll the coefficient in the above match, so make it one here.
                     degree_coeffs.insert(pow, 1);
                     uniq_terms.insert(term);
@@ -393,10 +392,7 @@ impl Poly {
                 for (pow, coeff) in degree_coeffs.into_iter() {
                     poly[pow] = coeff;
                 }
-                Ok((
-                    Self::new(poly),
-                    uniq_terms.into_iter().next().map(Rc::clone),
-                ))
+                Ok((Self::new(poly), uniq_terms.into_iter().next()))
             }
         }
     }
@@ -408,31 +404,31 @@ impl Poly {
     /// ```ignore
     /// poly![1, 2, 3].to_expr("x") == "3 * (x ^ 2) + 2 * x + 1"
     /// ```
-    pub fn to_expr(&self, relative_to: &Rc<Expr>) -> Rc<Expr> {
+    pub fn to_expr(&self, relative_to: InternedExpr) -> InternedExpr {
         let mut terms = Vec::with_capacity(self.vec.len());
         for (pow, coeff) in self.vec.iter().enumerate() {
             let term = match coeff {
                 0 => {
                     continue;
                 }
-                1 => Rc::clone(relative_to),
-                _ => Rc::new(Expr::BinaryExpr(BinaryExpr::mult(
+                1 => relative_to,
+                _ => intern_expr!(Expr::BinaryExpr(BinaryExpr::mult(
                     Expr::Const(*coeff as f64),
-                    Rc::clone(relative_to),
+                    relative_to,
                 ))),
             };
 
             terms.push(match pow {
-                0 => Rc::new(Expr::Const(*coeff as f64)),
+                0 => intern_expr!(Expr::Const(*coeff as f64)),
                 1 => term,
-                _ => Rc::new(Expr::BinaryExpr(BinaryExpr::exp(
+                _ => intern_expr!(Expr::BinaryExpr(BinaryExpr::exp(
                     term,
-                    Rc::new(Expr::Const(pow as f64)),
+                    intern_expr!(Expr::Const(pow as f64)),
                 ))),
             });
         }
         if terms.is_empty() {
-            return Rc::new(Expr::Const(0.));
+            return intern_expr!(Expr::Const(0.));
         }
 
         unflatten_binary_expr(
@@ -445,7 +441,7 @@ impl Poly {
 
 /// Gets the term and power of an expression.
 /// Returns None if the power is not a positive integer.
-fn term_and_pow_from_expr(expr: &Rc<Expr>) -> Result<(&Rc<Expr>, usize), String> {
+fn term_and_pow_from_expr(expr: InternedExpr) -> Result<(InternedExpr, usize), String> {
     match expr.as_ref() {
         Expr::BinaryExpr(BinaryExpr {
             op: BinaryOperator::Exp,
@@ -458,7 +454,7 @@ fn term_and_pow_from_expr(expr: &Rc<Expr>) -> Result<(&Rc<Expr>, usize), String>
                 // And we only support integer powers in the polynomial.
                 return Err(format!("Expected a positive term degree for {}", expr));
             }
-            Ok((term, pow))
+            Ok((*term, pow))
         }
         // If there is no explicit exponentiation, just treat the whole expression
         // as a term.
@@ -566,9 +562,9 @@ mod test {
                 let expr = parse_expr!($expr);
                 let relative: Option<&str> = $relative;
                 let has_relative = relative.is_some();
-                let rel = relative.map(|r: &str| parse_expr!(r)).unwrap_or(Rc::new(Expr::empty()));
-                let rel_opt = if has_relative { Some(&rel) } else { None };
-                let poly = Poly::from_expr(&expr, rel_opt).ok().map(|(p, t)| (p, t.map(|expr| expr.to_string())));
+                let rel = relative.map(|r: &str| parse_expr!(r)).unwrap_or(InternedExpr::empty());
+                let rel_opt = if has_relative { Some(rel) } else { None };
+                let poly = Poly::from_expr(expr, rel_opt).ok().map(|(p, t)| (p, t.map(|expr| expr.to_string())));
                 assert_eq!(poly, $expected);
             }
         )*
@@ -598,7 +594,7 @@ mod test {
             #[test]
             fn $case() {
                 let rel = parse_expr!($relative);
-                let expr = $poly.to_expr(&rel);
+                let expr = $poly.to_expr(rel);
                 assert_eq!(expr.to_string(), $expected);
             }
         )*

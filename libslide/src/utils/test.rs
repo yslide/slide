@@ -9,7 +9,7 @@ macro_rules! parse_expr {
         let tokens = scan($expr).tokens;
         let (parsed, _) = parse_expression(tokens);
         match parsed {
-            Stmt::Expr(expr) => Rc::new(expr),
+            Stmt::Expr(expr) => expr,
             _ => unreachable!(),
         }
     }};

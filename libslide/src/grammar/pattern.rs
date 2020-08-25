@@ -1,6 +1,4 @@
-pub use super::*;
-
-use std::rc::Rc;
+use super::*;
 
 #[derive(Clone, Debug)]
 pub enum ExprPat {
@@ -11,37 +9,13 @@ pub enum ExprPat {
     ConstPat(String),
     /// Pattern matching any expression
     AnyPat(String),
-    BinaryExpr(BinaryExpr<Self>),
-    UnaryExpr(UnaryExpr<Self>),
-    Parend(Rc<Self>),
-    Bracketed(Rc<Self>),
+    BinaryExpr(BinaryExpr<InternedExprPat>),
+    UnaryExpr(UnaryExpr<InternedExprPat>),
+    Parend(InternedExprPat),
+    Bracketed(InternedExprPat),
 }
 
 impl Grammar for ExprPat {}
-impl Grammar for Rc<ExprPat> {}
-
-impl Expression for ExprPat {
-    #[inline]
-    fn is_const(&self) -> bool {
-        matches!(self, Self::Const(_))
-    }
-
-    #[inline]
-    fn paren(inner: Rc<Self>) -> Self {
-        Self::Parend(inner)
-    }
-
-    #[inline]
-    fn bracket(inner: Rc<Self>) -> Self {
-        Self::Bracketed(inner)
-    }
-
-    #[inline]
-    fn empty() -> Self {
-        // Patterns must be named, so we can encode an unnamed pattern as an empty expression.
-        ExprPat::VarPat(String::new())
-    }
-}
 
 // TODO: We can't derive this because `f64` doesn't implement `Eq`.
 // This should be fixed by moving to a arbitrary-precision numeric type.
@@ -83,15 +57,15 @@ impl core::hash::Hash for ExprPat {
     }
 }
 
-impl From<BinaryExpr<Self>> for ExprPat {
-    fn from(binary_expr: BinaryExpr<Self>) -> Self {
-        Self::BinaryExpr(binary_expr)
+impl From<BinaryExpr<InternedExprPat>> for InternedExprPat {
+    fn from(binary_expr: BinaryExpr<InternedExprPat>) -> Self {
+        intern_expr_pat!(ExprPat::BinaryExpr(binary_expr))
     }
 }
 
-impl From<UnaryExpr<Self>> for ExprPat {
-    fn from(unary_expr: UnaryExpr<Self>) -> Self {
-        Self::UnaryExpr(unary_expr)
+impl From<UnaryExpr<InternedExprPat>> for InternedExprPat {
+    fn from(unary_expr: UnaryExpr<InternedExprPat>) -> Self {
+        intern_expr_pat!(ExprPat::UnaryExpr(unary_expr))
     }
 }
 

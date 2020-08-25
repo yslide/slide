@@ -199,6 +199,10 @@
     html_logo_url = "https://avatars1.githubusercontent.com/u/49662722?s=400&u=62119505c71017e88a2728f7a1257b3506481441&v=4"
 )]
 
+#[macro_use]
+mod grammar;
+pub use grammar::Grammar;
+
 mod common;
 pub use common::*;
 
@@ -216,8 +220,6 @@ pub use partial_evaluator::evaluate;
 pub use partial_evaluator::EvaluatorContext;
 
 mod evaluator_rules;
-mod grammar;
-pub use grammar::Grammar;
 
 mod math;
 

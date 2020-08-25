@@ -11,19 +11,18 @@ use crate::utils::{hash, normalize};
 
 use std::collections::HashSet;
 use std::error::Error;
-use std::rc::Rc;
 
 /// Evaluates an expression to as simplified a form as possible.
 /// The evaluation may be partial, as some values (like variables) may be unknown.
-pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Result<Expr, Box<dyn Error>> {
+pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Result<InternedExpr, Box<dyn Error>> {
     let mut rule_set = RuleSet::default();
     for rule in ctxt.rule_denylist {
         rule_set.remove(rule)
     }
     let built_rules = rule_set.build()?;
 
-    let mut simplified_expr: Rc<Expr> = match expr {
-        Stmt::Expr(expr) => expr.into(),
+    let mut simplified_expr: InternedExpr = match expr {
+        Stmt::Expr(expr) => expr,
         // TODO: see below
         _ => todo!("Evaluation currently only handles expressions"),
     };
@@ -33,7 +32,7 @@ pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Result<Expr, Box<dyn Erro
     let mut expr_hash = hash(&simplified_expr);
     let mut seen: HashSet<u64> = HashSet::new();
     if ctxt.always_flatten {
-        simplified_expr = flatten_expr(&simplified_expr);
+        simplified_expr = flatten_expr(simplified_expr);
     }
     while seen.insert(expr_hash) {
         for rule in &built_rules {
@@ -42,7 +41,7 @@ pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Result<Expr, Box<dyn Erro
         expr_hash = hash(&simplified_expr);
     }
 
-    Ok(normalize(simplified_expr).as_ref().clone())
+    Ok(normalize(simplified_expr))
 }
 
 #[cfg(test)]

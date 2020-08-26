@@ -1,13 +1,18 @@
 #![no_main]
 use libfuzzer_sys::fuzz_target;
-use slide::{run_slide, Opts};
+
+use std::process::Command;
 
 fuzz_target!(|program: String| {
-    run_slide(Opts {
-        program,
-        emit_format: "pretty".to_string(),
-        parse_only: true,
-        expr_pat: false,
-        color: false,
-    });
+    let mut cmd = Command::new("cargo");
+    cmd.arg("run");
+    cmd.arg("-q");
+    cmd.arg("--");
+    cmd.arg("--");
+    cmd.arg(&program);
+
+    match cmd.output().unwrap().status.code().unwrap() {
+        2 => panic!("Failed!"),
+        _ => {}
+    }
 });

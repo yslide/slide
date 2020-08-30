@@ -10,3 +10,4 @@ mod unbuilt_rule;
 
 pub use registry::RuleName;
 pub use registry::RuleSet;
+pub use rule::Rule;

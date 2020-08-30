@@ -100,7 +100,7 @@ pub fn run_slide(opts: Opts) -> SlideResult {
         return emit_tree(&parse_tree);
     }
 
-    let simplified = evaluate(parse_tree, EvaluatorContext::default()).unwrap();
+    let simplified = evaluate(parse_tree, &EvaluatorContext::default()).unwrap();
     emit_tree(&simplified)
 }
 

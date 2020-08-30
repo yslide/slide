@@ -151,8 +151,8 @@ impl RuleSet {
     }
 
     /// Remove a named rule from the rule set.
-    pub fn remove(&mut self, rule: RuleName) {
-        self.rules.remove(&rule);
+    pub fn remove(&mut self, rule: &RuleName) {
+        self.rules.remove(rule);
     }
 
     /// Insert a custom unbuilt rule into the rule set.

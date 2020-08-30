@@ -5,28 +5,36 @@ mod types;
 use flatten::flatten_expr;
 pub use types::*;
 
-use crate::evaluator_rules::RuleSet;
+use crate::evaluator_rules::{Rule, RuleSet};
 use crate::grammar::*;
 use crate::utils::{hash, normalize};
 
 use std::collections::HashSet;
 use std::error::Error;
 
-/// Evaluates an expression to as simplified a form as possible.
+/// Evaluates a statement to as simplified a form as possible.
 /// The evaluation may be partial, as some values (like variables) may be unknown.
-pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Result<InternedExpr, Box<dyn Error>> {
+pub fn evaluate(expr: Stmt, ctxt: &EvaluatorContext) -> Result<Stmt, Box<dyn Error>> {
     let mut rule_set = RuleSet::default();
-    for rule in ctxt.rule_denylist {
+    for rule in &ctxt.rule_denylist {
         rule_set.remove(rule)
     }
     let built_rules = rule_set.build()?;
 
-    let mut simplified_expr: InternedExpr = match expr {
-        Stmt::Expr(expr) => expr,
-        // TODO: see below
-        _ => todo!("Evaluation currently only handles expressions"),
-    };
+    Ok(match expr {
+        Stmt::Expr(expr) => Stmt::Expr(evaluate_expr(expr, &built_rules, &ctxt)),
+        Stmt::Assignment(Assignment { var, rhs: expr }) => Stmt::Assignment(Assignment {
+            var,
+            rhs: evaluate_expr(expr, &built_rules, &ctxt),
+        }),
+    })
+}
 
+/// Evaluates an expression to as simplified a form as possible.
+/// The evaluation may be partial, as some values (like variables) may be unknown.
+/// The returned expression is [normalized](crate::utils::grammar::normalize).
+fn evaluate_expr(expr: InternedExpr, rules: &[Rule], ctxt: &EvaluatorContext) -> InternedExpr {
+    let mut simplified_expr = expr;
     // Try simplifying the expression with a rule set until the same expression is seen again,
     // meaning we can't simplify any further or are stuck in a cycle.
     let mut expr_hash = hash(&simplified_expr);
@@ -35,13 +43,13 @@ pub fn evaluate(expr: Stmt, ctxt: EvaluatorContext) -> Result<InternedExpr, Box<
         simplified_expr = flatten_expr(simplified_expr);
     }
     while seen.insert(expr_hash) {
-        for rule in &built_rules {
+        for rule in rules {
             simplified_expr = rule.transform(simplified_expr);
         }
         expr_hash = hash(&simplified_expr);
     }
 
-    Ok(normalize(simplified_expr))
+    normalize(simplified_expr)
 }
 
 #[cfg(test)]
@@ -63,7 +71,7 @@ mod tests {
             #[test]
             fn $name() {
                 let parsed = parse($program);
-                let evaluated = evaluate(parsed.clone(), EvaluatorContext::default()).unwrap();
+                let evaluated = evaluate(parsed.clone(), &EvaluatorContext::default()).unwrap();
 
                 assert_eq!(evaluated.to_string(), $result.to_string());
             }
@@ -149,7 +157,7 @@ mod tests {
         let ctxt = EvaluatorContext::default()
             .with_denylist([RuleName::Add].to_vec())
             .always_flatten(false);
-        let evaluated = evaluate(parsed, ctxt).unwrap();
+        let evaluated = evaluate(parsed, &ctxt).unwrap();
         assert_eq!(evaluated.to_string(), "-1 + 12".to_string());
     }
 }

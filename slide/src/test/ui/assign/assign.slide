@@ -1,0 +1,14 @@
+===in
+xar = (1 + 10 / 2)
+===in
+
+~~~stdout
+xar = 6
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

@@ -53,8 +53,14 @@ jobs:
           if [[ "$FUZZ_OUT" =~ $RE_CRASH_FILE ]]; then
             FILE="${BASH_REMATCH[1]}"
             DL_CASE="$(curl --upload-file "$FILE" https://transfer.sh/hello.txt)"
+            FUZZ_OUTPUT="$(curl --upload-file "out.slide" https://transfer.sh/fuzz-output.txt)"
           fi
-          JSON="$(jq -cn --arg ec "$EC" --arg out "$FUZZ_OUT" --arg dl_case "$DL_CASE" '{ec: $ec, fuzz_out: $out, dl_case: $dl_case}')"
+          JSON="$(jq -cn \
+                --arg ec "$EC" \
+                --arg out "$FUZZ_OUT" \
+                --arg dl_case "$DL_CASE" \
+                --arg fuzz_out "$FUZZ_OUTPUT" \
+                '{ec: $ec, fuzz_out: $out, dl_case: $dl_case, fuzz_out: $fuzz_out}')"
           echo "::set-output name=matrix::$JSON"
 
       - name: Create issue
@@ -76,4 +82,7 @@ jobs:
 
             [Command run output][1]
 
-            [1]: https://github.com/yslide/slide-workflows/actions/runs/${{ github.run_id }}
+            [Fuzz output][2]
+
+            [1]: https://github.com/yslide/slide/actions/runs/${{ github.run_id }}
+            [2]: ${{ fromJson(steps.run.outputs.matrix).fuzz_out }}

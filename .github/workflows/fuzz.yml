@@ -75,7 +75,7 @@ jobs:
             Daily slide fuzzing failed. Last 30 lines of the output log are as follows:
 
             ```
-            ${{ fromJson(steps.run.outputs.matrix).fuzz_out }}
+            ${{ fromJson(steps.run.outputs.matrix).out }}
             ```
 
             Download this test case at ${{ fromJson(steps.run.outputs.matrix).dl_case }}

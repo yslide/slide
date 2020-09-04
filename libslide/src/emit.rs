@@ -45,7 +45,7 @@ where
     ///
     /// NB: This is a multiplexer of the corresponding `emit_` methods present on [Emit][Emit],
     /// except for [EmitFormat::Latex][EmitFormat::Latex], which is emitted via
-    /// [emit_wrapped_latex][EmitFormat::emit_wrapped_latex].
+    /// [emit_wrapped_latex][Emit::emit_wrapped_latex].
     fn emit(&self, form: EmitFormat) -> String {
         match form {
             EmitFormat::Pretty => self.emit_pretty(),

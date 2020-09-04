@@ -32,7 +32,7 @@ pub fn evaluate(expr: Stmt, ctxt: &EvaluatorContext) -> Result<Stmt, Box<dyn Err
 
 /// Evaluates an expression to as simplified a form as possible.
 /// The evaluation may be partial, as some values (like variables) may be unknown.
-/// The returned expression is [normalized](crate::utils::grammar::normalize).
+/// The returned expression is [normalized](crate::utils::normalize).
 fn evaluate_expr(expr: InternedExpr, rules: &[Rule], ctxt: &EvaluatorContext) -> InternedExpr {
     let mut simplified_expr = expr;
     // Try simplifying the expression with a rule set until the same expression is seen again,

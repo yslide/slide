@@ -1,5 +1,6 @@
 //! The slide app. For an overview of slide's design, see [libslide's documentation][libslide].
 
+#![deny(warnings)]
 #![deny(missing_docs)]
 #![doc(html_logo_url = "https://raw.githubusercontent.com/yslide/slide/master/assets/logo.png")]
 

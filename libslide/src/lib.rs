@@ -194,6 +194,7 @@
 //! | `_a / $a * _a` | `(9 + 1) / v * (9 + 1)` |
 //! | `_a + _b * $c * #d` | `(x ^ 2) + (5 / y) * w * 15` |
 
+#![deny(warnings)]
 #![deny(missing_docs)]
 #![doc(
     html_logo_url = "https://avatars1.githubusercontent.com/u/49662722?s=400&u=62119505c71017e88a2728f7a1257b3506481441&v=4"
@@ -222,6 +223,7 @@ pub use partial_evaluator::EvaluatorContext;
 mod evaluator_rules;
 
 mod math;
+pub use math::Poly; // Since poly! is exposed, expose Poly too.
 
 pub(crate) mod emit;
 pub use emit::Emit;

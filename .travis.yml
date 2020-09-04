@@ -50,6 +50,8 @@ script:
     https://github.com/rust-lang/rust-clippy/ --force clippy
   - rustup component add rustfmt
   - scripts/check lintformat
+  # Ensure documentation
+  - scripts/doc
   # Ensure fuzzer builds
   - pushd slide/fuzz
   - cargo build
@@ -60,7 +62,6 @@ after_success:
     if [ "$TRAVIS_BRANCH" == "master" ]; then
       if [ "$CHANNEL" == "stable" ]; then
         export DEPLOY_DOCS=1
-        cargo doc --document-private-items
       elif [ "$CHANNEL" == "nightly" ]; then
         export DEPLOY_UI=1
         scripts/build_www

@@ -1,0 +1,16 @@
+#!/bin/bash
+#
+# Tests and builds project documentation.
+#
+# Usage:
+#       scripts/doc <options>
+#
+# Options:
+#       --open    Open documentation after building
+
+ARGS=("--document-private-items" "--no-deps")
+if [ "$1" = "--open" ]; then
+  ARGS+=("--open")
+fi
+
+cargo doc ${ARGS[@]}

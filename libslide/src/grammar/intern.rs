@@ -69,14 +69,22 @@ macro_rules! make_interner {
                 match mb {
                     Some(spur) => Self(spur),
                     None => {
-                        let spur = $rodeo
-                            .write()
-                            .expect("Failed to write to intern rodeo; likely poisoned.")
-                            .get_or_intern(expr.emit_s_expression());
+                        // NB: race condition:
+                        // Suppose we write an expression E to the rodeo (1),
+                        // but before we write the spur -> expression mapping (2),
+                        // another thread interns E.
+                        // In that case we would return a spur corresponding to E.
+                        // If the thread then tries to dereference the interned expression
+                        // before the spur -> E mapping is written, the thread would blow up.
+                        // To avoid this, lock the rodeo until we write both to both the rodeo and
+                        // the spur mapping.
+                        // TODO(ayazhafiz): containerize?
+                        let mut spur_write_lk = $rodeo.write().expect("Failed to write to intern rodeo; likely poisoned.");
+                        let spur = spur_write_lk.get_or_intern(expr.emit_s_expression()); // (1)
                         $spur2expr
                             .write()
                             .expect("Failed to write to intern reverse map; likely poisoned.")
-                            .insert(spur, expr);
+                            .insert(spur, expr); // (2)
                         Self(spur)
                     }
                 }

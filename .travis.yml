@@ -39,9 +39,6 @@ jobs:
       os: osx
       env: CHANNEL="stable"
 
-  allow_failures:
-    - rust: nightly
-
 script:
   # Ensure slide builds
   - cargo build --verbose --all

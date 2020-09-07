@@ -284,7 +284,10 @@ fn drive_test(test: &Test<PathBuf>) -> Outcome {
 
     let stdout = String::from_utf8(cmd.stdout).unwrap();
     let stderr = String::from_utf8(cmd.stderr).unwrap();
-    let exitcode = cmd.status.code().unwrap().to_string() + "\n";
+    let exitcode = match cmd.status.code() {
+        Some(n) => n.to_string(),
+        None => "no code".to_owned(),
+    } + "\n";
 
     if bless {
         let blessed = mk_bless_file(&test_case, &stdout, &stderr, &exitcode);

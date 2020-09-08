@@ -64,12 +64,18 @@ pub fn flatten_expr(expr: InternedExpr) -> InternedExpr {
         Expr::BinaryExpr(BinaryExpr { op, lhs, rhs }) => {
             let lhs = flatten_expr(*lhs);
             let rhs = flatten_expr(*rhs);
-            intern_expr!(Expr::BinaryExpr(BinaryExpr { op: *op, lhs, rhs }))
+            intern_expr!(
+                Expr::BinaryExpr(BinaryExpr { op: *op, lhs, rhs }),
+                /* TODO: propagate span */ crate::DUMMY_SP
+            )
         }
 
         Expr::UnaryExpr(UnaryExpr { op, rhs }) => {
             let rhs = flatten_expr(*rhs);
-            intern_expr!(Expr::UnaryExpr(UnaryExpr { op: *op, rhs }))
+            intern_expr!(
+                Expr::UnaryExpr(UnaryExpr { op: *op, rhs }),
+                /* TODO: propagate span */ crate::DUMMY_SP
+            )
         }
     }
 }
@@ -140,7 +146,10 @@ fn flatten_add_or_sub(o_lhs: InternedExpr, o_rhs: InternedExpr, is_subtract: boo
 
     let mut new_args: Vec<InternedExpr> = Vec::with_capacity(1 + terms.len());
     if coeff != 0. {
-        new_args.push(intern_expr!(Expr::Const(coeff)));
+        new_args.push(intern_expr!(
+            Expr::Const(coeff),
+            /* TODO: propagate span */ crate::DUMMY_SP
+        ));
     }
     for (term, coeff) in terms {
         if coeff == 0. {
@@ -152,15 +161,30 @@ fn flatten_add_or_sub(o_lhs: InternedExpr, o_rhs: InternedExpr, is_subtract: boo
         } else if (coeff - -1.).abs() < std::f64::EPSILON {
             // coeff == -1
             let neg = UnaryExpr::negate(term);
-            new_args.push(intern_expr!(Expr::UnaryExpr(neg)));
+            new_args.push(intern_expr!(
+                Expr::UnaryExpr(neg),
+                /* TODO: propagate span */ crate::DUMMY_SP
+            ));
         } else {
-            let mult = BinaryExpr::mult(Expr::Const(coeff), term);
-            new_args.push(intern_expr!(Expr::BinaryExpr(mult)));
+            let mult = BinaryExpr::mult(
+                intern_expr!(
+                    Expr::Const(coeff),
+                    /* TODO: propagate span */ crate::DUMMY_SP
+                ),
+                term,
+            );
+            new_args.push(intern_expr!(
+                Expr::BinaryExpr(mult),
+                /* TODO: propagate span */ crate::DUMMY_SP
+            ));
         }
     }
 
     match new_args.len() {
-        0 => intern_expr!(Expr::Const(0.)),
+        0 => intern_expr!(
+            Expr::Const(0.),
+            /* TODO: propagate span */ crate::DUMMY_SP
+        ),
         1 => new_args.remove(0),
         _ => unflatten_binary_expr(&new_args, BinaryOperator::Plus, UnflattenStrategy::Left),
     }
@@ -443,7 +467,10 @@ fn flatten_mul_or_div(o_lhs: InternedExpr, o_rhs: InternedExpr, is_div: bool) ->
     let mut new_args: Vec<InternedExpr> = Vec::with_capacity(1 + terms.len());
     if (coeff - 1.).abs() >= std::f64::EPSILON {
         // coeff != 1
-        new_args.push(intern_expr!(Expr::Const(coeff)));
+        new_args.push(intern_expr!(
+            Expr::Const(coeff),
+            /* TODO: propagate span */ crate::DUMMY_SP
+        ));
     }
     for (term, coeff) in terms {
         if coeff == 0. {
@@ -456,16 +483,37 @@ fn flatten_mul_or_div(o_lhs: InternedExpr, o_rhs: InternedExpr, is_div: bool) ->
         } else if (coeff - -1.).abs() < std::f64::EPSILON {
             // coeff == -1
             // -1 * x ~ 1/x
-            let reciprocal = BinaryExpr::div(Expr::Const(1.), term);
-            new_args.push(intern_expr!(Expr::BinaryExpr(reciprocal)));
+            let reciprocal = BinaryExpr::div(
+                intern_expr!(
+                    Expr::Const(1.),
+                    /* TODO: propagate span */ crate::DUMMY_SP
+                ),
+                term,
+            );
+            new_args.push(intern_expr!(
+                Expr::BinaryExpr(reciprocal),
+                /* TODO: propagate span */ crate::DUMMY_SP
+            ));
         } else {
-            let exponentiation = BinaryExpr::exp(term, Expr::Const(coeff));
-            new_args.push(intern_expr!(Expr::BinaryExpr(exponentiation)));
+            let exponentiation = BinaryExpr::exp(
+                term,
+                intern_expr!(
+                    Expr::Const(coeff,),
+                    /* TODO: propagate span */ crate::DUMMY_SP
+                ),
+            );
+            new_args.push(intern_expr!(
+                Expr::BinaryExpr(exponentiation),
+                /* TODO: propagate span */ crate::DUMMY_SP
+            ));
         }
     }
 
     match new_args.len() {
-        0 => intern_expr!(Expr::Const(1.)),
+        0 => intern_expr!(
+            Expr::Const(1.),
+            /* TODO: propagate span */ crate::DUMMY_SP
+        ),
         1 => new_args.remove(0),
         _ => unflatten_binary_expr(&new_args, BinaryOperator::Mult, UnflattenStrategy::Left),
     }

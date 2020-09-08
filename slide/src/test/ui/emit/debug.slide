@@ -9,11 +9,15 @@
 
 ~~~stdout
 Expr(
-    InternedExpr(
-        Spur {
+    InternedExpr {
+        spur: Spur {
             key: 7,
         },
-    ),
+        span: Span {
+            lo: 0,
+            hi: 14,
+        },
+    },
 )
 ~~~stdout
 

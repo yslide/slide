@@ -49,7 +49,10 @@ pub(super) fn add(expr: InternedExpr) -> Option<InternedExpr> {
             _ => i += 1,
         }
     }
-    args.push(intern_expr!(konst.into()));
+    args.push(intern_expr!(
+        konst.into(),
+        /* TODO: propagate span */ crate::DUMMY_SP
+    ));
 
     Some(unflatten_binary_expr(
         &args,
@@ -60,7 +63,7 @@ pub(super) fn add(expr: InternedExpr) -> Option<InternedExpr> {
 
 pub(super) fn subtract(expr: InternedExpr) -> Option<InternedExpr> {
     let (l, r) = get_binary_args!(expr, BinaryOperator::Minus)?;
-    Some(intern_expr!(Expr::Const(l - r)))
+    Some(intern_expr!(Expr::Const(l - r), expr.span))
 }
 
 pub(super) fn multiply(expr: InternedExpr) -> Option<InternedExpr> {
@@ -76,7 +79,10 @@ pub(super) fn multiply(expr: InternedExpr) -> Option<InternedExpr> {
             _ => i += 1,
         }
     }
-    args.push(intern_expr!(konst.into()));
+    args.push(intern_expr!(
+        konst.into(),
+        /* TODO: propagate span */ crate::DUMMY_SP
+    ));
 
     Some(unflatten_binary_expr(
         &args,
@@ -86,13 +92,14 @@ pub(super) fn multiply(expr: InternedExpr) -> Option<InternedExpr> {
 }
 
 pub(super) fn divide(expr: InternedExpr) -> Option<InternedExpr> {
+    let og_span = expr.span;
     match expr.as_ref() {
         Expr::BinaryExpr(BinaryExpr {
             op: BinaryOperator::Div,
             lhs,
             rhs,
         }) => match (lhs.as_ref(), rhs.as_ref()) {
-            (Expr::Const(l), Expr::Const(r)) => Some(intern_expr!(Expr::Const(l / r))),
+            (Expr::Const(l), Expr::Const(r)) => Some(intern_expr!(Expr::Const(l / r), og_span)),
             _ => {
                 // Now we try to convert the numerator/denominator into polynomials and cancel them.
                 let (numerator, relative_to) = Poly::from_expr(*lhs, None).ok()?;
@@ -112,7 +119,7 @@ pub(super) fn divide(expr: InternedExpr) -> Option<InternedExpr> {
                 } else {
                     let denom_expr = denominator.to_expr(relative_to);
                     let division = BinaryExpr::div(numer_expr, denom_expr);
-                    Some(intern_expr!(Expr::BinaryExpr(division)))
+                    Some(intern_expr!(Expr::BinaryExpr(division), og_span))
                 }
             }
         },
@@ -122,12 +129,12 @@ pub(super) fn divide(expr: InternedExpr) -> Option<InternedExpr> {
 
 pub(super) fn modulo(expr: InternedExpr) -> Option<InternedExpr> {
     let (l, r) = get_binary_args!(expr, BinaryOperator::Mod)?;
-    Some(intern_expr!(Expr::Const(l % r)))
+    Some(intern_expr!(Expr::Const(l % r), expr.span))
 }
 
 pub(super) fn exponentiate(expr: InternedExpr) -> Option<InternedExpr> {
     let (l, r) = get_binary_args!(expr, BinaryOperator::Exp)?;
-    Some(intern_expr!(Expr::Const(l.powf(*r))))
+    Some(intern_expr!(Expr::Const(l.powf(*r)), expr.span))
 }
 
 pub(super) fn posate(expr: InternedExpr) -> Option<InternedExpr> {
@@ -136,7 +143,7 @@ pub(super) fn posate(expr: InternedExpr) -> Option<InternedExpr> {
 
 pub(super) fn negate(expr: InternedExpr) -> Option<InternedExpr> {
     match get_unary_arg!(expr, UnaryOperator::SignNegative)?.as_ref() {
-        Expr::Const(n) => Some(intern_expr!(Expr::Const(-n))),
+        Expr::Const(n) => Some(intern_expr!(Expr::Const(-n), expr.span)),
         _ => None,
     }
 }

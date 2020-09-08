@@ -57,18 +57,6 @@ impl core::hash::Hash for ExprPat {
     }
 }
 
-impl From<BinaryExpr<InternedExprPat>> for InternedExprPat {
-    fn from(binary_expr: BinaryExpr<InternedExprPat>) -> Self {
-        intern_expr_pat!(ExprPat::BinaryExpr(binary_expr))
-    }
-}
-
-impl From<UnaryExpr<InternedExprPat>> for InternedExprPat {
-    fn from(unary_expr: UnaryExpr<InternedExprPat>) -> Self {
-        intern_expr_pat!(ExprPat::UnaryExpr(unary_expr))
-    }
-}
-
 impl PartialOrd for ExprPat {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))

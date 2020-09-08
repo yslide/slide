@@ -30,11 +30,12 @@ macro_rules! binary_expr_parser {
                 match op {
                     $($matching_op)+ => {
                         $self.next();
-                        lhs = BinaryExpr {
-                            op,
-                            lhs,
-                            rhs: $self.$rhs_term(),
-                        }.into();
+                        let rhs = $self.$rhs_term();
+                        let span = lhs.span().to(rhs.span());
+                        lhs = Self::Expr::binary(
+                            BinaryExpr { op, lhs, rhs, },
+                            span,
+                        );
                     }
                     _ => break,
                 }
@@ -92,20 +93,22 @@ where
     fn parse_const_pattern(&mut self, name: String, span: Span) -> Self::Expr;
     fn parse_any_pattern(&mut self, name: String, span: Span) -> Self::Expr;
     fn parse_open_paren(&mut self, open: Token) -> Self::Expr {
-        let expr = Self::Expr::paren(self.expr());
+        let inner = self.expr();
         let closing_tok = self.next();
+        let sp = open.span.to(closing_tok.span);
         if !matches!(closing_tok.ty, TT::CloseParen) {
             self.push_diag(unclosed_delimiter(open, TT::CloseParen, closing_tok));
         }
-        expr
+        Self::Expr::paren(inner, sp)
     }
     fn parse_open_bracket(&mut self, open: Token) -> Self::Expr {
-        let expr = Self::Expr::bracket(self.expr());
+        let inner = self.expr();
         let closing_tok = self.next();
+        let sp = open.span.to(closing_tok.span);
         if !matches!(closing_tok.ty, TT::CloseBracket) {
             self.push_diag(unclosed_delimiter(open, TT::CloseBracket, closing_tok));
         }
-        expr
+        Self::Expr::bracket(inner, sp)
     }
     fn push_diag(&mut self, diagnostic: Diagnostic);
 
@@ -157,15 +160,13 @@ where
                 "Expected an expression, found end of file",
                 Some("expected an expression".into()),
             ));
-            return Self::Expr::empty();
+            return Self::Expr::empty(tok.span);
         }
 
         let node = if let Ok(op) = UnaryOperator::try_from(&tok) {
-            UnaryExpr {
-                op,
-                rhs: self.exp_term(),
-            }
-            .into()
+            let rhs = self.exp_term();
+            let span = tok.span.to(rhs.span());
+            Self::Expr::unary(UnaryExpr { op, rhs }, span)
         } else {
             match tok.ty {
                 TT::Float(f) => self.parse_float(f, tok.span),
@@ -181,7 +182,7 @@ where
                         format!("Expected an expression, found `{}`", tok.to_string()),
                         Some("expected an expression".into()),
                     ));
-                    Self::Expr::empty()
+                    Self::Expr::empty(tok.span)
                 }
             }
         };

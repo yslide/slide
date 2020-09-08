@@ -412,23 +412,41 @@ impl Poly {
                     continue;
                 }
                 1 => relative_to,
-                _ => intern_expr!(Expr::BinaryExpr(BinaryExpr::mult(
-                    Expr::Const(*coeff as f64),
-                    relative_to,
-                ))),
+                _ => intern_expr!(
+                    Expr::BinaryExpr(BinaryExpr::mult(
+                        intern_expr!(
+                            Expr::Const(*coeff as f64),
+                            /* TODO:propagate span */ crate::DUMMY_SP
+                        ),
+                        relative_to
+                    )),
+                    /* TODO: propagate span */ crate::DUMMY_SP
+                ),
             };
 
             terms.push(match pow {
-                0 => intern_expr!(Expr::Const(*coeff as f64)),
+                0 => intern_expr!(
+                    Expr::Const(*coeff as f64),
+                    /* TODO: propagate span */ crate::DUMMY_SP
+                ),
                 1 => term,
-                _ => intern_expr!(Expr::BinaryExpr(BinaryExpr::exp(
-                    term,
-                    intern_expr!(Expr::Const(pow as f64)),
-                ))),
+                _ => intern_expr!(
+                    Expr::BinaryExpr(BinaryExpr::exp(
+                        term,
+                        intern_expr!(
+                            Expr::Const(pow as f64),
+                            /* TODO: propagate span */ crate::DUMMY_SP
+                        ),
+                    )),
+                    /* TODO: propagate span */ crate::DUMMY_SP
+                ),
             });
         }
         if terms.is_empty() {
-            return intern_expr!(Expr::Const(0.));
+            return intern_expr!(
+                Expr::Const(0.),
+                /* TODO: propagate span */ crate::DUMMY_SP
+            );
         }
 
         unflatten_binary_expr(
@@ -562,7 +580,7 @@ mod test {
                 let expr = parse_expr!($expr);
                 let relative: Option<&str> = $relative;
                 let has_relative = relative.is_some();
-                let rel = relative.map(|r: &str| parse_expr!(r)).unwrap_or(InternedExpr::empty());
+                let rel = relative.map(|r: &str| parse_expr!(r)).unwrap_or(InternedExpr::empty(crate::DUMMY_SP));
                 let rel_opt = if has_relative { Some(rel) } else { None };
                 let poly = Poly::from_expr(expr, rel_opt).ok().map(|(p, t)| (p, t.map(|expr| expr.to_string())));
                 assert_eq!(poly, $expected);

@@ -38,7 +38,7 @@ impl ExpressionParser {
                 cut_name = name.substring(1, name.len() - 1)
             )),
         );
-        intern_expr!(Expr::Var(name))
+        intern_expr!(Expr::Var(name), span)
     }
 }
 
@@ -77,12 +77,12 @@ impl Parser<Stmt> for ExpressionParser {
         parsed
     }
 
-    fn parse_float(&mut self, f: f64, _span: Span) -> Self::Expr {
-        intern_expr!(Expr::Const(f))
+    fn parse_float(&mut self, f: f64, span: Span) -> Self::Expr {
+        intern_expr!(Expr::Const(f), span)
     }
 
-    fn parse_variable(&mut self, name: String, _span: Span) -> Self::Expr {
-        intern_expr!(Expr::Var(name))
+    fn parse_variable(&mut self, name: String, span: Span) -> Self::Expr {
+        intern_expr!(Expr::Var(name), span)
     }
 
     fn parse_var_pattern(&mut self, name: String, span: Span) -> Self::Expr {
@@ -101,7 +101,7 @@ impl Parser<Stmt> for ExpressionParser {
 #[cfg(test)]
 mod tests {
     parser_tests! {
-        parse_expression
+        expr
 
         variable:                "a"
         variable_in_op_left:     "a + 1"

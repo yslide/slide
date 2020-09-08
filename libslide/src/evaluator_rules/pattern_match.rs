@@ -136,6 +136,7 @@ impl Transformer<InternedExprPat, InternedExpr> for PatternMatch<InternedExpr> {
                 return *result;
             }
 
+            let og_span = item.span;
             let transformed: InternedExpr = match item.as_ref() {
                 ExprPat::VarPat(_) | ExprPat::ConstPat(_) | ExprPat::AnyPat(_) => {
                     match repls.map.get(&hash(item.as_ref())) {
@@ -148,25 +149,29 @@ impl Transformer<InternedExprPat, InternedExpr> for PatternMatch<InternedExpr> {
                     }
                 }
 
-                ExprPat::Const(f) => Expr::Const(*f).into(),
-                ExprPat::BinaryExpr(binary_expr) => Expr::BinaryExpr(BinaryExpr {
-                    op: binary_expr.op,
-                    lhs: transform(repls, binary_expr.lhs, cache),
-                    rhs: transform(repls, binary_expr.rhs, cache),
-                })
-                .into(),
-                ExprPat::UnaryExpr(unary_expr) => Expr::UnaryExpr(UnaryExpr {
-                    op: unary_expr.op,
-                    rhs: transform(repls, unary_expr.rhs, cache),
-                })
-                .into(),
+                ExprPat::Const(f) => intern_expr!(Expr::Const(*f), og_span),
+                ExprPat::BinaryExpr(binary_expr) => intern_expr!(
+                    Expr::BinaryExpr(BinaryExpr {
+                        op: binary_expr.op,
+                        lhs: transform(repls, binary_expr.lhs, cache),
+                        rhs: transform(repls, binary_expr.rhs, cache),
+                    }),
+                    og_span
+                ),
+                ExprPat::UnaryExpr(unary_expr) => intern_expr!(
+                    Expr::UnaryExpr(UnaryExpr {
+                        op: unary_expr.op,
+                        rhs: transform(repls, unary_expr.rhs, cache),
+                    }),
+                    og_span
+                ),
                 ExprPat::Parend(expr) => {
                     let inner = transform(repls, *expr, cache);
-                    Expr::Parend(inner).into()
+                    intern_expr!(Expr::Parend(inner), og_span)
                 }
                 ExprPat::Bracketed(expr) => {
                     let inner = transform(repls, *expr, cache);
-                    Expr::Bracketed(inner).into()
+                    intern_expr!(Expr::Bracketed(inner), og_span)
                 }
             };
 
@@ -195,6 +200,7 @@ impl Transformer<InternedExprPat, InternedExprPat> for PatternMatch<InternedExpr
                 return *result;
             }
 
+            let og_span = item.span;
             let transformed: InternedExprPat = match item.as_ref() {
                 ExprPat::VarPat(_) | ExprPat::ConstPat(_) | ExprPat::AnyPat(_) => {
                     match repls.map.get(&hash(item.as_ref())) {
@@ -203,25 +209,29 @@ impl Transformer<InternedExprPat, InternedExprPat> for PatternMatch<InternedExpr
                     }
                 }
 
-                ExprPat::Const(f) => ExprPat::Const(*f).into(),
-                ExprPat::BinaryExpr(binary_expr) => ExprPat::BinaryExpr(BinaryExpr {
-                    op: binary_expr.op,
-                    lhs: transform(repls, binary_expr.lhs, cache),
-                    rhs: transform(repls, binary_expr.rhs, cache),
-                })
-                .into(),
-                ExprPat::UnaryExpr(unary_expr) => ExprPat::UnaryExpr(UnaryExpr {
-                    op: unary_expr.op,
-                    rhs: transform(repls, unary_expr.rhs, cache),
-                })
-                .into(),
+                ExprPat::Const(f) => intern_expr_pat!(ExprPat::Const(*f), og_span),
+                ExprPat::BinaryExpr(binary_expr) => intern_expr_pat!(
+                    ExprPat::BinaryExpr(BinaryExpr {
+                        op: binary_expr.op,
+                        lhs: transform(repls, binary_expr.lhs, cache),
+                        rhs: transform(repls, binary_expr.rhs, cache),
+                    }),
+                    og_span
+                ),
+                ExprPat::UnaryExpr(unary_expr) => intern_expr_pat!(
+                    ExprPat::UnaryExpr(UnaryExpr {
+                        op: unary_expr.op,
+                        rhs: transform(repls, unary_expr.rhs, cache),
+                    }),
+                    og_span
+                ),
                 ExprPat::Parend(expr) => {
                     let inner = transform(repls, *expr, cache);
-                    ExprPat::Parend(inner).into()
+                    intern_expr_pat!(ExprPat::Parend(inner), og_span)
                 }
                 ExprPat::Bracketed(expr) => {
                     let inner = transform(repls, *expr, cache);
-                    ExprPat::Bracketed(inner).into()
+                    intern_expr_pat!(ExprPat::Bracketed(inner), og_span)
                 }
             };
 
@@ -285,17 +295,17 @@ mod tests {
 
         #[test]
         fn try_merge() {
-            let a = intern_expr_pat!(ExprPat::VarPat("a".into()));
-            let b = intern_expr_pat!(ExprPat::VarPat("b".into()));
-            let c = intern_expr_pat!(ExprPat::VarPat("c".into()));
+            let a = intern_expr_pat!(ExprPat::VarPat("a".into()), crate::DUMMY_SP);
+            let b = intern_expr_pat!(ExprPat::VarPat("b".into()), crate::DUMMY_SP);
+            let c = intern_expr_pat!(ExprPat::VarPat("c".into()), crate::DUMMY_SP);
 
             let mut left: PatternMatch<InternedExpr> = PatternMatch::default();
-            left.insert(&a, Expr::Const(1.).into());
-            left.insert(&b, Expr::Const(2.).into());
+            left.insert(&a, intern_expr!(Expr::Const(1.), crate::DUMMY_SP));
+            left.insert(&b, intern_expr!(Expr::Const(2.), crate::DUMMY_SP));
 
             let mut right: PatternMatch<InternedExpr> = PatternMatch::default();
-            right.insert(&b, Expr::Const(2.).into());
-            right.insert(&c, Expr::Const(3.).into());
+            right.insert(&b, intern_expr!(Expr::Const(2.), crate::DUMMY_SP));
+            right.insert(&c, intern_expr!(Expr::Const(3.), crate::DUMMY_SP));
 
             let merged = PatternMatch::try_merge(left, right).unwrap();
             assert_eq!(merged.map.len(), 3);
@@ -306,45 +316,16 @@ mod tests {
 
         #[test]
         fn try_merge_overlapping_non_matching() {
-            let a = intern_expr_pat!(ExprPat::VarPat("a".into()));
+            let a = intern_expr_pat!(ExprPat::VarPat("a".into()), crate::DUMMY_SP);
 
             let mut left: PatternMatch<InternedExpr> = PatternMatch::default();
-            left.insert(&a, Expr::Const(1.).into());
+            left.insert(&a, intern_expr!(Expr::Const(1.), crate::DUMMY_SP));
 
             let mut right: PatternMatch<InternedExpr> = PatternMatch::default();
-            right.insert(&a, Expr::Const(2.).into());
+            right.insert(&a, intern_expr!(Expr::Const(2.), crate::DUMMY_SP));
 
             let merged = PatternMatch::try_merge(left, right);
             assert!(merged.is_none());
-        }
-
-        #[test]
-        fn transform_common_subexpression_elimination() {
-            let parsed_rule = parse_rule("#a * _b + #a * _b");
-            let parsed_target = parse_expr("0 * 0 + 0 * 0");
-
-            let repls = PatternMatch::match_rule(parsed_rule, parsed_target).unwrap();
-            let transformed = repls.transform(parsed_rule);
-            let (l, r) = match transformed.as_ref() {
-                Expr::BinaryExpr(BinaryExpr { lhs, rhs, .. }) => (lhs, rhs),
-                _ => unreachable!(),
-            };
-            assert!(std::ptr::eq(l.as_ref(), r.as_ref())); // #a * _b
-
-            let (ll, lr, rl, rr) = match (l.as_ref(), r.as_ref()) {
-                (
-                    Expr::BinaryExpr(BinaryExpr {
-                        lhs: ll, rhs: lr, ..
-                    }),
-                    Expr::BinaryExpr(BinaryExpr {
-                        lhs: rl, rhs: rr, ..
-                    }),
-                ) => (ll, lr, rl, rr),
-                _ => unreachable!(),
-            };
-            assert!(std::ptr::eq(ll.as_ref(), lr.as_ref())); // check 0s
-            assert!(std::ptr::eq(lr.as_ref(), rl.as_ref()));
-            assert!(std::ptr::eq(rl.as_ref(), rr.as_ref()));
         }
     }
 

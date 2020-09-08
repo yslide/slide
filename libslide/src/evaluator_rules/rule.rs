@@ -164,24 +164,28 @@ impl Transformer<InternedExpr, InternedExpr> for Rule {
             match target.as_ref() {
                 Expr::Const(_) => target,
                 Expr::Var(_) => target,
-                Expr::BinaryExpr(binary_expr) => Expr::BinaryExpr(BinaryExpr {
-                    op: binary_expr.op,
-                    lhs: transform(rule, binary_expr.lhs, cache),
-                    rhs: transform(rule, binary_expr.rhs, cache),
-                })
-                .into(),
-                Expr::UnaryExpr(unary_expr) => Expr::UnaryExpr(UnaryExpr {
-                    op: unary_expr.op,
-                    rhs: transform(rule, unary_expr.rhs, cache),
-                })
-                .into(),
+                Expr::BinaryExpr(binary_expr) => intern_expr!(
+                    Expr::BinaryExpr(BinaryExpr {
+                        op: binary_expr.op,
+                        lhs: transform(rule, binary_expr.lhs, cache),
+                        rhs: transform(rule, binary_expr.rhs, cache),
+                    }),
+                    target.span
+                ),
+                Expr::UnaryExpr(unary_expr) => intern_expr!(
+                    Expr::UnaryExpr(UnaryExpr {
+                        op: unary_expr.op,
+                        rhs: transform(rule, unary_expr.rhs, cache),
+                    }),
+                    target.span
+                ),
                 Expr::Parend(expr) => {
                     let inner = transform(rule, *expr, cache);
-                    Expr::Parend(inner).into()
+                    intern_expr!(Expr::Parend(inner), target.span)
                 }
                 Expr::Bracketed(expr) => {
                     let inner = transform(rule, *expr, cache);
-                    Expr::Bracketed(inner).into()
+                    intern_expr!(Expr::Bracketed(inner), target.span)
                 }
             }
         }
@@ -235,31 +239,36 @@ impl Transformer<InternedExprPat, InternedExprPat> for Rule {
     /// Bootstraps a rule with another (or possibly the same) rule.
     fn transform(&self, target: InternedExprPat) -> InternedExprPat {
         // First, apply the rule recursively on the target's subexpressions.
+        let og_span = target.span;
         let partially_transformed = match target.as_ref() {
             ExprPat::Const(_) | ExprPat::VarPat(_) | ExprPat::ConstPat(_) | ExprPat::AnyPat(_) => {
                 target
             }
-            ExprPat::BinaryExpr(binary_expr) => ExprPat::BinaryExpr(BinaryExpr {
-                op: binary_expr.op,
-                lhs: self.transform(binary_expr.lhs),
-                rhs: self.transform(binary_expr.rhs),
-            })
-            .into(),
+            ExprPat::BinaryExpr(binary_expr) => intern_expr_pat!(
+                ExprPat::BinaryExpr(BinaryExpr {
+                    op: binary_expr.op,
+                    lhs: self.transform(binary_expr.lhs),
+                    rhs: self.transform(binary_expr.rhs),
+                }),
+                og_span
+            ),
             ExprPat::UnaryExpr(unary_expr) => {
                 let rhs = self.transform(unary_expr.rhs);
-                ExprPat::UnaryExpr(UnaryExpr {
-                    op: unary_expr.op,
-                    rhs,
-                })
-                .into()
+                intern_expr_pat!(
+                    ExprPat::UnaryExpr(UnaryExpr {
+                        op: unary_expr.op,
+                        rhs,
+                    }),
+                    og_span
+                )
             }
             ExprPat::Parend(expr) => {
                 let inner = self.transform(*expr);
-                ExprPat::Parend(inner).into()
+                intern_expr_pat!(ExprPat::Parend(inner), og_span)
             }
             ExprPat::Bracketed(expr) => {
                 let inner = self.transform(*expr);
-                ExprPat::Bracketed(inner).into()
+                intern_expr_pat!(ExprPat::Bracketed(inner), og_span)
             }
         };
 

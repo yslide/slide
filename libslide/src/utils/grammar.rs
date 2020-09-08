@@ -114,22 +114,28 @@ pub fn get_flattened_binary_args(
 fn negate(expr: InternedExpr) -> InternedExpr {
     match expr.as_ref() {
         // #a -> -#a
-        Expr::Const(f) => intern_expr!(Expr::Const(-f)),
+        Expr::Const(f) => intern_expr!(Expr::Const(-f), expr.span),
 
         // $a -> -$a
-        Expr::Var(_) => intern_expr!(Expr::UnaryExpr(UnaryExpr {
-            op: UnaryOperator::SignNegative,
-            rhs: expr,
-        })),
+        Expr::Var(_) => intern_expr!(
+            Expr::UnaryExpr(UnaryExpr {
+                op: UnaryOperator::SignNegative,
+                rhs: expr,
+            }),
+            expr.span
+        ),
 
         // +_a => -_a
         Expr::UnaryExpr(UnaryExpr {
             op: UnaryOperator::SignPositive,
             rhs,
-        }) => intern_expr!(Expr::UnaryExpr(UnaryExpr {
-            op: UnaryOperator::SignPositive,
-            rhs: *rhs,
-        })),
+        }) => intern_expr!(
+            Expr::UnaryExpr(UnaryExpr {
+                op: UnaryOperator::SignPositive,
+                rhs: *rhs,
+            }),
+            expr.span
+        ),
 
         // -_a => _a
         Expr::UnaryExpr(UnaryExpr {
@@ -141,10 +147,13 @@ fn negate(expr: InternedExpr) -> InternedExpr {
         // TODO: We could expand factorable expressions further:
         //       -(_a + _b) = -_a + -_b
         //       -(_a - _b) = -_a - -_b
-        Expr::BinaryExpr(_) => intern_expr!(Expr::UnaryExpr(UnaryExpr {
-            op: UnaryOperator::SignNegative,
-            rhs: expr,
-        })),
+        Expr::BinaryExpr(_) => intern_expr!(
+            Expr::UnaryExpr(UnaryExpr {
+                op: UnaryOperator::SignNegative,
+                rhs: expr,
+            }),
+            expr.span
+        ),
 
         Expr::Parend(expr) | Expr::Bracketed(expr) => negate(*expr),
     }
@@ -163,7 +172,10 @@ where
         let mut args = args.iter();
         let mut lhs = *args.next().unwrap();
         for rhs in args {
-            lhs = BinaryExpr { op, lhs, rhs: *rhs }.into();
+            lhs = E::binary(
+                BinaryExpr { op, lhs, rhs: *rhs },
+                /* TODO: propagate span */ crate::DUMMY_SP,
+            )
         }
         lhs
     }
@@ -172,7 +184,10 @@ where
         let mut args = args.iter().rev();
         let mut rhs = *args.next().unwrap();
         for lhs in args {
-            rhs = BinaryExpr { op, lhs: *lhs, rhs }.into();
+            rhs = E::binary(
+                BinaryExpr { op, lhs: *lhs, rhs },
+                /* TODO: propagate span */ crate::DUMMY_SP,
+            )
         }
         rhs
     }
@@ -217,21 +232,25 @@ pub fn normalize(expr: InternedExpr) -> InternedExpr {
                 lhs: normalize(*lhs),
                 rhs: normalize(*rhs),
             });
-            let mut flattened_args = get_flattened_binary_args(partially_normalized.into(), *op);
+            let mut flattened_args =
+                get_flattened_binary_args(intern_expr!(partially_normalized, expr.span), *op);
             flattened_args.sort();
             unflatten_binary_expr(&flattened_args, *op, UnflattenStrategy::Left)
         }
-        Expr::UnaryExpr(UnaryExpr { op, rhs }) => intern_expr!(Expr::UnaryExpr(UnaryExpr {
-            op: *op,
-            rhs: normalize(*rhs),
-        })),
+        Expr::UnaryExpr(UnaryExpr { op, rhs }) => intern_expr!(
+            Expr::UnaryExpr(UnaryExpr {
+                op: *op,
+                rhs: normalize(*rhs),
+            }),
+            expr.span
+        ),
         Expr::Parend(expr) => {
             let inner = normalize(*expr);
-            intern_expr!(Expr::Parend(inner))
+            intern_expr!(Expr::Parend(inner), inner.span)
         }
         Expr::Bracketed(expr) => {
             let inner = normalize(*expr);
-            intern_expr!(Expr::Bracketed(inner))
+            intern_expr!(Expr::Bracketed(inner), inner.span)
         }
 
         _ => expr,

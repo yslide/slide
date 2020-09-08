@@ -149,18 +149,6 @@ impl From<f64> for Expr {
     }
 }
 
-impl From<BinaryExpr<InternedExpr>> for InternedExpr {
-    fn from(binary_expr: BinaryExpr<InternedExpr>) -> Self {
-        intern_expr!(Expr::BinaryExpr(binary_expr))
-    }
-}
-
-impl From<UnaryExpr<InternedExpr>> for InternedExpr {
-    fn from(unary_expr: UnaryExpr<InternedExpr>) -> Self {
-        intern_expr!(Expr::UnaryExpr(unary_expr))
-    }
-}
-
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Debug)]
 pub enum BinaryOperator {
     // Discrimant values exist to describe a formal ordering, and are grouped by tens to express

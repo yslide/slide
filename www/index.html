@@ -300,7 +300,7 @@ on commit ${this.commit}.
             if (this.showLatexEmitImg) {
               // slice(1, -1) to strip inline math mode: $<expr>$
               const latex = encodeURIComponent(this.output.slice(1, -1));
-              this.latexEmitImgUrl = `https://latex.codecogs.com/gif.latex?${latex}`;
+              this.latexEmitImgUrl = `https://latex.codecogs.com/svg.latex?${latex}`;
             }
           }
         }

@@ -8,3 +8,7 @@ assets/*.log
 assets/*.md5
 assets/*.out
 assets/*.pdf
+
+# latex emit test
+*.actual.png
+*.diff.png

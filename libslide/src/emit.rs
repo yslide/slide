@@ -187,7 +187,11 @@ impl Emit for Expr {
 
     fn emit_latex(&self) -> String {
         match self {
-            Self::Const(num) => num.to_string(),
+            Self::Const(num) => match num.to_string().as_ref() {
+                "inf" => "\\infty",
+                other => other,
+            }
+            .to_owned(),
             Self::Var(var) => var.to_string(),
             Self::BinaryExpr(binary_expr) => binary_expr.emit_latex(),
             Self::UnaryExpr(unary_expr) => unary_expr.emit_latex(),

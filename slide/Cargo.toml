@@ -31,8 +31,12 @@ path = "src/test/mod.rs"
 harness = false
 
 [dev-dependencies]
-libtest-mimic = { git = "https://github.com/ayazhafiz/libtest-mimic", branch = "master" }
 difference = "2.0.0"
+image = "0.20"
+lazy_static = "1.4.0"
+lcs-image-diff = { version = "0.1.7", default-features = false }
+libtest-mimic = { git = "https://github.com/ayazhafiz/libtest-mimic", commit = "2c0a08a6e41879eba5d0d69113e3f2617a312790" }
+reqwest = { version = "0.10.8", features = ["blocking"] }
 
 [features]
 wasm = ["wasm-bindgen", "wee_alloc", "serde"]

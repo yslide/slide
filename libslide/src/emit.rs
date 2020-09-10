@@ -34,6 +34,29 @@ impl From<String> for EmitFormat {
     }
 }
 
+bitflags::bitflags! {
+    /// Configuration options for emitting a slide grammar.
+    #[derive(Default)]
+    pub struct EmitConfig: u32 {
+        /// Emit divisions as fractions.
+        /// Applies to LaTeX emit.
+        const FRAC = 1;
+    }
+}
+
+impl From<Vec<String>> for EmitConfig {
+    fn from(opts: Vec<String>) -> Self {
+        let mut config = EmitConfig::default();
+        for opt in opts {
+            config |= match opt.as_ref() {
+                "frac" => EmitConfig::FRAC,
+                _ => unreachable!(),
+            }
+        }
+        config
+    }
+}
+
 /// Implements the emission of a type in an [EmitFormat][EmitFormat].
 pub trait Emit
 where
@@ -46,45 +69,49 @@ where
     /// NB: This is a multiplexer of the corresponding `emit_` methods present on [Emit][Emit],
     /// except for [EmitFormat::Latex][EmitFormat::Latex], which is emitted via
     /// [emit_wrapped_latex][Emit::emit_wrapped_latex].
-    fn emit(&self, form: EmitFormat) -> String {
+    fn emit(&self, form: EmitFormat, config: EmitConfig) -> String {
         match form {
-            EmitFormat::Pretty => self.emit_pretty(),
-            EmitFormat::SExpression => self.emit_s_expression(),
-            EmitFormat::Latex => self.emit_wrapped_latex(),
-            EmitFormat::Debug => self.emit_debug(),
+            EmitFormat::Pretty => self.emit_pretty(config),
+            EmitFormat::SExpression => self.emit_s_expression(config),
+            EmitFormat::Latex => self.emit_wrapped_latex(config),
+            EmitFormat::Debug => self.emit_debug(config),
         }
     }
 
     /// Emit `self` with the [pretty emit format][EmitFormat::Pretty]
-    fn emit_pretty(&self) -> String;
+    fn emit_pretty(&self, config: EmitConfig) -> String;
 
     /// Emit `self` with the [debug emit format][EmitFormat::Debug]
-    fn emit_debug(&self) -> String {
+    fn emit_debug(&self, _config: EmitConfig) -> String {
         format!("{:#?}", self)
     }
 
     /// Emit `self` with the [s_expression emit format][EmitFormat::SExpression]
-    fn emit_s_expression(&self) -> String {
-        unimplemented!();
-    }
+    fn emit_s_expression(&self, config: EmitConfig) -> String;
 
     /// Emit `self` with the [LaTeX emit format][EmitFormat::Latex]
-    fn emit_latex(&self) -> String;
+    fn emit_latex(&self, config: EmitConfig) -> String;
 
     /// Same as [emit_latex][Emit::emit_latex], but wraps the latex code in inline math mode.
-    fn emit_wrapped_latex(&self) -> String {
-        format!("${}$", self.emit_latex())
+    fn emit_wrapped_latex(&self, config: EmitConfig) -> String {
+        format!("${}$", self.emit_latex(config))
     }
 }
 
-#[inline]
-fn emit_pretty(arg: &impl Emit) -> String {
-    arg.emit_pretty()
+/// Creates free-standing emit functions for use in other macros, where calling Self::emit_* is
+/// inconvinient.
+macro_rules! mk_free_emit_fns {
+    ($($name:ident;)*) => {$(
+        #[inline]
+        fn $name(arg: &impl Emit, config: EmitConfig) -> String {
+            arg.$name(config)
+        }
+    )*};
 }
 
-#[inline]
-fn emit_latex(arg: &impl Emit) -> String {
-    arg.emit_latex()
+mk_free_emit_fns! {
+    emit_pretty;
+    emit_latex;
 }
 
 /// Implements `core::fmt::Display` for a type implementing `Emit`.
@@ -93,7 +120,7 @@ macro_rules! fmt_emit_impl {
     ($S:path) => {
         impl core::fmt::Display for $S {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                write!(f, "{}", self.emit_pretty())
+                write!(f, "{}", self.emit_pretty(EmitConfig::default()))
             }
         }
     };
@@ -119,73 +146,70 @@ macro_rules! latex_wrap {
 
 fmt_emit_impl!(Stmt);
 impl Emit for Stmt {
-    fn emit_pretty(&self) -> String {
+    fn emit_pretty(&self, config: EmitConfig) -> String {
         match self {
-            Self::Expr(expr) => expr.emit_pretty(),
-            Self::Assignment(asgn) => asgn.emit_pretty(),
+            Self::Expr(expr) => expr.emit_pretty(config),
+            Self::Assignment(asgn) => asgn.emit_pretty(config),
         }
     }
 
-    fn emit_s_expression(&self) -> String {
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
         match self {
-            Self::Expr(expr) => expr.emit_s_expression(),
+            Self::Expr(expr) => expr.emit_s_expression(config),
             Self::Assignment(Assignment { var, rhs }) => {
-                format!("(= {} {})", var, rhs.emit_s_expression())
+                format!("(= {} {})", var, rhs.emit_s_expression(config))
             }
         }
     }
 
-    fn emit_latex(&self) -> String {
+    fn emit_latex(&self, config: EmitConfig) -> String {
         match self {
-            Self::Expr(expr) => expr.emit_latex(),
-            Self::Assignment(asgn) => asgn.emit_latex(),
+            Self::Expr(expr) => expr.emit_latex(config),
+            Self::Assignment(asgn) => asgn.emit_latex(config),
         }
     }
 }
 
 fmt_emit_impl!(Assignment);
 impl Emit for Assignment {
-    fn emit_pretty(&self) -> String {
-        format!("{} = {}", self.var, self.rhs.emit_pretty())
+    fn emit_pretty(&self, config: EmitConfig) -> String {
+        format!("{} = {}", self.var, self.rhs.emit_pretty(config))
     }
 
-    fn emit_latex(&self) -> String {
-        format!("{} = {}", self.var, self.rhs.emit_latex())
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
+        format!("(= {} {})", self.var, self.rhs.emit_s_expression(config))
+    }
+
+    fn emit_latex(&self, config: EmitConfig) -> String {
+        format!("{} = {}", self.var, self.rhs.emit_latex(config))
     }
 }
 
 fmt_emit_impl!(Expr);
 impl Emit for Expr {
-    fn emit_pretty(&self) -> String {
+    fn emit_pretty(&self, config: EmitConfig) -> String {
         match self {
             Self::Const(num) => num.to_string(),
             Self::Var(var) => var.to_string(),
-            Self::BinaryExpr(binary_expr) => binary_expr.emit_pretty(),
-            Self::UnaryExpr(unary_expr) => unary_expr.emit_pretty(),
-            Self::Parend(expr) => normal_wrap!((expr.emit_pretty())),
-            Self::Bracketed(expr) => normal_wrap!([expr.emit_pretty()]),
+            Self::BinaryExpr(binary_expr) => binary_expr.emit_pretty(config),
+            Self::UnaryExpr(unary_expr) => unary_expr.emit_pretty(config),
+            Self::Parend(expr) => normal_wrap!((expr.emit_pretty(config))),
+            Self::Bracketed(expr) => normal_wrap!([expr.emit_pretty(config)]),
         }
     }
 
-    fn emit_s_expression(&self) -> String {
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
         match self {
             Self::Const(konst) => konst.to_string(),
             Self::Var(var) => var.to_string(),
-            Self::BinaryExpr(BinaryExpr { op, lhs, rhs }) => format!(
-                "({} {} {})",
-                op.emit_pretty(),
-                lhs.emit_s_expression(),
-                rhs.emit_s_expression()
-            ),
-            Self::UnaryExpr(UnaryExpr { op, rhs }) => {
-                format!("({} {})", op.emit_pretty(), rhs.emit_s_expression())
-            }
-            Self::Parend(inner) => normal_wrap!((inner.emit_s_expression())),
-            Self::Bracketed(inner) => normal_wrap!([inner.emit_s_expression()]),
+            Self::BinaryExpr(binary_expr) => binary_expr.emit_s_expression(config),
+            Self::UnaryExpr(unary_expr) => unary_expr.emit_s_expression(config),
+            Self::Parend(inner) => normal_wrap!((inner.emit_s_expression(config))),
+            Self::Bracketed(inner) => normal_wrap!([inner.emit_s_expression(config)]),
         }
     }
 
-    fn emit_latex(&self) -> String {
+    fn emit_latex(&self, config: EmitConfig) -> String {
         match self {
             Self::Const(num) => match num.to_string().as_ref() {
                 "inf" => "\\infty",
@@ -193,17 +217,17 @@ impl Emit for Expr {
             }
             .to_owned(),
             Self::Var(var) => var.to_string(),
-            Self::BinaryExpr(binary_expr) => binary_expr.emit_latex(),
-            Self::UnaryExpr(unary_expr) => unary_expr.emit_latex(),
-            Self::Parend(expr) => latex_wrap!((expr.emit_latex())),
-            Self::Bracketed(expr) => latex_wrap!([expr.emit_latex()]),
+            Self::BinaryExpr(binary_expr) => binary_expr.emit_latex(config),
+            Self::UnaryExpr(unary_expr) => unary_expr.emit_latex(config),
+            Self::Parend(expr) => latex_wrap!((expr.emit_latex(config))),
+            Self::Bracketed(expr) => latex_wrap!([expr.emit_latex(config)]),
         }
     }
 }
 
 fmt_emit_impl!(BinaryOperator);
 impl Emit for BinaryOperator {
-    fn emit_pretty(&self) -> String {
+    fn emit_pretty(&self, _config: EmitConfig) -> String {
         match self {
             Self::Plus => "+",
             Self::Minus => "-",
@@ -215,7 +239,11 @@ impl Emit for BinaryOperator {
         .to_owned()
     }
 
-    fn emit_latex(&self) -> String {
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
+        self.emit_pretty(config)
+    }
+
+    fn emit_latex(&self, _config: EmitConfig) -> String {
         match self {
             Self::Plus => "+",
             Self::Minus => "-",
@@ -229,7 +257,7 @@ impl Emit for BinaryOperator {
 }
 
 macro_rules! format_binary_operand {
-    ($E:ident, $parent_expr:ident, $operand:expr, $is_right_operand:expr, $emit:ident, $wrap:ident) => {
+    ($E:ident, $parent_expr:ident, $operand:expr, $is_right_operand:expr, $emit:ident, $wrap:ident, $config:ident) => {
         match $operand.as_ref() {
             // We want to format items like
             //    v--------- child op
@@ -260,12 +288,12 @@ macro_rules! format_binary_operand {
                         && child.op.precedence() == $parent_expr.op.precedence()
                         && !$parent_expr.op.is_associative())
                 {
-                    $wrap!(($emit(child)))
+                    $wrap!(($emit(child, $config)))
                 } else {
-                    $emit(child)
+                    $emit(child, $config)
                 }
             }
-            expr => $emit(expr),
+            expr => $emit(expr, $config),
         }
     };
 }
@@ -274,22 +302,53 @@ macro_rules! display_binary_expr {
     ($iexpr:ident, $expr:ident) => {
         fmt_emit_impl!(BinaryExpr<$iexpr>);
         impl Emit for BinaryExpr<$iexpr> {
-            fn emit_pretty(&self) -> String {
+            fn emit_pretty(&self, config: EmitConfig) -> String {
                 format!(
                     "{} {} {}",
-                    format_binary_operand!($expr, self, &self.lhs, false, emit_pretty, normal_wrap),
-                    self.op.emit_pretty(),
-                    format_binary_operand!($expr, self, &self.rhs, true, emit_pretty, normal_wrap),
+                    format_binary_operand!(
+                        $expr,
+                        self,
+                        &self.lhs,
+                        false,
+                        emit_pretty,
+                        normal_wrap,
+                        config
+                    ),
+                    self.op.emit_pretty(config),
+                    format_binary_operand!(
+                        $expr,
+                        self,
+                        &self.rhs,
+                        true,
+                        emit_pretty,
+                        normal_wrap,
+                        config
+                    ),
                 )
             }
 
-            fn emit_latex(&self) -> String {
+            fn emit_s_expression(&self, config: EmitConfig) -> String {
                 format!(
-                    "{} {} {}",
-                    format_binary_operand!($expr, self, &self.lhs, false, emit_latex, latex_wrap),
-                    self.op.emit_latex(),
-                    format_binary_operand!($expr, self, &self.rhs, true, emit_latex, latex_wrap),
+                    "({} {} {})",
+                    self.op.emit_s_expression(config),
+                    self.lhs.emit_s_expression(config),
+                    self.rhs.emit_s_expression(config),
                 )
+            }
+
+            fn emit_latex(&self, config: EmitConfig) -> String {
+                let lhs = format_binary_operand!(
+                    $expr, self, &self.lhs, false, emit_latex, latex_wrap, config
+                );
+                let op = self.op.emit_latex(config);
+                let rhs = format_binary_operand!(
+                    $expr, self, &self.rhs, true, emit_latex, latex_wrap, config
+                );
+                if self.op == BinaryOperator::Div && config.contains(EmitConfig::FRAC) {
+                    format!("\\frac{{{}}}{{{}}}", lhs, rhs)
+                } else {
+                    format!("{} {} {}", lhs, op, rhs)
+                }
             }
         }
     };
@@ -299,7 +358,7 @@ display_binary_expr!(InternedExprPat, ExprPat);
 
 fmt_emit_impl!(UnaryOperator);
 impl Emit for UnaryOperator {
-    fn emit_pretty(&self) -> String {
+    fn emit_pretty(&self, _config: EmitConfig) -> String {
         match self {
             Self::SignPositive => "+",
             Self::SignNegative => "-",
@@ -307,8 +366,12 @@ impl Emit for UnaryOperator {
         .to_owned()
     }
 
-    fn emit_latex(&self) -> String {
-        self.emit_pretty()
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
+        self.emit_pretty(config)
+    }
+
+    fn emit_latex(&self, config: EmitConfig) -> String {
+        self.emit_pretty(config)
     }
 }
 
@@ -316,20 +379,28 @@ macro_rules! display_unary_expr {
     ($iexpr:ident, $expr:ident) => {
         fmt_emit_impl!(UnaryExpr<$iexpr>);
         impl Emit for UnaryExpr<$iexpr> {
-            fn emit_pretty(&self) -> String {
+            fn emit_pretty(&self, config: EmitConfig) -> String {
                 let format_arg = |arg: &$iexpr| match arg.as_ref() {
-                    $expr::BinaryExpr(l) => format!("({})", l),
-                    expr => expr.emit_pretty(),
+                    $expr::BinaryExpr(l) => normal_wrap!((l.emit_pretty(config))),
+                    expr => expr.emit_pretty(config),
                 };
-                format!("{}{}", self.op.emit_pretty(), format_arg(&self.rhs))
+                format!("{}{}", self.op.emit_pretty(config), format_arg(&self.rhs))
             }
 
-            fn emit_latex(&self) -> String {
+            fn emit_s_expression(&self, config: EmitConfig) -> String {
+                format!(
+                    "({} {})",
+                    self.op.emit_s_expression(config),
+                    self.rhs.emit_s_expression(config),
+                )
+            }
+
+            fn emit_latex(&self, config: EmitConfig) -> String {
                 let format_arg = |arg: &$iexpr| match arg.as_ref() {
-                    $expr::BinaryExpr(l) => latex_wrap!((l)),
-                    expr => expr.emit_latex(),
+                    $expr::BinaryExpr(l) => latex_wrap!((l.emit_latex(config))),
+                    expr => expr.emit_latex(config),
                 };
-                format!("{}{}", self.op.emit_latex(), format_arg(&self.rhs))
+                format!("{}{}", self.op.emit_latex(config), format_arg(&self.rhs))
             }
         }
     };
@@ -339,46 +410,39 @@ display_unary_expr!(InternedExprPat, ExprPat);
 
 fmt_emit_impl!(ExprPat);
 impl Emit for ExprPat {
-    fn emit_pretty(&self) -> String {
+    fn emit_pretty(&self, config: EmitConfig) -> String {
         match self {
             Self::Const(num) => num.to_string(),
             Self::VarPat(var) | Self::ConstPat(var) | Self::AnyPat(var) => var.to_string(),
-            Self::BinaryExpr(binary_expr) => binary_expr.emit_pretty(),
-            Self::UnaryExpr(unary_expr) => unary_expr.emit_pretty(),
-            Self::Parend(expr) => normal_wrap!((expr.emit_pretty())),
-            Self::Bracketed(expr) => normal_wrap!([expr.emit_pretty()]),
+            Self::BinaryExpr(binary_expr) => binary_expr.emit_pretty(config),
+            Self::UnaryExpr(unary_expr) => unary_expr.emit_pretty(config),
+            Self::Parend(expr) => normal_wrap!((expr.emit_pretty(config))),
+            Self::Bracketed(expr) => normal_wrap!([expr.emit_pretty(config)]),
         }
     }
 
-    fn emit_s_expression(&self) -> String {
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
         match self {
             Self::Const(konst) => konst.to_string(),
             Self::VarPat(pat) | Self::ConstPat(pat) | Self::AnyPat(pat) => pat.to_string(),
-            Self::BinaryExpr(BinaryExpr { op, lhs, rhs }) => format!(
-                "({} {} {})",
-                op.to_string(),
-                lhs.emit_s_expression(),
-                rhs.emit_s_expression()
-            ),
-            Self::UnaryExpr(UnaryExpr { op, rhs }) => {
-                format!("({} {})", op.to_string(), rhs.emit_s_expression())
-            }
-            Self::Parend(inner) => normal_wrap!((inner.emit_s_expression())),
-            Self::Bracketed(inner) => normal_wrap!([inner.emit_s_expression()]),
+            Self::BinaryExpr(binary) => binary.emit_s_expression(config),
+            Self::UnaryExpr(unary) => unary.emit_s_expression(config),
+            Self::Parend(inner) => normal_wrap!((inner.emit_s_expression(config))),
+            Self::Bracketed(inner) => normal_wrap!([inner.emit_s_expression(config)]),
         }
     }
 
-    fn emit_latex(&self) -> String {
+    fn emit_latex(&self, config: EmitConfig) -> String {
         match self {
             Self::Const(konst) => konst.to_string(),
             Self::VarPat(pat) | Self::ConstPat(pat) | Self::AnyPat(pat) => {
                 // $a, #a, _a all need to be escaped as \$a, \#a, \_a.
                 format!("\\{}", pat.to_string())
             }
-            Self::BinaryExpr(binary_expr) => binary_expr.emit_latex(),
-            Self::UnaryExpr(unary_expr) => unary_expr.emit_latex(),
-            Self::Parend(inner) => latex_wrap!((inner.emit_latex())),
-            Self::Bracketed(inner) => latex_wrap!([inner.emit_latex()]),
+            Self::BinaryExpr(binary_expr) => binary_expr.emit_latex(config),
+            Self::UnaryExpr(unary_expr) => unary_expr.emit_latex(config),
+            Self::Parend(inner) => latex_wrap!((inner.emit_latex(config))),
+            Self::Bracketed(inner) => latex_wrap!([inner.emit_latex(config)]),
         }
     }
 }

@@ -1,38 +1,39 @@
 [package]
-name = "libslide"
-description = "Library for slide, a static expression optimizer."
-version = "0.0.1"
 authors = ["ayazhafiz <ayaz.hafiz.1@gmail.com>"]
-license-file = "../LICENSE"
-readme = "../README.md"
-workspace = ".."
-repository = "https://github.com/yslide/slide"
+description = "Library for slide, a static expression optimizer."
 edition = "2018"
-
-[features]
-benchmark-internals = []
+license-file = "../LICENSE"
+name = "libslide"
+readme = "../README.md"
+repository = "https://github.com/yslide/slide"
+version = "0.0.1"
+workspace = ".."
 
 [[bench]]
+harness = false
 name = "gcd"
 path = "benches/math/gcd.rs"
-harness = false
 required-features = ["benchmark-internals"]
 
 [[bench]]
+harness = false
 name = "gcd_poly"
 path = "benches/math/gcd_poly_zz.rs"
-harness = false
 required-features = ["benchmark-internals"]
 
 [dependencies]
-strtod = "0.0.1"
+bitflags = "1.2.1"
 lasso = "0.3.1"
 lazy_static = "1.4.0"
+strtod = "0.0.1"
 
 [dependencies.num-traits]
-version = "0.2"
 default-features = false
 features = ["std"]
+version = "0.2"
 
 [dev-dependencies]
 criterion = "0.3.2"
+
+[features]
+benchmark-internals = []

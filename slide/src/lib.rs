@@ -33,6 +33,8 @@ pub struct Opts {
     pub program: String,
     /// How the result of slide's execution should be emitted.
     pub emit_format: String,
+    /// Configuration options for slide emit.
+    pub emit_config: Vec<String>,
     /// When true, slide will stop after parsing a program.
     pub parse_only: bool,
     /// When true, slide will expect the program to be an expression pattern.
@@ -56,6 +58,7 @@ pub struct SlideResult {
 pub fn run_slide(opts: Opts) -> SlideResult {
     let Opts {
         emit_format,
+        emit_config,
         program,
         color,
         ..
@@ -69,7 +72,7 @@ pub fn run_slide(opts: Opts) -> SlideResult {
     };
     let emit_tree = move |obj: &dyn Emit| SlideResult {
         code: 0,
-        stdout: obj.emit(emit_format.into()),
+        stdout: obj.emit(emit_format.into(), emit_config.into()),
         stderr: String::new(),
     };
 

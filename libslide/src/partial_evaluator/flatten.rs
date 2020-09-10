@@ -576,7 +576,7 @@ mod tests {
             let expr = parse(split.next().unwrap());
             let expected_flattened = split.next().unwrap();
 
-            let flattened = normalize(flatten_expr(expr)).emit_s_expression();
+            let flattened = normalize(flatten_expr(expr)).emit_s_expression(Default::default());
 
             assert_eq!(flattened, expected_flattened);
         }

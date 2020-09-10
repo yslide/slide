@@ -21,6 +21,21 @@ fn get_opts(color: bool) -> Opts {
                 .possible_values(&["pretty", "s-expression", "latex", "debug"]),
         )
         .arg(
+            // TODO: validate that -olatex is present.
+            clap::Arg::with_name("emit-config")
+                .long("--emit-config")
+                .next_line_help(true)
+                .help(
+                    "Emit configuration options. Possible values:\n\
+                    \tfrac (latex): Emit divisions as fractions.\n\
+                    ",
+                )
+                .hide_possible_values(true)
+                .takes_value(true)
+                .possible_values(&["frac"])
+                .multiple(true),
+        )
+        .arg(
             clap::Arg::with_name("parse-only")
                 .long("--parse-only")
                 .help("Stop after parsing and dump the AST"),
@@ -37,6 +52,10 @@ fn get_opts(color: bool) -> Opts {
         program: matches.value_of("program").unwrap().into(),
         // TODO: we should consolidate emit_format and output-form before any stable release.
         emit_format: matches.value_of("output-form").unwrap().into(),
+        emit_config: matches
+            .values_of("emit-config")
+            .map(|opts| opts.map(str::to_owned).collect())
+            .unwrap_or_default(),
         parse_only: matches.is_present("parse-only") || expr_pat,
         expr_pat,
         color,

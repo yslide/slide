@@ -3,7 +3,7 @@
 //!
 //! [Grammar]: super::Grammar
 
-use crate::emit::Emit;
+use crate::emit::{Emit, EmitConfig};
 use crate::grammar::{Expr, ExprPat, Grammar};
 use crate::Span;
 
@@ -117,7 +117,7 @@ macro_rules! make_interner {
                 Sp: Into<Span>
             {
                 let span = span.into();
-                let hash = expr.emit_s_expression();
+                let hash = expr.emit_s_expression(Default::default());
                 let mb = {
                     let interner_lk = $interner.read().expect("Failed to read interner; likely poisoned.");
                     interner_lk.rodeo.get(hash)
@@ -139,7 +139,7 @@ macro_rules! make_interner {
                         spur
                     }
                     None => {
-                        let hash = expr.emit_s_expression();
+                        let hash = expr.emit_s_expression(Default::default());
                         // Lock up the interner to prevent a race condition.
                         let mut interner_lk = $interner.write().expect("Failed to get rodeo");
                         let spur = interner_lk.rodeo.get_or_intern(hash);
@@ -176,22 +176,22 @@ macro_rules! make_interner {
         impl Eq for $interned_struct {}
 
         impl Emit for $interned_struct {
-            fn emit_pretty(&self) -> String {
-                self.as_ref().emit_pretty()
+            fn emit_pretty(&self, config: EmitConfig) -> String {
+                self.as_ref().emit_pretty(config)
             }
 
-            fn emit_s_expression(&self) -> String {
-                self.as_ref().emit_s_expression()
+            fn emit_s_expression(&self, config: EmitConfig) -> String {
+                self.as_ref().emit_s_expression(config)
             }
 
-            fn emit_latex(&self) -> String {
-                self.as_ref().emit_latex()
+            fn emit_latex(&self, config: EmitConfig) -> String {
+                self.as_ref().emit_latex(config)
             }
         }
 
         impl core::fmt::Display for $interned_struct {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                write!(f, "{}", self.emit_pretty(),)
+                write!(f, "{}", self.emit_pretty(EmitConfig::default()))
             }
         }
 

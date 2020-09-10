@@ -227,6 +227,7 @@ pub use math::Poly; // Since poly! is exposed, expose Poly too.
 
 pub(crate) mod emit;
 pub use emit::Emit;
+pub use emit::EmitConfig;
 pub use emit::EmitFormat;
 
 #[cfg(feature = "benchmark-internals")]

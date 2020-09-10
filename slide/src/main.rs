@@ -15,7 +15,18 @@ fn get_opts(color: bool) -> Opts {
         )
         .arg(
             clap::Arg::with_name("output-form")
-                .short("o")
+                .short("-o")
+                .long("--output-form")
+                .next_line_help(true)
+                .help(
+                    "Slide emit format. Possible values:\n\
+                    \tpretty:       Human-readable text, like \"1 + 2\".\n\
+                    \ts-expression: Prefixed s-expression, like \"(+ 1 2)\".\n\
+                    \tlatex:        LaTeX math mode code, like \"$\\left\\(1 + 2\\right\\)$\".\n\
+                    \tdebug:        Opaque internal representation. Note: this format is not stable.\n\
+                    ",
+                )
+                .hide_possible_values(true)
                 .default_value("pretty")
                 .takes_value(true)
                 .possible_values(&["pretty", "s-expression", "latex", "debug"]),

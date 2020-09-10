@@ -3,10 +3,7 @@
   <head>
     <meta name="viewport" content="width=device-width" />
     <meta charset="UTF-8" />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/@primer/css/dist/primer.css"
-    />
+    <link rel="stylesheet" href="https://unpkg.com/@primer/css/dist/primer.css" />
 
     <style>
       pre.inner {
@@ -76,10 +73,7 @@
   </head>
   <body>
     <div class="d-flex flex-column flex-row flex-items-center">
-      <article
-        id="app"
-        class="markdown-body col-10 col-md-10 col-xl-6 mb-5 my-md-4 my-lg-8"
-      >
+      <article id="app" class="markdown-body col-10 col-md-10 col-xl-6 mb-5 my-md-4 my-lg-8">
         <div class="pagehead">
           <h1 class="d-flex flex-row flex-items-center">
             <a href="https://github.com/yslide/slide">slide</a>
@@ -99,29 +93,35 @@
             @input="onInput"
           ><code></code></pre></pre>
 
-          <details>
+          <details id="options">
             <summary>Options</summary>
             <div class="border bg-blue-light px-3 mt-2">
               <div class="form-group">
                 <div class="form-group-header">
-                  <label for="example-select">Emit format</label>
+                  <label>Emit format</label>
                 </div>
                 <div class="form-group-body">
-                  <select
-                    id="emit-format"
-                    name="emit-mode"
-                    class="form-select"
-                    v-model="emitFormat"
-                  >
-                    <option
-                      v-for="option in emitFormatOptions"
-                      v-bind:value="option"
-                    >
+                  <select name="emit-mode" class="form-select" v-model="emitFormat">
+                    <option v-for="option in emitFormatOptions" v-bind:value="option">
                       {{ option }}
                     </option>
                   </select>
                 </div>
               </div>
+
+              <details id="emit-config">
+                <summary>Emit config</summary>
+                <div v-for="(_show, opt) in emitConfig" class="form-checkbox ml-4">
+                  <label>
+                    <input
+                      type="checkbox"
+                      class="form-checkbox-details-trigger"
+                      v-model="emitConfig[opt]"
+                    />
+                    {{ opt }}
+                  </label>
+                </div>
+              </details>
 
               <div class="form-checkbox">
                 <label>
@@ -135,12 +135,7 @@
                   Parse only
                   <span class="form-checkbox-details text-normal ml-4">
                     <label>
-                      <input
-                        id="expr-pat"
-                        name="expr-pat"
-                        type="checkbox"
-                        v-model="exprPat"
-                      />
+                      <input id="expr-pat" name="expr-pat" type="checkbox" v-model="exprPat" />
                       Parse expression pattern
                     </label>
                   </span>
@@ -150,13 +145,7 @@
           </details>
         </form>
 
-        <button
-          type="submit"
-          class="btn btn-md btn-primary"
-          v-on:click="runSlide"
-        >
-          slide!
-        </button>
+        <button type="submit" class="btn btn-md btn-primary" v-on:click="runSlide">slide!</button>
 
         <h2>Output</h2>
         <div class="ml-3 mr-3">
@@ -185,6 +174,9 @@
       ansi.use_classes = true;
 
       const DEFAULT_EXAMPLE = "x(x + 2 * 3) / (x + 6)";
+      const DEFAULT_EMIT_CONFIG = {
+        frac: false,
+      };
       const BASE_ISSUE_URL = "https://github.com/yslide/slide/issues/new";
 
       const queryParams = new URLSearchParams(window.location.search);
@@ -192,6 +184,17 @@
         ? LZString.decompressFromEncodedURIComponent(queryParams.get("input"))
         : DEFAULT_EXAMPLE;
       const emitFormat = queryParams.get("emit-format") || "pretty";
+      const emitConfig = DEFAULT_EMIT_CONFIG;
+      if (queryParams.get("emit-config")) {
+        const userConfig = JSON.parse(
+          LZString.decompressFromEncodedURIComponent(queryParams.get("emit-config"))
+        );
+        for (const key of Object.keys(DEFAULT_EMIT_CONFIG)) {
+          if (userConfig[key] !== undefined) {
+            emitConfig[key] = userConfig[key];
+          }
+        }
+      }
       const parseOnly = queryParams.get("parse-only") === "true";
       const exprPat = queryParams.get("expr-pat") === "true";
 
@@ -203,20 +206,30 @@
           output: "",
           emitFormatOptions: ["pretty", "latex", "s-expression", "debug"],
           emitFormat,
+          emitConfig,
           parseOnly,
           exprPat,
           bugReportUrl: BASE_ISSUE_URL,
           ranOnce: false,
           latexEmitImgUrl: "",
-          showLatexEmitImg: false
+          showLatexEmitImg: false,
         },
         computed: {
           commitUrl() {
             return `https://github.com/yslide/slide/commit/${this.commit}`;
-          }
+          },
+
+          emitConfigOptIsSet() {
+            for (const isSet of Object.values(this.emitConfig)) {
+              if (isSet) return true;
+            }
+            return false;
+          },
         },
         created() {
           document.querySelector("#slide-input").innerText = this.input;
+          document.querySelector("#options").open = this.emitConfigOptIsSet || this.parseOnly;
+          document.querySelector("#emit-config").open = this.emitConfigOptIsSet;
         },
         updated() {
           this.updateUrl();
@@ -224,9 +237,10 @@
         methods: {
           updateUrl() {
             const queryParams = new URLSearchParams(window.location.search);
+            queryParams.set("input", LZString.compressToEncodedURIComponent(this.input));
             queryParams.set(
-              "input",
-              LZString.compressToEncodedURIComponent(this.input)
+              "emit-config",
+              LZString.compressToEncodedURIComponent(JSON.stringify(this.emitConfig))
             );
             queryParams.set("emit-format", this.emitFormat);
             queryParams.set("parse-only", this.parseOnly);
@@ -246,9 +260,10 @@
             const slideOpts = {
               program: this.input,
               emit_format: this.emitFormat,
+              emit_config: Object.keys(this.emitConfig).filter((opt) => this.emitConfig[opt]),
               parse_only: this.parseOnly,
               expr_pat: this.exprPat,
-              color: true
+              color: true,
             };
 
             const { code, stdout, stderr } = run_slide_wasm(slideOpts);
@@ -261,11 +276,7 @@
           },
 
           updateBugReportUrl(slideOpts) {
-            const optsStr = JSON.stringify(
-              slideOpts,
-              ["emit_format", "parse_only", "expr_pat"],
-              2
-            );
+            const optsStr = JSON.stringify(slideOpts, ["emit_format", "parse_only", "expr_pat"], 2);
             const body = `[slide playground](${window.location})
 
 Given the input
@@ -302,8 +313,8 @@ on commit ${this.commit}.
               const latex = encodeURIComponent(this.output.slice(1, -1));
               this.latexEmitImgUrl = `https://latex.codecogs.com/svg.latex?${latex}`;
             }
-          }
-        }
+          },
+        },
       });
     </script>
   </body>

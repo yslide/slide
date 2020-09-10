@@ -122,7 +122,7 @@ fn mk_bless_file(test_case: &SlideEmitTest, stdout: &str, stderr: &str, exitcode
         let clause_delim = get_clause_delim(clause);
         content.push_str(&format!("{}\n", clause_delim));
         content.push_str(clause_content);
-        if clause == "in" {
+        if !clause_content.is_empty() && !clause_content.ends_with('\n') {
             content.push('\n');
         }
         content.push_str(&format!("{}\n\n", clause_delim));

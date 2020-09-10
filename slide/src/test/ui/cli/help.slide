@@ -1,0 +1,43 @@
+!!!args
+--help
+!!!args
+
+===in
+===in
+
+~~~stdout
+slide 0.0.1
+ayazhafiz <ayaz.hafiz.1@gmail.com>
+A static expression optimizer.
+
+USAGE:
+    slide [FLAGS] [OPTIONS] <program>
+
+FLAGS:
+        --expr-pat      Parse the program as an expression pattern. Implies --parse-only.
+    -h, --help          Prints help information
+        --parse-only    Stop after parsing and dump the AST
+    -V, --version       Prints version information
+
+OPTIONS:
+        --emit-config <emit-config>...
+            Emit configuration options. Possible values:
+            	frac (latex): Emit divisions as fractions.
+    -o, --output-form <output-form>
+            Slide emit format. Possible values:
+            	pretty:       Human-readable text, like "1 + 2".
+            	s-expression: Prefixed s-expression, like "(+ 1 2)".
+            	latex:        LaTeX math mode code, like "$\left\(1 + 2\right\)$".
+            	debug:        Opaque internal representation. Note: this format is not stable.
+             [default: pretty]
+
+ARGS:
+    <program>    Program to evaluate
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

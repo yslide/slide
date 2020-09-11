@@ -1,0 +1,16 @@
+@TODO: this should become 9x^9
+
+===in
+9x^10 / x
+===in
+
+~~~stdout
+9 * x ^ 10 / x
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

@@ -32,7 +32,7 @@ harness = false
 
 [dev-dependencies]
 difference = "2.0.0"
-image = "0.20"
+image = "0.23"
 lazy_static = "1.4.0"
 lcs-image-diff = { version = "0.1.7", default-features = false }
 libtest-mimic = { git = "https://github.com/ayazhafiz/libtest-mimic", commit = "2c0a08a6e41879eba5d0d69113e3f2617a312790" }

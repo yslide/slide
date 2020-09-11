@@ -1,0 +1,39 @@
+!!!args
+--lint
+!!!args
+
+===in
+( ((1   +    [[  [2    /     ([([4])])]]]  )))
+===in
+
+~~~stdout
+1.5
+~~~stdout
+
+~~~stderr
+warning[L0001]: Redundant nesting
+  |
+1 | ( ((1   +    [[  [2    /     ([([4])])]]]  ))) 
+  | ----------------------------------------------
+  |
+  = help: consider reducing this expression to "(1   +    [[  [2    /     ([([4])])]]])"
+
+warning[L0001]: Redundant nesting
+  |
+1 | ( ((1   +    [[  [2    /     ([([4])])]]]  ))) 
+  |              ----------------------------
+  |
+  = help: consider reducing this expression to "[2    /     ([([4])])]"
+
+warning[L0001]: Redundant nesting
+  |
+1 | ( ((1   +    [[  [2    /     ([([4])])]]]  ))) 
+  |                              ---------
+  |
+  = help: consider reducing this expression to "(4)"
+
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

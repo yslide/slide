@@ -1,0 +1,30 @@
+!!!args
+---explain L0003
+!!!args
+
+===in
+===in
+
+~~~stdout
+The similar names lint detects expression patterns with very similar names.
+
+For example, the following pattern expression has different patterns with the same suffix "a":
+
+```text
+$a + #a + _a + $a
+```
+
+While this is expression is semantically valid, it can be difficuly to read and misleading,
+since "a" is used in three separate and independent patterns. A clearer expression would be
+
+```text
+$a + #b + _c + $a
+```
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

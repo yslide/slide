@@ -1,0 +1,29 @@
+!!!args
+---explain L0002
+!!!args
+
+===in
+===in
+
+~~~stdout
+The unary series lint detects trivially-reducible chains of unary operators.
+
+For example, the following chains of unary expressions can be reduced to a more trivial form:
+
+```text
+---1   -> -1
++++1   ->  1
++-+-+- -> -1
+```
+
+Chaining unary operators is not standard style in mathematical expressions and can be
+misleading. For example, `--x` may be interpreted to be the prefix decrement operator available
+in some computer programming languages, which is absent in canonical mathematical notation.
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

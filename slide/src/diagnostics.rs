@@ -10,22 +10,29 @@ use annotate_snippets::{
     snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
 };
 
+pub fn sanitize_source_for_diagnostics(source: &str) -> String {
+    let source = source.to_owned();
+    source + " " // we might emit an EOF diagnostic, so add extra space.
+}
+
 pub fn emit_slide_diagnostics(
     file: Option<&str>,
-    source: String,
-    diagnostics: Vec<Diagnostic>,
+    source: &str,
+    diagnostics: &[Diagnostic],
     color: bool,
 ) -> String {
-    let source = source + " "; // we might emit an EOF diagnostic, so add extra space.
+    if diagnostics.is_empty() {
+        return String::new();
+    }
 
     let last_i = diagnostics.len() - 1;
     let mut emitted_diagnostics = String::new();
 
-    for (i, diagnostic) in diagnostics.into_iter().enumerate() {
+    for (i, diagnostic) in diagnostics.iter().enumerate() {
         let main_annotation_type = convert_diagnostic_kind(&diagnostic.kind);
         let mut annotations = Vec::with_capacity(diagnostic.associated_diagnostics.len() + 1);
         // The first annotation always points to the code that generated this diagnostic.
-        let label = diagnostic.msg.unwrap_or_default();
+        let label = diagnostic.msg.clone().unwrap_or_default();
         annotations.push(SourceAnnotation {
             label: &label,
             annotation_type: main_annotation_type,
@@ -48,7 +55,7 @@ pub fn emit_slide_diagnostics(
         let snippet = Snippet {
             title: Some(Annotation {
                 label: Some(&diagnostic.title),
-                id: None,
+                id: diagnostic.code,
                 annotation_type: main_annotation_type,
             }),
             footer,
@@ -83,6 +90,7 @@ fn convert_associated_diagnostic(diagnostic: &AssociatedDiagnostic) -> Annotatio
 fn convert_diagnostic_kind(diagnostic_kind: &DiagnosticKind) -> AnnotationType {
     match diagnostic_kind {
         DiagnosticKind::Error => AnnotationType::Error,
+        DiagnosticKind::Warning => AnnotationType::Warning,
         DiagnosticKind::Note => AnnotationType::Note,
         DiagnosticKind::Help => AnnotationType::Help,
     }

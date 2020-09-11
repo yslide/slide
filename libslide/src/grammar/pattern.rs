@@ -1,7 +1,9 @@
 use super::*;
 
+/// A slide expression pattern.
 #[derive(Clone, Debug)]
 pub enum ExprPat {
+    /// A constant
     Const(f64),
     /// Pattern matching a variable
     VarPat(String),
@@ -9,9 +11,13 @@ pub enum ExprPat {
     ConstPat(String),
     /// Pattern matching any expression
     AnyPat(String),
+    /// A binary expression
     BinaryExpr(BinaryExpr<InternedExprPat>),
+    /// A unary expression
     UnaryExpr(UnaryExpr<InternedExprPat>),
+    /// A paranthesized expression
     Parend(InternedExprPat),
+    /// A bracketed expression
     Bracketed(InternedExprPat),
 }
 

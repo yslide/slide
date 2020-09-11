@@ -202,7 +202,7 @@
 
 #[macro_use]
 mod grammar;
-pub use grammar::Grammar;
+pub use grammar::{ExprPat, Grammar, Stmt};
 
 mod common;
 pub use common::*;
@@ -211,10 +211,16 @@ pub mod diagnostics;
 
 pub mod scanner;
 pub use scanner::scan;
+pub use scanner::Token;
 
 mod parser;
 pub use parser::parse_expression;
 pub use parser::parse_expression_pattern;
+
+mod linter;
+pub use linter::lint_expr_pat;
+pub use linter::lint_stmt;
+pub use linter::LintConfig;
 
 mod partial_evaluator;
 pub use partial_evaluator::evaluate;

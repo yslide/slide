@@ -55,9 +55,10 @@ fn unclosed_delimiter(open: Token, expected: TT, found: Token) -> Diagnostic {
     Diagnostic::span_err(
         found.span,
         format!("Expected `{}`, found {}", expected, found_str),
+        /* TODO: add error code */ None,
         format!("expected closing `{}`", expected),
     )
-    .with_help_note(open.span, format!("opening `{}` here", open))
+    .with_spanned_help(open.span, format!("opening `{}` here", open))
 }
 
 /// Returns a diagnostic for extra tokens following a primary item.
@@ -73,6 +74,7 @@ fn extra_tokens_diag(extra_tokens: &mut PeekIter<Token>) -> Diagnostic {
     Diagnostic::span_err(
         lo..hi,
         "Unexpected extra tokens",
+        /* TODO: add error code */ None,
         "not connected to a primary expression".to_string(),
     )
 }
@@ -158,6 +160,7 @@ where
             self.push_diag(Diagnostic::span_err(
                 tok.span,
                 "Expected an expression, found end of file",
+                /* TODO: add error code */ None,
                 Some("expected an expression".into()),
             ));
             return Self::Expr::empty(tok.span);
@@ -180,6 +183,7 @@ where
                     self.push_diag(Diagnostic::span_err(
                         tok.span,
                         format!("Expected an expression, found `{}`", tok.to_string()),
+                        /* TODO: add error code */ None,
                         Some("expected an expression".into()),
                     ));
                     Self::Expr::empty(tok.span)

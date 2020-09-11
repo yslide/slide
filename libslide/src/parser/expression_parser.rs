@@ -31,6 +31,7 @@ impl ExpressionParser {
             Diagnostic::span_err(
                 span,
                 "Patterns cannot be used in an expression",
+                /* TODO: add error code */ None,
                 Some("unexpected pattern".into()),
             )
             .with_help(format!(

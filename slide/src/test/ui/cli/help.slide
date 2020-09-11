@@ -16,6 +16,7 @@ USAGE:
 FLAGS:
         --expr-pat      Parse the program as an expression pattern. Implies --parse-only.
     -h, --help          Prints help information
+        --lint          Emit lint warnings for the program, if any.
         --parse-only    Stop after parsing and dump the AST
     -V, --version       Prints version information
 
@@ -23,6 +24,7 @@ OPTIONS:
         --emit-config <emit-config>...
             Emit configuration options. Possible values:
             	frac (latex): Emit divisions as fractions.
+        --explain <diagnostic>            Provide a detailed explanation for a diagnostic code.
     -o, --output-form <output-form>
             Slide emit format. Possible values:
             	pretty:       Human-readable text, like "1 + 2".

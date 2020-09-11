@@ -131,6 +131,11 @@
                 </div>
               </details>
 
+              <label>
+                <input type="checkbox" class="form-checkbox-details-trigger" v-model="lint" />
+                Lint
+              </label>
+
               <div class="form-checkbox">
                 <label>
                   <input
@@ -146,6 +151,25 @@
                       <input id="expr-pat" name="expr-pat" type="checkbox" v-model="exprPat" />
                       Parse expression pattern
                     </label>
+                  </span>
+                </label>
+              </div>
+
+              <div class="form-checkbox">
+                <label>
+                  <input
+                    type="checkbox"
+                    class="form-checkbox-details-trigger"
+                    v-model="shouldExplain"
+                  />
+                  Explain
+                  <span class="form-checkbox-details text-normal">
+                    <input
+                      class="form-control input-contrast"
+                      size="6"
+                      placeholder="code"
+                      v-model="explain"
+                    />
                   </span>
                 </label>
               </div>
@@ -203,8 +227,11 @@
           }
         }
       }
+      const lint = queryParams.get("lint") === "true";
       const parseOnly = queryParams.get("parse-only") === "true";
       const exprPat = queryParams.get("expr-pat") === "true";
+      const shouldExplain = queryParams.get("shouldExplain") === "true";
+      const explain = queryParams.get("explain") || "";
 
       new Vue({
         el: "#app",
@@ -215,8 +242,11 @@
           emitFormatOptions: ["pretty", "latex", "s-expression", "debug"],
           emitFormat,
           emitConfig,
+          lint,
           parseOnly,
           exprPat,
+          shouldExplain,
+          explain,
           bugReportUrl: BASE_ISSUE_URL,
           ranOnce: false,
           latexEmitImgUrl: "",
@@ -236,7 +266,8 @@
         },
         created() {
           document.querySelector("#slide-input").innerText = this.input;
-          document.querySelector("#options").open = this.emitConfigOptIsSet || this.parseOnly;
+          document.querySelector("#options").open =
+            this.emitConfigOptIsSet || this.lint || this.parseOnly || this.shouldExplain;
           document.querySelector("#emit-config").open = this.emitConfigOptIsSet;
         },
         updated() {
@@ -251,8 +282,11 @@
               LZString.compressToEncodedURIComponent(JSON.stringify(this.emitConfig))
             );
             queryParams.set("emit-format", this.emitFormat);
+            queryParams.set("lint", this.lint);
             queryParams.set("parse-only", this.parseOnly);
             queryParams.set("expr-pat", this.exprPat);
+            queryParams.set("shouldExplain", this.shouldExplain);
+            queryParams.set("explain", this.explain);
             const curUrl = `${window.location.pathname}?${queryParams}`;
             history.replaceState(null, "", curUrl);
           },
@@ -269,14 +303,16 @@
               program: this.input,
               emit_format: this.emitFormat,
               emit_config: Object.keys(this.emitConfig).filter((opt) => this.emitConfig[opt]),
+              lint: this.lint,
               parse_only: this.parseOnly,
               expr_pat: this.exprPat,
+              explain_diagnostic: this.shouldExplain ? this.explain : undefined,
               color: true,
             };
 
             const { code, stdout, stderr } = run_slide_wasm(slideOpts);
 
-            this.output = ansi.ansi_to_html(`${stdout}${stderr}`);
+            this.output = ansi.ansi_to_html(`${stderr}\n${stdout}`).trim();
             this.ranOnce = true;
             this.updateUrl();
             this.updateBugReportUrl(slideOpts);

@@ -52,12 +52,12 @@ impl Poly {
     /// Creates a new [Poly][Poly] from a vector of coefficients, with the degree of each
     /// coefficient being its index in the vector.
     pub fn new(vec: Vec<isize>) -> Self {
-        Self { vec }
+        Self { vec }.truncate_zeros()
     }
 
     /// Creates an empty [Poly][Poly].
     pub fn empty() -> Self {
-        Self::new(vec![])
+        Self::new(vec![]).truncate_zeros()
     }
 
     /// Returns whether the polynomial is equivalent to 0.
@@ -454,6 +454,12 @@ impl Poly {
             BinaryOperator::Plus,
             UnflattenStrategy::Left,
         )
+    }
+
+    /// Prints the Poly as a polynomial string.
+    pub fn to_string(&self, var: &str) -> String {
+        self.to_expr(intern_expr!(Expr::Var(var.to_owned()), crate::DUMMY_SP))
+            .to_string()
     }
 }
 

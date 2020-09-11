@@ -18,13 +18,13 @@ pub fn gcd_poly_zz_heu(f: Poly, g: Poly) -> Result<(Poly, Poly, Poly), &'static 
     }
 
     let df = f.deg();
-    let dg = f.deg();
+    let dg = g.deg();
 
     let (gcd_val, f, g) = poly_extract_common(f, g);
 
-    // Handle single-degree cases.
-    if df == 1 || dg == 1 {
-        return Ok((Poly::empty(), f, g));
+    // Handle no-degree cases.
+    if df == 0 || dg == 0 {
+        return Ok((poly![gcd_val], f, g));
     }
     let f_norm = f.max_norm();
     let g_norm = g.max_norm();

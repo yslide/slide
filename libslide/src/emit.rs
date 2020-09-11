@@ -344,10 +344,12 @@ macro_rules! display_binary_expr {
                 let rhs = format_binary_operand!(
                     $expr, self, &self.rhs, true, emit_latex, latex_wrap, config
                 );
-                if self.op == BinaryOperator::Div && config.contains(EmitConfig::FRAC) {
-                    format!("\\frac{{{}}}{{{}}}", lhs, rhs)
-                } else {
-                    format!("{} {} {}", lhs, op, rhs)
+                match self.op {
+                    BinaryOperator::Exp => format!("{}^{{{}}}", lhs, rhs),
+                    BinaryOperator::Div if config.contains(EmitConfig::FRAC) => {
+                        format!("\\frac{{{}}}{{{}}}", lhs, rhs)
+                    }
+                    _ => format!("{} {} {}", lhs, op, rhs),
                 }
             }
         }

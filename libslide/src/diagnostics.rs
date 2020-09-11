@@ -14,6 +14,9 @@ pub enum DiagnosticKind {
     /// An error diagnostic. Generally, this diagnostic should be emitted for unrecoverable errors.
     /// In other cases, a warning or a note may be more applicable.
     Error,
+    /// A warning diagnostic describes something that is not a strict error, but may not match
+    /// canonical style, usage patterns, or otherwise may be error-prone.
+    Warning,
     /// A note diagnostic is a generic annotation with no specific connotation like `error`. It can
     /// be particularly useful as an associated diagnostic, for example in expanding on a primary
     /// error.
@@ -37,6 +40,8 @@ pub struct AssociatedDiagnostic {
 pub struct Diagnostic {
     /// The diagnostic kind.
     pub kind: DiagnosticKind,
+    /// The diagnostic code.
+    pub code: Option<&'static str>,
     /// Source location for which the diagnostic is applicable.
     pub span: Span,
     /// A summarizing title for the diagnostic.
@@ -51,63 +56,84 @@ pub struct Diagnostic {
     pub unspanned_associated_diagnostics: Vec<AssociatedDiagnostic>,
 }
 
-impl Diagnostic {
-    /// Creates an error diagnostic at a span.
-    pub(crate) fn span_err<S, M, N>(span: S, title: M, err: N) -> Diagnostic
-    where
-        S: Into<Span>,
-        M: Into<String>,
-        N: Into<Option<String>>,
-    {
-        Diagnostic {
-            kind: DiagnosticKind::Error,
-            span: span.into(),
-            title: title.into(),
-            msg: err.into(),
-            associated_diagnostics: Vec::with_capacity(2),
-            unspanned_associated_diagnostics: Vec::with_capacity(2),
+macro_rules! span_diag {
+    ($(#[doc = $doc:expr] $name:ident as $kind:ident)*) => {$(
+        #[doc = $doc]
+        pub(crate) fn $name<S, M, C, N>(span: S, title: M, code:C, msg: N) -> Diagnostic
+        where
+            S: Into<Span>,
+            M: Into<String>,
+            C: Into<Option<&'static str>>,
+            N: Into<Option<String>>,
+        {
+            Diagnostic {
+                kind: DiagnosticKind::$kind,
+                span: span.into(),
+                title: title.into(),
+                code: code.into(),
+                msg: msg.into(),
+                associated_diagnostics: Vec::with_capacity(2),
+                unspanned_associated_diagnostics: Vec::with_capacity(2),
+            }
         }
-    }
+    )*}
+}
 
-    /// Adds a note to the diagnostic.
-    pub(crate) fn with_note<M>(mut self, note: M) -> Diagnostic
-    where
-        M: Into<String>,
-    {
-        self.unspanned_associated_diagnostics
-            .push(AssociatedDiagnostic {
-                kind: DiagnosticKind::Note,
-                span: self.span,
+macro_rules! with_diag {
+    ($(#[doc = $doc:expr] $name:ident as $kind:ident)*) => {$(
+        #[doc = $doc]
+        pub(crate) fn $name<M>(mut self, note: M) -> Diagnostic
+        where
+            M: Into<String>,
+        {
+            self.unspanned_associated_diagnostics
+                .push(AssociatedDiagnostic {
+                    kind: DiagnosticKind::$kind,
+                    span: self.span,
+                    msg: note.into(),
+                });
+            self
+        }
+    )*}
+}
+
+macro_rules! with_spanned_diag {
+    ($(#[doc = $doc:expr] $name:ident as $kind:ident)*) => {$(
+        #[doc = $doc]
+        pub(crate) fn $name<S, M>(mut self, span: S, note: M) -> Diagnostic
+        where
+            S: Into<Span>,
+            M: Into<String>,
+        {
+            self.associated_diagnostics.push(AssociatedDiagnostic {
+                kind: DiagnosticKind::$kind,
+                span: span.into(),
                 msg: note.into(),
             });
-        self
+            self
+        }
+    )*}
+}
+
+impl Diagnostic {
+    span_diag! {
+        /// Creates an error diagnostic at a span.
+        span_err as Error
+        /// Creates a warning diagnostic at a span.
+        span_warn as Warning
     }
 
-    /// Adds a help message to the diagnostic.
-    pub(crate) fn with_help<M>(mut self, note: M) -> Diagnostic
-    where
-        M: Into<String>,
-    {
-        self.unspanned_associated_diagnostics
-            .push(AssociatedDiagnostic {
-                kind: DiagnosticKind::Help,
-                span: self.span,
-                msg: note.into(),
-            });
-        self
+    with_diag! {
+        /// Adds a note to the diagnostic.
+        with_note as Note
+        /// Adds a help message to the diagnostic.
+        with_help as Help
     }
 
-    /// Adds a help message to the diagnostic, possibly at a different span.
-    pub(crate) fn with_help_note<S, M>(mut self, span: S, note: M) -> Diagnostic
-    where
-        S: Into<Span>,
-        M: Into<String>,
-    {
-        self.associated_diagnostics.push(AssociatedDiagnostic {
-            kind: DiagnosticKind::Help,
-            span: span.into(),
-            msg: note.into(),
-        });
-        self
+    with_spanned_diag! {
+        /// Adds a help message to the diagnostic, possibly at a different span.
+        with_spanned_help as Help
+        /// Adds a note to the diagnostic, possibly at a different span.
+        with_spanned_note as Note
     }
 }

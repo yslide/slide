@@ -1,0 +1,29 @@
+!!!args
+---explain L0001
+!!!args
+
+===in
+===in
+
+~~~stdout
+The redundant nesting lint detects redundant nesting of expressions in parantheses or
+brackets.
+
+For example, the following nestings are redundant and can be reduced to a single nesting:
+
+```text
+((1))     -> (1)
+[[1]]     -> [1]
+([[(1)]]) -> (1)
+```
+
+Redundant nestings are difficult to read and may be misleading, as generally a single nesting
+is expected to host an expression for precedence or clarity reasons.
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

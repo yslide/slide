@@ -52,6 +52,7 @@ impl Parser<InternedExprPat> for ExpressionPatternParser {
             Diagnostic::span_err(
                 span,
                 "Variables cannot be used in an expression pattern",
+                /* TODO: add error code */ None,
                 Some("unexpected variable".into()),
             )
             .with_help(format!(

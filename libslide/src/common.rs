@@ -1,5 +1,7 @@
 //! Common types used by libslide.
 
+use std::cmp::Ordering;
+
 /// Describes the character span of a substring in a text.
 ///
 /// For example, in "abcdef", "bcd" has the span (1, 4).
@@ -25,6 +27,28 @@ impl Span {
         Self {
             lo: self.lo,
             hi: other.hi,
+        }
+    }
+}
+
+impl PartialOrd for Span {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Span {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.lo < other.lo {
+            Ordering::Less
+        } else if self.lo > other.lo {
+            Ordering::Greater
+        } else if self.hi < other.hi {
+            Ordering::Less
+        } else if self.hi > other.hi {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
         }
     }
 }

@@ -1,0 +1,19 @@
+!!!args
+--lint
+--expr-pat
+!!!args
+
+===in
+$a + #aa + _aaa + $b + #ba
+===in
+
+~~~stdout
+$a + #aa + _aaa + $b + #ba
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

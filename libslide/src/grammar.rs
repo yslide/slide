@@ -4,9 +4,11 @@
 mod intern;
 mod pattern;
 mod transformer;
+mod visitor;
 pub use intern::*;
 pub use pattern::*;
 pub use transformer::*;
+pub use visitor::*;
 
 use crate::emit::Emit;
 use crate::scanner::types::{Token, TokenType};
@@ -21,9 +23,25 @@ where
 {
 }
 
+/// A statement in a slide program.
 #[derive(Clone, Debug)]
 pub enum Stmt {
+    /// An expression statement is a statement that consists solely of an expression. For example,
+    /// the slide program
+    ///
+    /// ```text
+    /// 1 + 1
+    /// ```
+    ///
+    /// contains one statement, that statement also being an expression.
     Expr(InternedExpr),
+    /// An assignment binds some value to a variable. For example the statement
+    ///
+    /// ```text
+    /// x = 1 + 1
+    /// ```
+    ///
+    /// binds the expression "1 + 1" to "x".
     Assignment(Assignment),
 }
 

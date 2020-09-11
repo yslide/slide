@@ -48,19 +48,19 @@ jobs:
           cargo install cargo-fuzz
           cd slide
           EC="$(cargo fuzz run slide -- fuzz/corpus/ fuzz/seed -runs=500000 &> out.slide || echo $?)"
-          FUZZ_OUT="$(cat out.slide | tail -30)"
+          FUZZ_OUTPUT="$(cat out.slide | tail -30)"
           RE_CRASH_FILE="(fuzz/artifacts/slide/crash-[0-9a-zA-Z]+)"
           if [[ "$FUZZ_OUT" =~ $RE_CRASH_FILE ]]; then
             FILE="${BASH_REMATCH[1]}"
             DL_CASE="$(curl --upload-file "$FILE" https://transfer.sh/hello.txt)"
-            FUZZ_OUTPUT="$(curl --upload-file "out.slide" https://transfer.sh/fuzz-output.txt)"
+            FUZZ_OUTPUT_FILE="$(curl --upload-file "out.slide" https://transfer.sh/fuzz-output.txt)"
           fi
           JSON="$(jq -cn \
                 --arg ec "$EC" \
-                --arg out "$FUZZ_OUT" \
+                --arg fuzz_output "$FUZZ_OUTPUT" \
                 --arg dl_case "$DL_CASE" \
-                --arg fuzz_out "$FUZZ_OUTPUT" \
-                '{ec: $ec, fuzz_out: $out, dl_case: $dl_case, fuzz_out: $fuzz_out}')"
+                --arg fuzz_output_file "$FUZZ_OUTPUT_FILE" \
+                '{ec: $ec, fuzz_output: $fuzz_output, dl_case: $dl_case, fuzz_output_file: $fuzz_output_file}')"
           echo "::set-output name=matrix::$JSON"
 
       - name: Create issue
@@ -75,14 +75,14 @@ jobs:
             Daily slide fuzzing failed. Last 30 lines of the output log are as follows:
 
             ```
-            ${{ fromJson(steps.run.outputs.matrix).out }}
+            ${{ fromJson(steps.run.outputs.matrix).fuzz_output }}
             ```
 
             Download this test case at ${{ fromJson(steps.run.outputs.matrix).dl_case }}
 
             [Command run output][1]
 
-            [Fuzz output][2]
+            [Fuzz output file][2]
 
             [1]: https://github.com/yslide/slide/actions/runs/${{ github.run_id }}
-            [2]: ${{ fromJson(steps.run.outputs.matrix).fuzz_out }}
+            [2]: ${{ fromJson(steps.run.outputs.matrix).fuzz_output_file }}

@@ -197,7 +197,7 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 #![doc(
-    html_logo_url = "https://avatars1.githubusercontent.com/u/49662722?s=400&u=62119505c71017e88a2728f7a1257b3506481441&v=4"
+    html_logo_url = "https://avatars2.githubusercontent.com/u/49662722?s=400&u=f0bcc9ee748892048588a2907eb3f176b91a1084&v=4"
 )]
 
 #[macro_use]

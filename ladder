@@ -17,9 +17,8 @@ def test(args, runner_args):
     if args.sys:
         cargo_args.append("--test")
         cargo_args.append("system_tests")
-    cargo_args.append("--")
-    cargo_args.append("--test-threads")
-    cargo_args.append(str(args.threads))
+    cargo_args.append("-j")
+    cargo_args.append(str(args.jobs))
     for runner_arg in unknown:
         cargo_args.append(runner_arg)
     cargo_args.append("--")
@@ -108,10 +107,10 @@ test_parser.add_argument(
     help="""Only run system tests."""
 )
 test_parser.add_argument(
-    "-t", "--threads",
+    "-j", "--jobs",
     type=int,
-    default=4,
-    help="""The number of threads that should be used to run the tests."""
+    default=8,
+    help="""The number of concurrent jobs (threads) that should be used to run the tests."""
 )
 test_parser.add_argument(
     "--bless",

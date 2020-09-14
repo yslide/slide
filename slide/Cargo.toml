@@ -31,6 +31,7 @@ path = "src/test/mod.rs"
 harness = false
 
 [dev-dependencies]
+slide = { path = "." }
 difference = "2.0.0"
 image = "0.20"
 lazy_static = "1.4.0"

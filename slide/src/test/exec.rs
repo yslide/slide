@@ -1,6 +1,4 @@
-use super::atomic_lock;
 use libtest_mimic::Outcome;
-use std::process::Command;
 
 pub type SlideOutput = (
     /*stdout*/ String,
@@ -9,28 +7,32 @@ pub type SlideOutput = (
 );
 
 pub fn run_slide(args: &str, input: &str) -> Result<SlideOutput, Outcome> {
-    let mut cmd = Command::new("cargo");
-    cmd.args(&["run", "-q", "--"]);
-    cmd.args(
-        args.lines()
-            .filter(|l| !l.is_empty())
-            .flat_map(|arg| arg.split(' ')),
-    );
-    cmd.args(&["--", &input]);
+    let sanitized_args = vec!["slide"]
+        .into_iter()
+        .chain(
+            args.lines()
+                .filter(|l| !l.is_empty())
+                .flat_map(|arg| arg.split(' ')),
+        )
+        .chain(vec!["--", input].into_iter());
 
-    let cmd = match cmd.output() {
-        Ok(cmd) => cmd,
+    let opts = match slide::get_opts(|args| args.get_matches_from_safe(sanitized_args), false) {
+        Ok(opts) => opts,
         Err(e) => {
-            return Err(print_fail! { Failure: "{}", e; });
+            return Ok(if e.use_stderr() {
+                (String::new(), e.to_string(), 1.to_string())
+            } else {
+                (e.to_string(), String::new(), 0.to_string())
+            })
         }
     };
 
-    let stdout = String::from_utf8(cmd.stdout).unwrap();
-    let stderr = String::from_utf8(cmd.stderr).unwrap();
-    let exitcode = match cmd.status.code() {
-        Some(n) => n.to_string(),
-        None => "no code".to_owned(),
-    } + "\n";
+    let slide::SlideResult {
+        stdout,
+        stderr,
+        code,
+        ..
+    } = slide::run_slide(opts);
 
-    Ok((stdout, stderr, exitcode))
+    Ok((stdout, stderr, code.to_string()))
 }

@@ -111,19 +111,31 @@ impl SlideEmitTest {
             };
         }
 
-        if stdout != self.stdout || stderr != self.stderr || exitcode != self.exitcode {
+        // Right ends of bless content may be inaccurate because we always force a newline, so
+        // just check that the actual content is correct.
+
+        macro_rules! t {
+            ($expr:expr) => {
+                $expr.trim_end()
+            };
+        }
+
+        if t!(stdout) != t!(self.stdout)
+            || t!(stderr) != t!(self.stderr)
+            || t!(exitcode) != t!(self.exitcode)
+        {
             return fail! { move |printer: &mut dyn LinePrinter| {
-                if stdout != self.stdout {
+                if t!(stdout) != t!(self.stdout) {
                     printer! { printer Text: "Mismatch in stdout:"; };
-                    print_diff(printer, &self.stdout, &stdout);
+                    print_diff(printer, &t!(self.stdout), &t!(stdout));
                 }
-                if stderr != self.stderr {
+                if t!(stderr) != t!(self.stderr) {
                     printer! { printer Text: "Mismatch in stderr:"; };
-                    print_diff(printer, &self.stderr, &stderr);
+                    print_diff(printer, &t!(self.stderr), &t!(stderr));
                 }
-                if exitcode != self.exitcode {
+                if t!(exitcode) != t!(self.exitcode) {
                     printer! { printer Text: "Mismatch in exit code:"; };
-                    print_diff(printer, &self.exitcode, &exitcode);
+                    print_diff(printer, &t!(self.exitcode), &t!(exitcode));
                 }
                 printer! { printer
                     Suggestion: "Help: If this is expected, try running `{}`.",

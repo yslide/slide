@@ -1,94 +1,9 @@
-use slide::{run_slide, Opts, SlideResult};
+use slide::{get_opts, run_slide, SlideResult};
 use std::env;
 use std::ffi::OsString;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use termcolor::{BufferedStandardStream, ColorChoice, WriteColor};
-
-fn get_opts(color: bool) -> Opts {
-    let matches = clap::App::new(clap::crate_name!())
-        .version(clap::crate_version!())
-        .about(clap::crate_description!())
-        .author(clap::crate_authors!())
-        .arg(
-            clap::Arg::with_name("program")
-                .help("Program to evaluate")
-                .required(true)
-                .default_value_if("explain", None, "")
-        )
-        .arg(
-            clap::Arg::with_name("output-form")
-                .short("-o")
-                .long("--output-form")
-                .next_line_help(true)
-                .help(
-                    "Slide emit format. Possible values:\n\
-                    \tpretty:       Human-readable text, like \"1 + 2\".\n\
-                    \ts-expression: Prefixed s-expression, like \"(+ 1 2)\".\n\
-                    \tlatex:        LaTeX math mode code, like \"$\\left\\(1 + 2\\right\\)$\".\n\
-                    \tdebug:        Opaque internal representation. Note: this format is not stable.\n\
-                    ",
-                )
-                .hide_possible_values(true)
-                .default_value("pretty")
-                .takes_value(true)
-                .possible_values(&["pretty", "s-expression", "latex", "debug"]),
-        )
-        .arg(
-            // TODO: validate that -olatex is present.
-            clap::Arg::with_name("emit-config")
-                .long("--emit-config")
-                .next_line_help(true)
-                .help(
-                    "Emit configuration options. Possible values:\n\
-                    \tfrac (latex): Emit divisions as fractions.\n\
-                    ",
-                )
-                .hide_possible_values(true)
-                .takes_value(true)
-                .possible_values(&["frac"])
-                .multiple(true),
-        )
-        .arg(
-            clap::Arg::with_name("lint")
-                .long("--lint")
-                .help("Emit lint warnings for the program, if any."),
-        )
-        .arg(
-            clap::Arg::with_name("parse-only")
-                .long("--parse-only")
-                .help("Stop after parsing and dump the AST"),
-        )
-        .arg(
-            clap::Arg::with_name("expr-pat")
-                .long("--expr-pat")
-                .help("Parse the program as an expression pattern. Implies --parse-only."),
-        )
-        .arg(
-            clap::Arg::with_name("explain")
-                .long("--explain")
-                .value_name("diagnostic")
-                .help("Provide a detailed explanation for a diagnostic code.")
-                .takes_value(true)
-        )
-        .get_matches();
-
-    let expr_pat = matches.is_present("expr-pat");
-    Opts {
-        program: matches.value_of("program").unwrap().into(),
-        // TODO: we should consolidate emit_format and output-form before any stable release.
-        emit_format: matches.value_of("output-form").unwrap().into(),
-        emit_config: matches
-            .values_of("emit-config")
-            .map(|opts| opts.map(str::to_owned).collect())
-            .unwrap_or_default(),
-        lint: matches.is_present("lint"),
-        parse_only: matches.is_present("parse-only") || expr_pat,
-        explain_diagnostic: matches.value_of("explain").map(str::to_owned),
-        expr_pat,
-        color,
-    }
-}
 
 fn main_impl() -> Result<(), Box<dyn std::error::Error>> {
     let mut ch_stdout = BufferedStandardStream::stdout(ColorChoice::Auto);
@@ -96,7 +11,7 @@ fn main_impl() -> Result<(), Box<dyn std::error::Error>> {
     let is_tty = atty::is(atty::Stream::Stderr);
     let use_color = is_tty && ch_stderr.supports_color();
 
-    let opts = get_opts(use_color);
+    let opts = get_opts(|args| Ok(args.get_matches()), use_color).unwrap();
     let SlideResult {
         code,
         stdout,

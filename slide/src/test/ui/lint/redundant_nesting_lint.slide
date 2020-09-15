@@ -31,7 +31,6 @@ warning[L0001]: Redundant nesting
   |                              ---------
   |
   = help: consider reducing this expression to "(4)"
-
 ~~~stderr
 
 ~~~exitcode

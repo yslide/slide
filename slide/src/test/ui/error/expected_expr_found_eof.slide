@@ -6,12 +6,11 @@
 ~~~stdout
 
 ~~~stderr
-error: Expected an expression, found end of file
+error[P0002]: Expected an expression, found expression
   |
 1 | 1 + 2 * 3 / 4 ^  
   |                 ^ expected an expression
   |
-
 ~~~stderr
 
 ~~~exitcode

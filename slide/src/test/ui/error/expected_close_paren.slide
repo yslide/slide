@@ -6,13 +6,12 @@
 ~~~stdout
 
 ~~~stderr
-error: Expected `)`, found `]`
+error[P0003]: Mismatched closing delimiter ``]``
   |
 1 | 1 + (2 * 3] - 5 
   |           ^ expected closing `)`
   |     - help: opening `(` here
   |
-
 ~~~stderr
 
 ~~~exitcode

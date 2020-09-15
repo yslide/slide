@@ -8,15 +8,14 @@
 ~~~stdout
 
 ~~~stderr
-error: Unexpected extra tokens
+error[P0001]: Unexpected extra tokens
   |
 1 |   1 + 0 -1 2 3
   |  __________^
 2 | |   4 5 6 / 7 ^ 8
 3 | |   9 
-  | |____^ not connected to a primary expression
+  | |____^ not connected to a primary statement
   |
-
 ~~~stderr
 
 ~~~exitcode

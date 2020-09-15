@@ -1,0 +1,35 @@
+!!!args
+--explain P0003
+!!!args
+
+===in
+===in
+
+~~~stdout
+All opening delimiters with closing pairs must have that closing delimiter as a
+correctly-ordered complement in a slide program. In particular,
+
+  - `(` and `)` are complements (parantheses)
+  - `[` and `]` are complements (brackets)
+
+The most obvious case for a mismatch is when an incorrect complement is used, for example in
+`(1+2]` or `[1+2)`.
+
+A complement to this is that nesting order must be obeyed. That is, `([1 + 2])` is valid but
+`([1 + 2)]` is not.
+
+Finally, a more subtle case may be when one set of delimiters is not properly closed, as in
+the case
+
+```text
+([1 + 2)
+       ^- expected closing `]`
+```
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

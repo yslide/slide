@@ -1,0 +1,41 @@
+!!!args
+--explain P0001
+!!!args
+
+===in
+===in
+
+~~~stdout
+This error fires on tokens that are not connected to the rest of a primary statement in a
+slide program.
+
+For example, in the program
+
+```text
+1 + 2 3 + 4
+      ^^^^^- offending tokens
+```
+
+`3 + 4` are not connected to the primary expression statement `1 + 2`, and slide does not
+know how this is intended to be evaluated.
+
+In the future, statement that are separated by a newline will not emit this error. The
+following are examples of programs that currently emit this error, but in the future should not:
+
+```text
+a = 1
+b = 2 - in the future, parsed as two assignment statements
+```
+
+```text
+1 + 2
+3 + 4 - in the future, parsed as two expression statements
+```
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

@@ -14,7 +14,7 @@ use libslide::diagnostics::Diagnostic;
 use libslide::scanner::ScanResult;
 use libslide::{
     evaluate, lint_expr_pat, lint_stmt, parse_expression, parse_expression_pattern, scan, Emit,
-    EmitConfig, EmitFormat, EvaluatorContext, LintConfig, Token,
+    EmitConfig, EmitFormat, EvaluatorContext, Token,
 };
 
 #[cfg(feature = "wasm")]
@@ -238,7 +238,7 @@ pub fn run_slide(opts: Opts) -> SlideResult {
     );
 
     if let Some(diag_code) = opts.explain_diagnostic {
-        let codes = LintConfig::all_codes_with_explanations();
+        let codes = Diagnostic::all_codes_with_explanations();
         return match codes.get::<str>(&diag_code) {
             Some(explanation) => {
                 result.stdout.push_str(&explanation);

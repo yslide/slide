@@ -1,6 +1,6 @@
-use super::{extra_tokens_diag, Parser};
+use super::{errors::*, extra_tokens_diag, Parser};
 use crate::common::Span;
-use crate::diagnostics::Diagnostic;
+use crate::diagnostics::{Diagnostic, DiagnosticRecord};
 use crate::grammar::*;
 use crate::scanner::types::Token;
 use crate::utils::PeekIter;
@@ -48,18 +48,7 @@ impl Parser<InternedExprPat> for ExpressionPatternParser {
     }
 
     fn parse_variable(&mut self, name: String, span: Span) -> Self::Expr {
-        self.push_diag(
-            Diagnostic::span_err(
-                span,
-                "Variables cannot be used in an expression pattern",
-                /* TODO: add error code */ None,
-                Some("unexpected variable".into()),
-            )
-            .with_help(format!(
-                r##"consider using "${name}", "#{name}", or "_{name}" as a pattern"##,
-                name = name,
-            )),
-        );
+        self.push_diag(IllegalVariable!(span, name));
         intern_expr_pat!(ExprPat::VarPat(name), span)
     }
 

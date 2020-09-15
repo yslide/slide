@@ -1,0 +1,37 @@
+!!!args
+--explain P0002
+!!!args
+
+===in
+===in
+
+~~~stdout
+This error fires on token sequences that are expected to parse as an expression, but do not.
+
+The following are examples of slide programs that emit this error:
+
+```text
+1 + +
+    ^- offending token
+```
+
+```text
+1 / )
+    ^- offending token
+```
+
+```text
+1 /
+   ^- offending token: end of file
+```
+
+In all cases such programs are malformed and should be refactored to include complete
+expressions.
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

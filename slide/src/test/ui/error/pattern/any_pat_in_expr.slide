@@ -6,13 +6,12 @@
 ~~~stdout
 
 ~~~stderr
-error: Patterns cannot be used in an expression
+error[P0004]: Patterns cannot be used in an expression
   |
 1 | 1 + _any 
   |     ^^^^ unexpected pattern
   |
   = help: consider using "any" as a variable
-
 ~~~stderr
 
 ~~~exitcode

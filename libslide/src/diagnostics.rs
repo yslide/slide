@@ -8,6 +8,9 @@
 //! - easily transformable into some output form by downstream customers (namely the slide app)
 
 use crate::common::Span;
+use crate::{LintConfig, ParseErrors, ScanErrors};
+
+use std::collections::HashMap;
 
 /// The kind of a slide diagnostic.
 pub enum DiagnosticKind {
@@ -54,6 +57,20 @@ pub struct Diagnostic {
     /// Any additional diagnostics associated with this one, not explicitly covering any span.
     /// Implicitly, these diagnostics cover the span of the primary one.
     pub unspanned_associated_diagnostics: Vec<AssociatedDiagnostic>,
+}
+
+/// Describes a code and detailed explanation for a diagnostic.
+pub trait DiagnosticRecord {
+    /// Diagnostic code.
+    const CODE: &'static str;
+    /// Detailed diagnostic explanation.
+    const EXPLANATION: &'static str;
+}
+
+/// Describes an individual registry of slide diagnostics.
+pub trait DiagnosticRegistry {
+    /// Retrieves all diagnostic codes owned by this registry and their explanations.
+    fn codes_with_explanations() -> Vec<(&'static str, &'static str)>;
 }
 
 macro_rules! span_diag {
@@ -136,4 +153,53 @@ impl Diagnostic {
         /// Adds a note to the diagnostic, possibly at a different span.
         with_spanned_note as Note
     }
+}
+
+macro_rules! include_diagnostic_registries {
+    ($($registry:ident)*) => {
+        impl Diagnostic {
+            /// All diagnostic codes and their explanations.
+            pub fn all_codes_with_explanations() -> HashMap<&'static str, &'static str> {
+                let mut map = HashMap::new();
+                $(map.extend($registry::codes_with_explanations());)*
+                map
+            }
+        }
+
+        #[cfg(test)]
+        mod check_codes {
+            use super::{Diagnostic, DiagnosticRegistry};
+            use crate::*;
+
+            #[test]
+            fn check_conflicts() {
+                let mut vec = Vec::new();
+                $(vec.extend($registry::codes_with_explanations());)*
+                assert_eq!(vec.len(), Diagnostic::all_codes_with_explanations().len());
+            }
+
+            /// Each code must be of form Sdddd, where S is L/S/P and d is a digit.
+            #[test]
+            fn check_format() {
+                let codes = Diagnostic::all_codes_with_explanations();
+
+                for code in codes.keys() {
+                    assert_eq!(code.len(), 5);
+                    assert!(matches!(
+                        code.chars().next(),
+                        Some('L') | Some('S') | Some('P')
+                    ));
+                    for ch in code.chars().skip(1) {
+                        assert!(matches!(ch, '0'..='9'));
+                    }
+                }
+            }
+        }
+    }
+}
+
+include_diagnostic_registries! {
+    LintConfig
+    ParseErrors
+    ScanErrors
 }

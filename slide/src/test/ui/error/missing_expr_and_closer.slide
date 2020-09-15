@@ -6,19 +6,18 @@
 ~~~stdout
 
 ~~~stderr
-error: Expected an expression, found end of file
+error[P0002]: Expected an expression, found expression
   |
 1 | 1 + (2 * 
   |         ^ expected an expression
   |
 
-error: Expected `)`, found end of file
+error[P0003]: Mismatched closing delimiter `end of file`
   |
 1 | 1 + (2 * 
   |         ^ expected closing `)`
   |     - help: opening `(` here
   |
-
 ~~~stderr
 
 ~~~exitcode

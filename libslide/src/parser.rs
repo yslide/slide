@@ -4,6 +4,11 @@
 #[macro_use]
 pub mod test_utils; // this **must** be first since macro import order matters!
 
+#[macro_use]
+mod errors;
+pub use errors::ParseErrors;
+use errors::*;
+
 mod expression_parser;
 mod expression_pattern_parser;
 
@@ -11,7 +16,7 @@ pub use expression_parser::parse as parse_expression;
 pub use expression_pattern_parser::parse as parse_expression_pattern;
 
 use crate::common::Span;
-use crate::diagnostics::Diagnostic;
+use crate::diagnostics::{Diagnostic, DiagnosticRecord};
 use crate::grammar::*;
 use crate::scanner::types::{Token, TokenType as TT};
 use crate::utils::PeekIter;
@@ -47,18 +52,14 @@ macro_rules! binary_expr_parser {
 }
 
 /// Returns a diagnostic for an unclosed delimiter.
-fn unclosed_delimiter(open: Token, expected: TT, found: Token) -> Diagnostic {
-    let mut found_str = found.to_string();
-    if !matches!(found.ty, TT::EOF) {
+fn unclosed_delimiter(opener: Token, expected_closer: TT, found_closer: Token) -> Diagnostic {
+    let mut found_str = found_closer.to_string();
+    if !matches!(found_closer.ty, TT::EOF) {
         found_str = format!("`{}`", found_str);
     }
-    Diagnostic::span_err(
-        found.span,
-        format!("Expected `{}`, found {}", expected, found_str),
-        /* TODO: add error code */ None,
-        format!("expected closing `{}`", expected),
-    )
-    .with_spanned_help(open.span, format!("opening `{}` here", open))
+    MismatchedClosingDelimiter!(expected expected_closer, at found_closer.span,
+                                due to opener, at opener.span;
+                                found found_str)
 }
 
 /// Returns a diagnostic for extra tokens following a primary item.
@@ -71,12 +72,8 @@ fn extra_tokens_diag(extra_tokens: &mut PeekIter<Token>) -> Diagnostic {
             break;
         }
     }
-    Diagnostic::span_err(
-        lo..hi,
-        "Unexpected extra tokens",
-        /* TODO: add error code */ None,
-        "not connected to a primary expression".to_string(),
-    )
+    let span = lo..hi;
+    ExtraTokens!(span)
 }
 
 trait Parser<T>
@@ -157,12 +154,7 @@ where
     fn num_term(&mut self) -> Self::Expr {
         let tok = self.next();
         if matches!(tok.ty, TT::EOF) {
-            self.push_diag(Diagnostic::span_err(
-                tok.span,
-                "Expected an expression, found end of file",
-                /* TODO: add error code */ None,
-                Some("expected an expression".into()),
-            ));
+            self.push_diag(ExpectedExpr!(tok.span, "expression"));
             return Self::Expr::empty(tok.span);
         }
 
@@ -180,12 +172,7 @@ where
                 TT::OpenParen => self.parse_open_paren(tok),
                 TT::OpenBracket => self.parse_open_bracket(tok),
                 _ => {
-                    self.push_diag(Diagnostic::span_err(
-                        tok.span,
-                        format!("Expected an expression, found `{}`", tok.to_string()),
-                        /* TODO: add error code */ None,
-                        Some("expected an expression".into()),
-                    ));
+                    self.push_diag(ExpectedExpr!(tok.span, tok.to_string()));
                     Self::Expr::empty(tok.span)
                 }
             }

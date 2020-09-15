@@ -1,6 +1,6 @@
-use super::{extra_tokens_diag, Parser};
+use super::{errors::*, extra_tokens_diag, Parser};
 use crate::common::Span;
-use crate::diagnostics::Diagnostic;
+use crate::diagnostics::{Diagnostic, DiagnosticRecord};
 use crate::grammar::*;
 use crate::scanner::types::{Token, TokenType};
 use crate::utils::{PeekIter, StringUtils};
@@ -27,18 +27,7 @@ impl ExpressionParser {
 
 impl ExpressionParser {
     fn parse_pattern(&mut self, name: String, span: Span) -> InternedExpr {
-        self.push_diag(
-            Diagnostic::span_err(
-                span,
-                "Patterns cannot be used in an expression",
-                /* TODO: add error code */ None,
-                Some("unexpected pattern".into()),
-            )
-            .with_help(format!(
-                r#"consider using "{cut_name}" as a variable"#,
-                cut_name = name.substring(1, name.len() - 1)
-            )),
-        );
+        self.push_diag(IllegalPattern!(span, name));
         intern_expr!(Expr::Var(name), span)
     }
 }

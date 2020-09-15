@@ -6,12 +6,11 @@
 ~~~stdout
 
 ~~~stderr
-error: Unexpected extra tokens
+error[P0001]: Unexpected extra tokens
   |
 1 | 1 2 3 
-  |   ^^^ not connected to a primary expression
+  |   ^^^ not connected to a primary statement
   |
-
 ~~~stderr
 
 ~~~exitcode

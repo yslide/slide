@@ -1,11 +1,16 @@
 //! Tokenizes slide programs and produces lexing diagnostics.
 
-pub mod types;
+#[macro_use]
+mod errors;
+pub use errors::ScanErrors;
+use errors::*;
 
-use crate::diagnostics::Diagnostic;
-use strtod::strtod;
+pub mod types;
 use types::TokenType as TT;
 pub use types::*;
+
+use crate::diagnostics::{Diagnostic, DiagnosticRecord};
+use strtod::strtod;
 
 /// Describes the result of tokenizing a slide program.
 pub struct ScanResult {
@@ -114,14 +119,7 @@ impl Scanner {
         let span = start..self.pos;
 
         if matches!(ty, Invalid(..)) {
-            let diag = Diagnostic::span_err(
-                span.clone(),
-                "Invalid token",
-                /* TODO: add error code */ None,
-                None,
-            )
-            .with_note("token must be mathematically significant");
-            self.push_diag(diag);
+            self.push_diag(InvalidToken!(span.clone()));
         }
         self.output.push(tok!(ty, span));
     }

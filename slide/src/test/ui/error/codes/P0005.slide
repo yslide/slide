@@ -1,0 +1,31 @@
+!!!args
+--explain P0005
+!!!args
+
+===in
+===in
+
+~~~stdout
+Variables are illegal in a slide expression pattern.
+
+In most cases, this error is fired because you intended to evaluate an expression with
+slide, or wrote a variable in place of a variable pattern.
+
+Because expression patterns are meant to abstract over and match expressions, there is
+generally not a need to explicitly define the name of a variable to be matched by an
+expression pattern. Rather, the concern is generally with the shape of the variable; that
+is, that it is actually a variable. For this use case, the "${name}" pattern (where "{name}"
+is a text placeholder) serves as a variable-matching pattern.
+
+As a concrete example, the expression pattern `$a + $b + $a` matches both the expressions
+`a + b + a` and `b + a + b`. Both expressions are lowered the same way despite having
+different variable names, so variable patterns permit abstraction and common representation
+over the names.
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

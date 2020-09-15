@@ -188,7 +188,7 @@
             class="mb-2"
           />
         </div>
-        <pre><pre id="slide-output" class="inner" v-html="output"><code></code></pre></pre>
+        <pre id="slide-output"><component :is="outputComponent" /></pre>
         <a v-bind:href="bugReportUrl" v-if="ranOnce">Report a bug</a>
       </article>
     </div>
@@ -263,6 +263,20 @@
             }
             return false;
           },
+
+          outputComponent() {
+            return {
+              template: `<pre class="inner">${this.sanitize(this.output)}</pre>`,
+              methods: {
+                explain: (code) => {
+                  this.shouldExplain = true;
+                  this.explain = code;
+                  document.querySelector("#options").open = true;
+                  this.runSlide();
+                },
+              },
+            };
+          },
         },
         created() {
           document.querySelector("#slide-input").innerText = this.input;
@@ -312,11 +326,21 @@
 
             const { code, stdout, stderr } = run_slide_wasm(slideOpts);
 
-            this.output = ansi.ansi_to_html(`${stderr}\n${stdout}`).trim();
+            this.output = `${stderr}\n${stdout}`;
             this.ranOnce = true;
             this.updateUrl();
             this.updateBugReportUrl(slideOpts);
             this.updateLatexEmitImg(code);
+          },
+
+          sanitize(output) {
+            return ansi
+              .ansi_to_html(output)
+              .trim()
+              .replace(
+                /(error|warning)\[([LSP]\d+)\]/g,
+                '$1[<a href="#slide-output" v-on:click="explain(\'$2\')">$2</a>]'
+              );
           },
 
           updateBugReportUrl(slideOpts) {

@@ -23,7 +23,7 @@ macro_rules! __check_parsed {
         use crate::grammar::*;
         use crate::parser::test_utils::verify_expr_spans;
 
-        let (parsed, input, expected_out) = __parse!(parse_expression, $inout);
+        let (parsed, input, expected_out) = __parse!(parse_statement, $inout);
         assert_eq!(parsed.to_string(), expected_out);
 
         if input == expected_out {

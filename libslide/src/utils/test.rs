@@ -1,14 +1,21 @@
+/// Parses a statement.
+#[macro_export]
+macro_rules! parse_stmt {
+    ($expr:expr) => {{
+        use crate::{parse_statement, scan};
+
+        let tokens = scan($expr).tokens;
+        let (parsed, _) = parse_statement(tokens);
+        parsed
+    }};
+}
+
 /// Parses an expression.
 #[macro_export]
-#[doc(hidden)]
 macro_rules! parse_expr {
     ($expr:expr) => {{
         use crate::grammar::*;
-        use crate::{parse_expression, scan};
-
-        let tokens = scan($expr).tokens;
-        let (parsed, _) = parse_expression(tokens);
-        match parsed {
+        match crate::parse_stmt!($expr) {
             Stmt::Expr(expr) => expr,
             _ => unreachable!(),
         }

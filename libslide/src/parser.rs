@@ -9,11 +9,11 @@ mod errors;
 pub use errors::ParseErrors;
 use errors::*;
 
-mod expression_parser;
 mod expression_pattern_parser;
+mod statement_parser;
 
-pub use expression_parser::parse as parse_expression;
 pub use expression_pattern_parser::parse as parse_expression_pattern;
+pub use statement_parser::parse as parse_statement;
 
 use crate::common::Span;
 use crate::diagnostics::{Diagnostic, DiagnosticRecord};
@@ -111,9 +111,6 @@ where
     }
     fn push_diag(&mut self, diagnostic: Diagnostic);
 
-    // Default parsing implementations.
-    // TODO: increase modularity of this parser
-
     #[inline]
     fn done(&mut self) -> bool {
         self.input().peek().map(|t| &t.ty) == Some(&TT::EOF)
@@ -153,6 +150,7 @@ where
 
     fn num_term(&mut self) -> Self::Expr {
         let tok = self.next();
+        let tok_span = tok.span;
         if matches!(tok.ty, TT::EOF) {
             self.push_diag(ExpectedExpr!(tok.span, "expression"));
             return Self::Expr::empty(tok.span);
@@ -178,18 +176,19 @@ where
             }
         };
 
+        let next_span = self.peek().span;
         match self.peek().ty {
             // <node>(<other>) => <node> * (<other>)
             TT::OpenParen | TT::OpenBracket => {
-                // TODO: mark this node as synthetic
-                self.input().push_front(Token::new(TT::Mult, (0, 0)));
+                self.input()
+                    .push_front(Token::new(TT::Mult, (tok_span.hi, next_span.lo)));
             }
             // <num><var> => <num> * <var>
             TT::Variable(_) | TT::VariablePattern(_) | TT::ConstPattern(_) | TT::AnyPattern(_)
                 if node.is_const() =>
             {
-                // TODO: mark this node as synthetic
-                self.input().push_front(Token::new(TT::Mult, (0, 0)))
+                self.input()
+                    .push_front(Token::new(TT::Mult, (tok_span.hi, next_span.lo)))
             }
             _ => {}
         }

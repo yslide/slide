@@ -215,8 +215,8 @@ pub(crate) use scanner::ScanErrors;
 pub use scanner::Token;
 
 mod parser;
-pub use parser::parse_expression;
 pub use parser::parse_expression_pattern;
+pub use parser::parse_statement;
 pub(crate) use parser::ParseErrors;
 
 mod linter;

@@ -13,7 +13,7 @@ use diagnostics::{emit_slide_diagnostics, sanitize_source_for_diagnostics};
 use libslide::diagnostics::Diagnostic;
 use libslide::scanner::ScanResult;
 use libslide::{
-    evaluate, lint_expr_pat, lint_stmt, parse_expression, parse_expression_pattern, scan, Emit,
+    evaluate, lint_expr_pat, lint_stmt, parse_expression_pattern, parse_statement, scan, Emit,
     EmitConfig, EmitFormat, EvaluatorContext, Token,
 };
 
@@ -297,7 +297,7 @@ impl<'a> ProgramEvaluator<'a> {
 
     /// Handles evaluation of a regular slide program (statements, expressions).
     fn eval_slide_program(mut self) -> SlideResult {
-        let (parse_tree, diagnostics) = parse_expression(self.tokens);
+        let (parse_tree, diagnostics) = parse_statement(self.tokens);
 
         self.result.err(&diagnostics);
         if !diagnostics.is_empty() {

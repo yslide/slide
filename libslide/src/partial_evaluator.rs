@@ -56,21 +56,14 @@ fn evaluate_expr(expr: InternedExpr, rules: &[Rule], ctxt: &EvaluatorContext) ->
 mod tests {
     use super::evaluate;
     use crate::evaluator_rules::RuleName;
-    use crate::grammar::*;
-    use crate::{parse_expression, scan, EvaluatorContext};
-
-    fn parse(program: &str) -> Stmt {
-        let tokens = scan(program).tokens;
-        let (parsed, _) = parse_expression(tokens);
-        parsed
-    }
+    use crate::{parse_stmt, EvaluatorContext};
 
     macro_rules! partial_evaluator_tests {
         ($($name:ident: $program:expr => $result:expr)*) => {
         $(
             #[test]
             fn $name() {
-                let parsed = parse($program);
+                let parsed = parse_stmt!($program);
                 let evaluated = evaluate(parsed.clone(), &EvaluatorContext::default()).unwrap();
 
                 assert_eq!(evaluated.to_string(), $result.to_string());
@@ -153,7 +146,7 @@ mod tests {
 
     #[test]
     fn remove_rule() {
-        let parsed = parse("1 - 2 + 3 * 4");
+        let parsed = parse_stmt!("1 - 2 + 3 * 4");
         let ctxt = EvaluatorContext::default()
             .with_denylist([RuleName::Add].to_vec())
             .always_flatten(false);

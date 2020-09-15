@@ -531,19 +531,9 @@ fn unwrap_expr(arg: InternedExpr) -> InternedExpr {
 #[cfg(test)]
 mod tests {
     use super::flatten_expr;
-    use crate::grammar::*;
+    use crate::parse_expr;
     use crate::utils::normalize;
     use crate::Emit;
-    use crate::{parse_expression, scan};
-
-    fn parse(program: &str) -> InternedExpr {
-        let tokens = scan(program).tokens;
-        let (parsed, _) = parse_expression(tokens);
-        match parsed {
-            Stmt::Expr(expr) => expr,
-            _ => unreachable!(),
-        }
-    }
 
     static CASES: &[&str] = &[
         "1 + 2 + 3 -> 6",
@@ -573,7 +563,7 @@ mod tests {
     fn flatten_cases() {
         for case in CASES {
             let mut split = case.split(" -> ");
-            let expr = parse(split.next().unwrap());
+            let expr = parse_expr!(split.next().unwrap());
             let expected_flattened = split.next().unwrap();
 
             let flattened = normalize(flatten_expr(expr)).emit_s_expression(Default::default());

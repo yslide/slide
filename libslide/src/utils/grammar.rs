@@ -260,19 +260,11 @@ pub fn normalize(expr: InternedExpr) -> InternedExpr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{parse_expression, parse_expression_pattern, scan};
-
-    fn parse(s: &'static str) -> InternedExpr {
-        let toks = scan(s).tokens;
-        match parse_expression(toks) {
-            (Stmt::Expr(expr), _) => expr,
-            _ => unreachable!(),
-        }
-    }
+    use crate::{parse_expr, parse_expression_pattern, scan};
 
     #[test]
     fn get_symmetric_expressions_add() {
-        let parsed = parse("1 - 2 + 3 + (x * 4) + 5");
+        let parsed = parse_expr!("1 - 2 + 3 + (x * 4) + 5");
         let exprs: Vec<String> = get_symmetric_expressions(parsed)
             .into_iter()
             .map(|e| e.to_string())
@@ -298,7 +290,7 @@ mod tests {
 
     #[test]
     fn get_symmetric_expressions_mult() {
-        let parsed = parse("1 ^ 2 * 3 * (x - 4) * 5");
+        let parsed = parse_expr!("1 ^ 2 * 3 * (x - 4) * 5");
         let exprs: Vec<String> = get_symmetric_expressions(parsed)
             .into_iter()
             .map(|e| e.to_string())
@@ -322,7 +314,7 @@ mod tests {
 
     #[test]
     fn flattened_binary_args() {
-        let expr = parse("1 - 2 + 3 + 4 * 5 + 6");
+        let expr = parse_expr!("1 - 2 + 3 + 4 * 5 + 6");
         let args: Vec<String> = get_flattened_binary_args(expr, BinaryOperator::Plus)
             .into_iter()
             .map(|e| e.to_string())
@@ -333,7 +325,10 @@ mod tests {
 
     #[test]
     fn unflatten_binary_expr_right() {
-        let args: Vec<InternedExpr> = vec!["1", "2", "3", "4"].into_iter().map(parse).collect();
+        let args: Vec<InternedExpr> = vec!["1", "2", "3", "4"]
+            .into_iter()
+            .map(|s| parse_expr!(s))
+            .collect();
         let expr = unflatten_binary_expr(&args, BinaryOperator::Plus, UnflattenStrategy::Right);
 
         match expr.as_ref() {
@@ -364,7 +359,10 @@ mod tests {
 
     #[test]
     fn unflatten_binary_expr_left() {
-        let args: Vec<InternedExpr> = vec!["1", "2", "3", "4"].into_iter().map(parse).collect();
+        let args: Vec<InternedExpr> = vec!["1", "2", "3", "4"]
+            .into_iter()
+            .map(|s| parse_expr!(s))
+            .collect();
         let expr = unflatten_binary_expr(&args, BinaryOperator::Plus, UnflattenStrategy::Left);
 
         match expr.as_ref() {

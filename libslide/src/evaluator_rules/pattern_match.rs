@@ -276,18 +276,11 @@ impl<E: InternedExpression + Eq> PatternMatch<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{parse_expression, parse_expression_pattern, scan};
+    use crate::{parse_expr, parse_expression_pattern, scan};
 
     fn parse_rule(prog: &str) -> InternedExprPat {
         let (expr, _) = parse_expression_pattern(scan(prog).tokens);
         expr
-    }
-
-    fn parse_expr(prog: &str) -> InternedExpr {
-        match parse_expression(scan(prog).tokens) {
-            (Stmt::Expr(expr), _) => expr,
-            _ => unreachable!(),
-        }
     }
 
     mod replacements {
@@ -338,7 +331,7 @@ mod tests {
                 #[test]
                 fn $name() {
                     let parsed_rule = parse_rule($rule);
-                    let parsed_target = parse_expr($target);
+                    let parsed_target = parse_expr!($target);
 
                     let repls = PatternMatch::match_rule(parsed_rule, parsed_target);
                     let (repls, expected_repls): (PatternMatch<InternedExpr>, Vec<&str>) =
@@ -357,7 +350,7 @@ mod tests {
                         .into_iter()
                         .map(|m| m.split(": "))
                         .map(|mut i| (i.next().unwrap(), i.next().unwrap()))
-                        .map(|(r, t)| (parse_rule(r), parse_expr(t)));
+                        .map(|(r, t)| (parse_rule(r), parse_expr!(t)));
 
                     assert_eq!(expected_repls.len(), repls.map.len());
 

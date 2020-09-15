@@ -266,7 +266,7 @@
 
           outputComponent() {
             return {
-              template: `<pre class="inner">${this.sanitize(this.output)}</pre>`,
+              template: `<pre class="inner">${this.output}</pre>`,
               methods: {
                 explain: (code) => {
                   this.shouldExplain = true;
@@ -326,21 +326,17 @@
 
             const { code, stdout, stderr } = run_slide_wasm(slideOpts);
 
-            this.output = `${stderr}\n${stdout}`;
-            this.ranOnce = true;
-            this.updateUrl();
-            this.updateBugReportUrl(slideOpts);
-            this.updateLatexEmitImg(code);
-          },
-
-          sanitize(output) {
-            return ansi
-              .ansi_to_html(output)
+            this.output = ansi
+              .ansi_to_html(`${stderr}\n${stdout}`)
               .trim()
               .replace(
                 /(error|warning)\[([LSP]\d+)\]/g,
                 '$1[<a href="#slide-output" v-on:click="explain(\'$2\')">$2</a>]'
               );
+            this.ranOnce = true;
+            this.updateUrl();
+            this.updateBugReportUrl(slideOpts);
+            this.updateLatexEmitImg(code);
           },
 
           updateBugReportUrl(slideOpts) {

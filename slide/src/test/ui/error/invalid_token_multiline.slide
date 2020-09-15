@@ -8,14 +8,14 @@
 ~~~stdout
 
 ~~~stderr
-error: Invalid token
+error[S0001]: Invalid token
   |
 1 | 9 * 32 @
   |        ^
   |
   = note: token must be mathematically significant
 
-error: Invalid token
+error[S0001]: Invalid token
   |
 1 | 9 * 32 @
 2 |   4 ~ 10 - 5 `
@@ -23,7 +23,7 @@ error: Invalid token
   |
   = note: token must be mathematically significant
 
-error: Invalid token
+error[S0001]: Invalid token
   |
 1 | 9 * 32 @
 2 |   4 ~ 10 - 5 `
@@ -31,14 +31,13 @@ error: Invalid token
   |
   = note: token must be mathematically significant
 
-error: Invalid token
+error[S0001]: Invalid token
   |
 ...
 3 | 10 , 
   |    ^
   |
   = note: token must be mathematically significant
-
 ~~~stderr
 
 ~~~exitcode

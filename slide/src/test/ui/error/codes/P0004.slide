@@ -1,0 +1,26 @@
+!!!args
+--explain P0004
+!!!args
+
+===in
+===in
+
+~~~stdout
+Patterns are illegal in a "regular" slide program; i.e. a program including a standard
+expression.
+
+In most cases, this error is fired because you intended to run an expression pattern through
+slide, or wrote a variable in the form of a pattern.
+
+Because patterns are abstractions over expressions, they cannot be evaluated in the way an
+expression can without first being filled in by an expression. As an analogy, saying you
+have "eaten groceries" does not provide concrete information about what you have eaten
+without first defining what the groceries are.
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

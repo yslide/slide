@@ -5,11 +5,9 @@ mod unary_series;
 use redundant_nesting::*;
 use unary_series::*;
 
-use super::{LintExplanation, LintRule};
+use super::{DiagnosticRecord, LintRule};
 use crate::diagnostics::Diagnostic;
 use crate::grammar::Stmt;
-
-use std::collections::HashMap;
 
 macro_rules! define_stmt_lints {
     ($($linter:ident,)*) => {
@@ -25,10 +23,10 @@ macro_rules! define_stmt_lints {
                 }
             }
 
-            pub fn all_explanations() -> HashMap<&'static str, &'static str> {
-                let mut map = HashMap::new();
-                $(map.insert($linter::CODE, $linter::EXPLANATION);)*
-                map
+            pub fn all_explanations() -> Vec<(&'static str, &'static str)> {
+                let mut vec = Vec::new();
+                $(vec.push(($linter::CODE, $linter::EXPLANATION));)*
+                vec
             }
         }
     };

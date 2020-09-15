@@ -6,13 +6,12 @@
 ~~~stdout
 
 ~~~stderr
-error: Patterns cannot be used in an expression
+error[P0004]: Patterns cannot be used in an expression
   |
 1 | 1 + #const 
   |     ^^^^^^ unexpected pattern
   |
   = help: consider using "const" as a variable
-
 ~~~stderr
 
 ~~~exitcode

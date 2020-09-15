@@ -6,12 +6,11 @@
 ~~~stdout
 
 ~~~stderr
-error: Expected an expression, found `%`
+error[P0002]: Expected an expression, found %
   |
 1 | 1 + % 
   |     ^ expected an expression
   |
-
 ~~~stderr
 
 ~~~exitcode

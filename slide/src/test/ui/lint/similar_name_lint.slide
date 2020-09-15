@@ -79,7 +79,6 @@ warning[L0003]: Similar name "gosh" used by multiple patterns
   | ----- "gosh" is used by a const pattern as well
   |         ----- note: const pattern here
   |
-
 ~~~stderr
 
 ~~~exitcode

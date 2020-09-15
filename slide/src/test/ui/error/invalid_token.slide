@@ -6,20 +6,19 @@
 ~~~stdout
 
 ~~~stderr
-error: Invalid token
+error[S0001]: Invalid token
   |
 1 | 9 * 32 @ 4 ~ 10 - 5 
   |        ^
   |
   = note: token must be mathematically significant
 
-error: Invalid token
+error[S0001]: Invalid token
   |
 1 | 9 * 32 @ 4 ~ 10 - 5 
   |            ^
   |
   = note: token must be mathematically significant
-
 ~~~stderr
 
 ~~~exitcode

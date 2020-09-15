@@ -211,16 +211,18 @@ pub mod diagnostics;
 
 pub mod scanner;
 pub use scanner::scan;
+pub(crate) use scanner::ScanErrors;
 pub use scanner::Token;
 
 mod parser;
 pub use parser::parse_expression;
 pub use parser::parse_expression_pattern;
+pub(crate) use parser::ParseErrors;
 
 mod linter;
 pub use linter::lint_expr_pat;
 pub use linter::lint_stmt;
-pub use linter::LintConfig;
+pub(crate) use linter::LintConfig;
 
 mod partial_evaluator;
 pub use partial_evaluator::evaluate;

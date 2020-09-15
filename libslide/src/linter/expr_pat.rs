@@ -3,11 +3,9 @@
 mod similar_names;
 use similar_names::*;
 
-use super::{LintExplanation, LintRule};
+use super::{DiagnosticRecord, LintRule};
 use crate::diagnostics::Diagnostic;
 use crate::grammar::InternedExprPat;
-
-use std::collections::HashMap;
 
 macro_rules! define_expr_pat_lints {
     ($($linter:ident,)*) => {
@@ -23,10 +21,10 @@ macro_rules! define_expr_pat_lints {
                 }
             }
 
-            pub fn all_explanations() -> HashMap<&'static str, &'static str> {
-                let mut map = HashMap::new();
-                $(map.insert($linter::CODE, $linter::EXPLANATION);)*
-                map
+            pub fn all_explanations() -> Vec<(&'static str, &'static str)> {
+                let mut vec = Vec::new();
+                $(vec.push(($linter::CODE, $linter::EXPLANATION));)*
+                vec
             }
         }
     };

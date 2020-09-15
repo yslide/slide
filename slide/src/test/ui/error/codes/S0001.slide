@@ -1,0 +1,30 @@
+!!!args
+--explain S0001
+!!!args
+
+===in
+===in
+
+~~~stdout
+Tokens in a slide program must be mathematically significant. In particular, slide uses a
+subset of canonical mathematical notation to represent expressions.
+
+This error is fired on a token either because
+
+  - The token is invalid in the language of common mathematical notation, and/or
+  - The token is not yet supported by slide in representing expressions. In this case, we
+    would appreciate a bug report at https://github.com/yslide/slide/issues/new.
+
+---
+
+NB: "canonical mathematical notation" is not well-defined. In general, slide's principle is
+to use notation that is intuitive and obvious. Of course, reasonable people can disagree on
+what this means.
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

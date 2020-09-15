@@ -12,15 +12,14 @@ _a + $b -#c + 1 2
 ~~~stdout
 
 ~~~stderr
-error: Unexpected extra tokens
+error[P0001]: Unexpected extra tokens
   |
 1 |   _a + $b -#c + 1 2
   |  _________________^
 2 | | 3 4 5 6 / 7 ^ 8
 3 | |   9 
-  | |____^ not connected to a primary expression
+  | |____^ not connected to a primary statement
   |
-
 ~~~stderr
 
 ~~~exitcode

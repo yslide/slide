@@ -45,9 +45,18 @@ define_errors! {
     ///to use notation that is intuitive and obvious. Of course, reasonable people can disagree on
     ///what this means.
     S0001: InvalidToken {
-        ($span:expr) => {
-            Diagnostic::span_err($span, "Invalid token", InvalidToken::CODE, None)
-                .with_note("token must be mathematically significant")
-        }
+        ($span:expr, $did_you_mean:expr) => {{
+            let mut diag = Diagnostic::span_err(
+                $span,
+                "Invalid token",
+                InvalidToken::CODE,
+                None,
+            )
+            .with_note("token must be mathematically significant");
+            if let Some((did_you_mean, span)) = $did_you_mean {
+                diag = diag.with_spanned_help(span, format!(r#"did you mean "{}"?"#, did_you_mean));
+            }
+            diag
+        }}
     }
 }

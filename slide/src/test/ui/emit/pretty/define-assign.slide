@@ -1,0 +1,18 @@
+!!!args
+--emit-config=define-assign
+!!!args
+
+===in
+A := 5
+===in
+
+~~~stdout
+A := 5
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

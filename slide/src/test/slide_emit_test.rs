@@ -244,6 +244,8 @@ fn print_diff(printer: &mut dyn LinePrinter, text1: &str, text2: &str) {
             Difference::Add(ref x) => (x, "+", &LineFormat::Success),
             Difference::Rem(ref x) => (x, "-", &LineFormat::Failure),
         };
-        printer.print_line(&format!("{}{}", prefix, content), fmt);
+        for line in content.lines() {
+            printer.print_line(&format!("{}{}", prefix, line), fmt);
+        }
     }
 }

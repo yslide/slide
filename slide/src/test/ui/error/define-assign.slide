@@ -1,0 +1,20 @@
+===in
+arg :  = 5
+===in
+
+~~~stdout
+~~~stdout
+
+~~~stderr
+error[S0001]: Invalid token
+  |
+1 | arg :  = 5 
+  |     ^
+  |     ---- help: did you mean ":="?
+  |
+  = note: token must be mathematically significant
+~~~stderr
+
+~~~exitcode
+1
+~~~exitcode

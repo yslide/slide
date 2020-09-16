@@ -101,7 +101,9 @@ impl Scanner {
     /// Matches a symbol with a token and creates it.
     fn scan_symbol(&mut self) {
         use TokenType::*;
+        let mut did_you_mean = None;
         let start = self.pos;
+        let mut span = None;
         let ty = match self.next().unwrap() {
             '+' => Plus,
             '-' => Minus,
@@ -110,16 +112,29 @@ impl Scanner {
             '%' => Mod,
             '^' => Exp,
             '=' => Equal,
+            ':' => {
+                if self.peek() == Some(&'=') {
+                    self.next();
+                    Equal
+                } else {
+                    span = Some(start..start + 1);
+                    self.collect_while(|c| c.is_whitespace());
+                    if self.peek() == Some(&'=') {
+                        did_you_mean = Some((":=", start..self.pos + 1));
+                    }
+                    Invalid(":".to_owned())
+                }
+            }
             '(' => OpenParen,
             ')' => CloseParen,
             '[' => OpenBracket,
             ']' => CloseBracket,
             c => Invalid(c.to_string()),
         };
-        let span = start..self.pos;
+        let span = span.unwrap_or_else(|| start..self.pos);
 
         if matches!(ty, Invalid(..)) {
-            self.push_diag(InvalidToken!(span.clone()));
+            self.push_diag(InvalidToken!(span.clone(), did_you_mean));
         }
         self.output.push(tok!(ty, span));
     }

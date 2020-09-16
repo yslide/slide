@@ -23,8 +23,8 @@ FLAGS:
 OPTIONS:
         --emit-config <emit-config>...
             Emit configuration options. Possible values:
-            	frac          (latex): Emit divisions as fractions.
-            	define-assign (pretty): Use ":=" for assignments.
+            	frac          (latex):        Emit divisions as fractions.
+            	define-assign (pretty|latex): Use ":=" for assignments.
         --explain <diagnostic>            Provide a detailed explanation for a diagnostic code.
     -o, --output-form <output-form>
             Slide emit format. Possible values:

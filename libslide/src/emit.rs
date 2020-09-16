@@ -42,7 +42,7 @@ bitflags::bitflags! {
         /// Applies to LaTeX emit.
         const FRAC = 1;
         /// Emit assignment operators as ":=".
-        /// Applies to pretty emit.
+        /// Applies to pretty, LaTeX emit.
         const DEFINE_ASSIGN = 2;
     }
 }
@@ -190,7 +190,12 @@ impl Emit for Assignment {
     }
 
     fn emit_latex(&self, config: EmitConfig) -> String {
-        format!("{} = {}", self.var, self.rhs.emit_latex(config))
+        let assign = if config.contains(EmitConfig::DEFINE_ASSIGN) {
+            ":="
+        } else {
+            "="
+        };
+        format!("{} {} {}", self.var, assign, self.rhs.emit_latex(config))
     }
 }
 

@@ -89,8 +89,8 @@ where
                 .next_line_help(true)
                 .help(
                     "Emit configuration options. Possible values:\n\
-                    \tfrac          (latex): Emit divisions as fractions.\n\
-                    \tdefine-assign (pretty): Use \":=\" for assignments.\n\
+                    \tfrac          (latex):        Emit divisions as fractions.\n\
+                    \tdefine-assign (pretty|latex): Use \":=\" for assignments.\n\
                     ",
                 )
                 .hide_possible_values(true)

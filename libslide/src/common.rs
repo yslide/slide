@@ -29,6 +29,11 @@ impl Span {
             hi: other.hi,
         }
     }
+
+    #[allow(unused)] // TODO: propogate usage
+    pub(crate) fn over<'a>(&self, content: &'a str) -> &'a str {
+        &content[self.lo..self.hi]
+    }
 }
 
 impl PartialOrd for Span {

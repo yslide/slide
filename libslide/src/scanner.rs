@@ -9,6 +9,7 @@ pub mod types;
 use types::TokenType as TT;
 pub use types::*;
 
+use crate::common::Span;
 use crate::diagnostics::{Diagnostic, DiagnosticRecord};
 use strtod::strtod;
 
@@ -33,14 +34,9 @@ pub fn scan<'a, T: Into<&'a str>>(input: T) -> ScanResult {
 struct Scanner {
     pos: usize,
     input: Vec<char>,
+    leading_trivia_start: usize,
     pub output: Vec<Token>,
     pub diagnostics: Vec<Diagnostic>,
-}
-
-macro_rules! tok {
-    ($ty:expr, $pos:expr) => {
-        Token::new($ty, $pos)
-    };
 }
 
 impl Scanner {
@@ -49,6 +45,7 @@ impl Scanner {
         Scanner {
             pos: 0,
             input: input.chars().collect(),
+            leading_trivia_start: 0,
             output: Vec::new(),
             diagnostics: Vec::new(),
         }
@@ -71,6 +68,14 @@ impl Scanner {
         self.diagnostics.push(diagnostic);
     }
 
+    fn push_tok<S: Into<Span>>(&mut self, ty: TokenType, span: S) {
+        let span = span.into();
+        let full_span = (self.leading_trivia_start, span.hi);
+        self.output.push(Token::new(ty, span, full_span));
+
+        self.leading_trivia_start = span.hi;
+    }
+
     fn collect_while(&mut self, pred: fn(&char) -> bool) -> String {
         let mut s = String::with_capacity(8);
         while let Some(true) = self.peek().map(pred) {
@@ -83,9 +88,7 @@ impl Scanner {
         // iterate through string
         while let Some(c) = self.peek() {
             match c {
-                _ if c.is_whitespace() => {
-                    self.next();
-                }
+                _ if c.is_whitespace() => self.scan_trivia(),
                 _ if c.is_digit(10) => self.scan_num(),
                 '$' => self.scan_var_pattern(),
                 '#' => self.scan_const_pattern(),
@@ -95,7 +98,13 @@ impl Scanner {
             }
         }
 
-        self.output.push(tok!(TT::EOF, (self.pos, self.pos + 1)));
+        self.push_tok(TT::EOF, (self.pos, self.pos + 1));
+    }
+
+    /// Scans leading trivia, including whitespace.
+    fn scan_trivia(&mut self) {
+        // For now, just skip all trivia.
+        self.next();
     }
 
     /// Matches a symbol with a token and creates it.
@@ -136,7 +145,7 @@ impl Scanner {
         if matches!(ty, Invalid(..)) {
             self.push_diag(InvalidToken!(span.clone(), did_you_mean));
         }
-        self.output.push(tok!(ty, span));
+        self.push_tok(ty, span);
     }
 
     /// Scans through the content of a number to create a token of that value.
@@ -152,7 +161,7 @@ impl Scanner {
         // valid float literals. For now, use an external parser.
         let float = strtod(&float_str).unwrap();
 
-        self.output.push(tok!(TT::Float(float), (start, self.pos)));
+        self.push_tok(TT::Float(float), (start, self.pos));
     }
 
     fn scan_var_str(&mut self) -> String {
@@ -163,8 +172,7 @@ impl Scanner {
         let start = self.pos;
 
         let var_name = self.scan_var_str();
-        self.output
-            .push(tok!(TT::Variable(var_name), (start, self.pos)));
+        self.push_tok(TT::Variable(var_name), (start, self.pos));
     }
 
     fn scan_var_pattern(&mut self) {
@@ -175,8 +183,7 @@ impl Scanner {
         pat.push(*self.next().unwrap());
         pat.push_str(&self.scan_var_str());
 
-        self.output
-            .push(tok!(TT::VariablePattern(pat), (start, self.pos)));
+        self.push_tok(TT::VariablePattern(pat), (start, self.pos));
     }
 
     fn scan_const_pattern(&mut self) {
@@ -187,8 +194,7 @@ impl Scanner {
         pat.push(*self.next().unwrap());
         pat.push_str(&self.scan_var_str());
 
-        self.output
-            .push(tok!(TT::ConstPattern(pat), (start, self.pos)));
+        self.push_tok(TT::ConstPattern(pat), (start, self.pos));
     }
 
     fn scan_any_pattern(&mut self) {
@@ -199,8 +205,7 @@ impl Scanner {
         pat.push(*self.next().unwrap());
         pat.push_str(&self.scan_var_str());
 
-        self.output
-            .push(tok!(TT::AnyPattern(pat), (start, self.pos)));
+        self.push_tok(TT::AnyPattern(pat), (start, self.pos));
     }
 }
 
@@ -276,6 +281,20 @@ mod tests {
             invalid_tokens: "@", "@"
             invalid_tokens_mixed_with_valid: "=@/", "= @ /"
             invalid_expressions: "1 + * 2", "1 + * 2"
+        }
+    }
+
+    #[test]
+    fn leading_trivia() {
+        let program = r#"1 + 2  +    3 -  
+
+ 4   ^ 5"#;
+        let tokens = crate::scan(program).tokens;
+        let toks_with_trivia = vec![
+            "1", " +", " 2", "  +", "    3", " -", "  \n\n 4", "   ^", " 5",
+        ];
+        for (tok, str_with_trivia) in tokens.into_iter().zip(toks_with_trivia) {
+            assert_eq!(tok.full_span.over(program), str_with_trivia);
         }
     }
 }

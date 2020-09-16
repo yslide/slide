@@ -98,17 +98,21 @@ pub struct Token {
     pub ty: TokenType,
     /// The source span of the token.
     pub span: Span,
+    /// The full span of the token including its leading trivia.
+    pub full_span: Span,
 }
 
 impl Token {
     /// Creates a new token.
-    pub fn new<S>(ty: TokenType, span: S) -> Self
+    pub fn new<Sp1, Sp2>(ty: TokenType, span: Sp1, full_span: Sp2) -> Self
     where
-        S: Into<Span>,
+        Sp1: Into<Span>,
+        Sp2: Into<Span>,
     {
         Self {
             ty,
             span: span.into(),
+            full_span: full_span.into(),
         }
     }
 }
@@ -130,7 +134,7 @@ mod tests {
                 #[test]
                 fn $name() {
                     use TokenType::*;
-                    let tok = Token {ty: $ty, span: (0, 0).into()};
+                    let tok = Token::new($ty, (0..0), (0..0));
                     assert_eq!(tok.to_string(), $format_str);
                 }
             )*

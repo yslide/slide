@@ -176,21 +176,22 @@ where
             }
         };
 
-        let next_span = self.peek().span;
-        match self.peek().ty {
+        let insert_synthetic_mult = match self.peek().ty {
             // <node>(<other>) => <node> * (<other>)
-            TT::OpenParen | TT::OpenBracket => {
-                self.input()
-                    .push_front(Token::new(TT::Mult, (tok_span.hi, next_span.lo)));
-            }
+            TT::OpenParen | TT::OpenBracket => true,
             // <num><var> => <num> * <var>
             TT::Variable(_) | TT::VariablePattern(_) | TT::ConstPattern(_) | TT::AnyPattern(_)
                 if node.is_const() =>
             {
-                self.input()
-                    .push_front(Token::new(TT::Mult, (tok_span.hi, next_span.lo)))
+                true
             }
-            _ => {}
+            _ => false,
+        };
+        if insert_synthetic_mult {
+            let next_span = self.peek().span;
+            let bw_cur_and_next = (tok_span.hi, next_span.lo);
+            self.input()
+                .push_front(Token::new(TT::Mult, bw_cur_and_next, bw_cur_and_next));
         }
 
         node

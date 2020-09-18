@@ -16,15 +16,17 @@ pub struct ExpressionPatternParser {
     diagnostics: Vec<Diagnostic>,
 }
 
-impl Parser<InternedExprPat> for ExpressionPatternParser {
-    type Expr = InternedExprPat;
-
+impl ExpressionPatternParser {
     fn new(input: Vec<Token>) -> Self {
         Self {
             _input: PeekIter::new(input.into_iter()),
             diagnostics: vec![],
         }
     }
+}
+
+impl Parser<InternedExprPat> for ExpressionPatternParser {
+    type Expr = InternedExprPat;
 
     fn input(&mut self) -> &mut PeekIter<Token> {
         &mut self._input
@@ -62,6 +64,10 @@ impl Parser<InternedExprPat> for ExpressionPatternParser {
 
     fn parse_any_pattern(&mut self, name: String, span: Span) -> Self::Expr {
         intern_expr_pat!(ExprPat::AnyPat(name), span)
+    }
+
+    fn has_stmt_break(&mut self) -> bool {
+        false
     }
 }
 

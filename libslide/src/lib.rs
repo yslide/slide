@@ -202,7 +202,7 @@
 
 #[macro_use]
 mod grammar;
-pub use grammar::{ExprPat, Grammar, Stmt};
+pub use grammar::{ExprPat, Grammar, Stmt, StmtList};
 
 mod common;
 pub use common::*;

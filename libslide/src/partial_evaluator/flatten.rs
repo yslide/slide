@@ -563,7 +563,8 @@ mod tests {
     fn flatten_cases() {
         for case in CASES {
             let mut split = case.split(" -> ");
-            let expr = parse_expr!(split.next().unwrap());
+            let lhs = split.next().unwrap();
+            let expr = parse_expr!(lhs);
             let expected_flattened = split.next().unwrap();
 
             let flattened = normalize(flatten_expr(expr)).emit_s_expression(Default::default());

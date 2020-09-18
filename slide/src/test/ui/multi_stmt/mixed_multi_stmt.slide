@@ -1,0 +1,26 @@
+@TODO: preserve newline between a = 250 and 7.25
+
+===in
+1 + 2 / 3 * 6
+a = 10 * 5 ^ 2
+
+10 / 8 + 1
++ 2 +
+3
+
+d = 1
+===in
+
+~~~stdout
+5
+a = 250
+7.25
+d = 1
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

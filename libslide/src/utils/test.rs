@@ -5,7 +5,7 @@ macro_rules! parse_stmt {
         use crate::{parse_statement, scan};
 
         let tokens = scan($expr).tokens;
-        let (parsed, _) = parse_statement(tokens);
+        let (parsed, _) = parse_statement(tokens, $expr);
         parsed
     }};
 }
@@ -15,7 +15,7 @@ macro_rules! parse_stmt {
 macro_rules! parse_expr {
     ($expr:expr) => {{
         use crate::grammar::*;
-        match crate::parse_stmt!($expr) {
+        match crate::parse_stmt!($expr).into_iter().next().unwrap() {
             Stmt::Expr(expr) => expr,
             _ => unreachable!(),
         }

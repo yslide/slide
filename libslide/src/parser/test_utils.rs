@@ -1,8 +1,8 @@
 #![cfg(test)]
 
 macro_rules! __parse {
-    ($parser:ident, $inout:expr) => {{
-        use crate::parser::$parser;
+    (parse_statement, $inout:expr) => {{
+        use crate::parser::parse_statement;
         use crate::scanner::scan;
 
         let inout: Vec<&str> = $inout.split(" => ").collect();
@@ -13,7 +13,23 @@ macro_rules! __parse {
             pin.to_owned()
         };
         let tokens = scan(pin).tokens;
-        let (parsed, _) = $parser(tokens);
+        let (parsed, _) = parse_statement(tokens, pin);
+        (parsed, pin, pout)
+    }};
+
+    (parse_expression_pattern, $inout:expr) => {{
+        use crate::parser::parse_expression_pattern;
+        use crate::scanner::scan;
+
+        let inout: Vec<&str> = $inout.split(" => ").collect();
+        let pin = inout[0];
+        let pout = if inout.len() > 1 {
+            inout[1].to_owned()
+        } else {
+            pin.to_owned()
+        };
+        let tokens = scan(pin).tokens;
+        let (parsed, _) = parse_expression_pattern(tokens);
         (parsed, pin, pout)
     }};
 }
@@ -29,7 +45,7 @@ macro_rules! __check_parsed {
         if input == expected_out {
             // We can automate verification of spans only if the input is in the same emit form as
             // the output.
-            let inner_expr = match parsed {
+            let inner_expr = match parsed.into_iter().next().unwrap() {
                 Stmt::Expr(inner) => inner,
                 Stmt::Assignment(Assignment { rhs, .. }) => rhs,
             };

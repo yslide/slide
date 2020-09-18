@@ -148,6 +148,29 @@ macro_rules! latex_wrap {
     };
 }
 
+#[inline]
+fn join_emits<'a, E: 'a + Emit>(
+    list: impl Iterator<Item = &'a E>,
+    emit: impl FnMut(&E) -> String,
+) -> String {
+    list.map(emit).collect::<Vec<_>>().join("\n")
+}
+
+fmt_emit_impl!(StmtList);
+impl Emit for StmtList {
+    fn emit_pretty(&self, config: EmitConfig) -> String {
+        join_emits(self.iter(), |s| s.emit_pretty(config))
+    }
+
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
+        join_emits(self.iter(), |s| s.emit_s_expression(config))
+    }
+
+    fn emit_latex(&self, config: EmitConfig) -> String {
+        join_emits(self.iter(), |s| s.emit_latex(config))
+    }
+}
+
 fmt_emit_impl!(Stmt);
 impl Emit for Stmt {
     fn emit_pretty(&self, config: EmitConfig) -> String {

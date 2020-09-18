@@ -298,7 +298,7 @@ impl<'a> ProgramEvaluator<'a> {
 
     /// Handles evaluation of a regular slide program (statements, expressions).
     fn eval_slide_program(mut self) -> SlideResult {
-        let (parse_tree, diagnostics) = parse_statement(self.tokens);
+        let (parse_tree, diagnostics) = parse_statement(self.tokens, &self.result.org_program);
 
         self.result.err(&diagnostics);
         if !diagnostics.is_empty() {

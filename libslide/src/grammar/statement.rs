@@ -1,5 +1,47 @@
 use super::*;
 
+/// A list of statements in a slide program.
+#[derive(Clone, Debug)]
+pub struct StmtList {
+    /// The list of statements.
+    list: Vec<Stmt>,
+}
+
+impl Grammar for StmtList {}
+
+impl StmtList {
+    pub(crate) fn new(list: Vec<Stmt>) -> Self {
+        Self { list }
+    }
+
+    pub(crate) fn iter(&self) -> std::slice::Iter<'_, Stmt> {
+        self.list.iter()
+    }
+}
+
+pub struct StmtListIterator {
+    stmts: <Vec<Stmt> as IntoIterator>::IntoIter,
+}
+
+impl Iterator for StmtListIterator {
+    type Item = Stmt;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.stmts.next()
+    }
+}
+
+impl IntoIterator for StmtList {
+    type Item = Stmt;
+    type IntoIter = StmtListIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter {
+            stmts: self.list.into_iter(),
+        }
+    }
+}
+
 /// A statement in a slide program.
 #[derive(Clone, Debug)]
 pub enum Stmt {

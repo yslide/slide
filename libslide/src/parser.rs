@@ -83,7 +83,7 @@ where
 {
     type Expr;
 
-    fn new(input: Vec<Token>) -> Self;
+    // fn new(input: Vec<Token>) -> Self;
     fn input(&mut self) -> &mut PeekIter<Token>;
     fn parse(&mut self) -> T;
     fn parse_float(&mut self, f: f64, span: Span) -> Self::Expr;
@@ -110,6 +110,8 @@ where
         Self::Expr::bracket(inner, sp)
     }
     fn push_diag(&mut self, diagnostic: Diagnostic);
+
+    fn has_stmt_break(&mut self) -> bool;
 
     #[inline]
     fn done(&mut self) -> bool {
@@ -186,7 +188,7 @@ where
                 true
             }
             _ => false,
-        };
+        } && !self.has_stmt_break();
         if insert_synthetic_mult {
             let next_span = self.peek().span;
             let bw_cur_and_next = (tok_span.hi, next_span.lo);

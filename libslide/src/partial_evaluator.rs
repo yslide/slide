@@ -12,22 +12,27 @@ use crate::utils::{hash, normalize};
 use std::collections::HashSet;
 use std::error::Error;
 
-/// Evaluates a statement to as simplified a form as possible.
+/// Evaluates a list of statements to as simplified a form as possible for each.
 /// The evaluation may be partial, as some values (like variables) may be unknown.
-pub fn evaluate(expr: Stmt, ctxt: &EvaluatorContext) -> Result<Stmt, Box<dyn Error>> {
+pub fn evaluate(stmt_list: StmtList, ctxt: &EvaluatorContext) -> Result<StmtList, Box<dyn Error>> {
     let mut rule_set = RuleSet::default();
     for rule in &ctxt.rule_denylist {
         rule_set.remove(rule)
     }
     let built_rules = rule_set.build()?;
 
-    Ok(match expr {
-        Stmt::Expr(expr) => Stmt::Expr(evaluate_expr(expr, &built_rules, &ctxt)),
-        Stmt::Assignment(Assignment { var, rhs: expr }) => Stmt::Assignment(Assignment {
-            var,
-            rhs: evaluate_expr(expr, &built_rules, &ctxt),
-        }),
-    })
+    let evaluated = stmt_list
+        .into_iter()
+        .map(|stmt| match stmt {
+            Stmt::Expr(expr) => Stmt::Expr(evaluate_expr(expr, &built_rules, &ctxt)),
+            Stmt::Assignment(Assignment { var, rhs: expr }) => Stmt::Assignment(Assignment {
+                var,
+                rhs: evaluate_expr(expr, &built_rules, &ctxt),
+            }),
+        })
+        .collect::<Vec<_>>();
+
+    Ok(StmtList::new(evaluated))
 }
 
 /// Evaluates an expression to as simplified a form as possible.

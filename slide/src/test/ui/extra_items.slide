@@ -12,6 +12,7 @@ error[P0001]: Unexpected extra tokens
   |
 1 |   1 + 0 -1 2 3
   |  __________^
+  |            - help: if you meant to specify another statement, add a newline before this token
 2 | |   4 5 6 / 7 ^ 8
 3 | |   9 
   | |____^ not connected to a primary statement

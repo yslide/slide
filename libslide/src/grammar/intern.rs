@@ -25,6 +25,9 @@ where
     /// Returns whether the expression is a statically-evaluatable constant.
     fn is_const(&self) -> bool;
 
+    /// Returns whether the expression is a terminable variable (or variable-like).
+    fn is_var(&self) -> bool;
+
     /// Paranthesizes `inner`.
     fn paren(inner: Self, span: Span) -> Self;
 
@@ -292,6 +295,11 @@ impl InternedExpression for InternedExpr {
     }
 
     #[inline]
+    fn is_var(&self) -> bool {
+        matches!(**self, Expr::Var(_))
+    }
+
+    #[inline]
     fn paren(inner: InternedExpr, span: Span) -> Self {
         intern_expr!(Expr::Parend(inner), span)
     }
@@ -329,6 +337,11 @@ impl InternedExpression for InternedExprPat {
     #[inline]
     fn is_const(&self) -> bool {
         matches!(**self, ExprPat::Const(_))
+    }
+
+    #[inline]
+    fn is_var(&self) -> bool {
+        matches!(**self, ExprPat::ConstPat(_) | ExprPat::VarPat(_) | ExprPat::AnyPat(_))
     }
 
     #[inline]

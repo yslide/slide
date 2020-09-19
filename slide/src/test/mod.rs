@@ -94,7 +94,9 @@ impl TestCase {
             }
         };
 
-        if slide_emit_test.args.contains(" latex") && slide_emit_test.exitcode.trim() == "0" {
+        if (slide_emit_test.args.contains(" latex") || slide_emit_test.args.contains("=latex"))
+            && slide_emit_test.exitcode.trim() == "0"
+        {
             // The check could be better, but this will do for now.
             builder.add_suffixed(LaTeXEmitTest::from(&slide_emit_test), " latex emit");
         }

@@ -44,6 +44,9 @@ bitflags::bitflags! {
         /// Emit assignment operators as ":=".
         /// Applies to pretty, LaTeX emit.
         const DEFINE_ASSIGN = 2;
+        /// Emits multiplications implicitly where possible.
+        /// For example, `2*x` can be emitted as `2x`.
+        const IMPLICIT_MULT = 4;
     }
 }
 
@@ -54,6 +57,7 @@ impl From<Vec<String>> for EmitConfig {
             config |= match opt.as_ref() {
                 "frac" => EmitConfig::FRAC,
                 "define-assign" => EmitConfig::DEFINE_ASSIGN,
+                "implicit-mult" => EmitConfig::IMPLICIT_MULT,
                 _ => unreachable!(),
             }
         }
@@ -312,33 +316,48 @@ macro_rules! format_binary_operand {
     };
 }
 
+macro_rules! can_fold_mult {
+    ($rhs:expr, $open_paren:expr, $open_bracket:expr, $mult:expr) => {
+        $rhs.starts_with($open_paren)
+            || $rhs.starts_with($open_bracket)
+            || ($mult.lhs.is_const() && $mult.rhs.is_var())
+    };
+}
+
 macro_rules! display_binary_expr {
     ($iexpr:ident, $expr:ident) => {
         fmt_emit_impl!(BinaryExpr<$iexpr>);
         impl Emit for BinaryExpr<$iexpr> {
             fn emit_pretty(&self, config: EmitConfig) -> String {
-                format!(
-                    "{} {} {}",
-                    format_binary_operand!(
-                        $expr,
-                        self,
-                        &self.lhs,
-                        false,
-                        emit_pretty,
-                        normal_wrap,
-                        config
-                    ),
-                    self.op.emit_pretty(config),
-                    format_binary_operand!(
-                        $expr,
-                        self,
-                        &self.rhs,
-                        true,
-                        emit_pretty,
-                        normal_wrap,
-                        config
-                    ),
-                )
+                let lhs = format_binary_operand!(
+                    $expr,
+                    self,
+                    &self.lhs,
+                    false,
+                    emit_pretty,
+                    normal_wrap,
+                    config
+                );
+                let op = self.op.emit_pretty(config);
+                let rhs = format_binary_operand!(
+                    $expr,
+                    self,
+                    &self.rhs,
+                    true,
+                    emit_pretty,
+                    normal_wrap,
+                    config
+                );
+
+                match self.op {
+                    BinaryOperator::Mult
+                        if config.contains(EmitConfig::IMPLICIT_MULT)
+                            && can_fold_mult!(rhs, '(', '[', self) =>
+                    {
+                        format!("{}{}", lhs, rhs)
+                    }
+                    _ => format!("{} {} {}", lhs, op, rhs),
+                }
             }
 
             fn emit_s_expression(&self, config: EmitConfig) -> String {
@@ -359,10 +378,16 @@ macro_rules! display_binary_expr {
                     $expr, self, &self.rhs, true, emit_latex, latex_wrap, config
                 );
                 match self.op {
-                    BinaryOperator::Exp => format!("{}^{{{}}}", lhs, rhs),
+                    BinaryOperator::Mult
+                        if config.contains(EmitConfig::IMPLICIT_MULT)
+                            && can_fold_mult!(rhs, "\\left(", "\\left[", self) =>
+                    {
+                        format!("{}{}", lhs, rhs)
+                    }
                     BinaryOperator::Div if config.contains(EmitConfig::FRAC) => {
                         format!("\\frac{{{}}}{{{}}}", lhs, rhs)
                     }
+                    BinaryOperator::Exp => format!("{}^{{{}}}", lhs, rhs),
                     _ => format!("{} {} {}", lhs, op, rhs),
                 }
             }

@@ -8,7 +8,7 @@
 ===in
 
 ~~~stdout
-$9 \mod 5 \mod 5$
+$9 \bmod 5 \bmod 5$
 ~~~stdout
 
 ~~~stderr

@@ -290,7 +290,7 @@ impl Emit for BinaryOperator {
             Self::Minus => "-",
             Self::Mult => "*",
             Self::Div => "/",
-            Self::Mod => "\\mod",
+            Self::Mod => "\\bmod",
             Self::Exp => "^",
         }
         .to_owned()

@@ -8,7 +8,7 @@
 ===in
 
 ~~~stdout
-$6 \mod 4 \mod a$
+$6 \bmod 4 \bmod a$
 ~~~stdout
 
 ~~~stderr

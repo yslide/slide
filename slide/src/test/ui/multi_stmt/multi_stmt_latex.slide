@@ -1,0 +1,31 @@
+!!!args
+-o latex
+--parse-only
+!!!args
+
+===in
+1 + 2 / 3 * 6
+a = 10 * 5 ^ 2
+
+10 / 8 + 1
++ 2 +
+3
+
+d = 1
+===in
+
+~~~stdout
+\begin{align*}
+1 + 2 / 3 * 6\\
+a = 10 * 5^{2}\\
+10 / 8 + 1 + 2 + 3\\
+d = 1
+\end{align*}
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

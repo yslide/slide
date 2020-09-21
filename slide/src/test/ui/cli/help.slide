@@ -24,6 +24,7 @@ OPTIONS:
         --emit-config <emit-config>...
             Emit configuration options. Possible values:
             	frac          (latex):        Emit divisions as fractions.
+            	times         (latex):        Emit "\times" for multiplications.
             	define-assign (pretty|latex): Use ":=" for assignments.
             	implicit-mult (pretty|latex): Use implicit multiplication where possible.
         --explain <diagnostic>            Provide a detailed explanation for a diagnostic code.

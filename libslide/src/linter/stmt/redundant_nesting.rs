@@ -46,7 +46,7 @@ impl<'a> RedundantNestingLinter<'a> {
         if nestings > 1 {
             let opener = &self.source[span.lo..span.lo + 1];
             let closer = &self.source[span.hi - 1..span.hi];
-            let inner_expr = &self.source[expr.span.lo..expr.span.hi];
+            let inner_expr = expr.span.over(self.source);
 
             self.diagnostics.push(
                 Diagnostic::span_warn(span, "Redundant nesting", Self::CODE, None).with_help(

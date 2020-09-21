@@ -50,7 +50,7 @@ impl<'a> StmtVisitor<'a> for UnarySeriesLinter<'a> {
 
         if count > 1 {
             let span = start_span.to(nested.span);
-            let inner_expr = &self.source[nested.span.lo..nested.span.hi];
+            let inner_expr = nested.span.over(self.source);
             let reduced_expr = format!("{}{}", if is_neg { "-" } else { "" }, inner_expr);
 
             self.diagnostics.push(

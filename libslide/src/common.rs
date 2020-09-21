@@ -7,9 +7,9 @@ use std::cmp::Ordering;
 /// For example, in "abcdef", "bcd" has the span (1, 4).
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
 pub struct Span {
-    /// Inclusive lower bound index of the span
+    /// Inclusive lower bound index of the span, in terms of number of chars
     pub lo: usize,
-    /// Exclusive upper bound index of the span
+    /// Exclusive upper bound index of the span, in terms of number of chars
     pub hi: usize,
 }
 
@@ -30,9 +30,15 @@ impl Span {
         }
     }
 
-    #[allow(unused)] // TODO: propogate usage
     pub(crate) fn over<'a>(&self, content: &'a str) -> &'a str {
-        &content[self.lo..self.hi]
+        let mut indices = content.char_indices().map(|(i, _)| i);
+        let lo = indices.nth(self.lo).unwrap();
+        let hi = vec![lo]
+            .into_iter()
+            .chain(indices)
+            .nth(self.hi - self.lo)
+            .unwrap_or(self.hi);
+        &content[lo..hi]
     }
 }
 

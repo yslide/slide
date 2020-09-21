@@ -1,0 +1,20 @@
+!!!args
+--parse-only
+-o latex
+--emit-config times
+!!!args
+
+===in
+1 * 2 * (3 * 4)[5 * 6a]
+===in
+
+~~~stdout
+$1 \times 2 \times \left(3 \times 4\right) \times \left[5 \times 6 \times a\right]$
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

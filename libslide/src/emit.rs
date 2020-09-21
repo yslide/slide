@@ -47,6 +47,9 @@ bitflags::bitflags! {
         /// Emits multiplications implicitly where possible.
         /// For example, `2*x` can be emitted as `2x`.
         const IMPLICIT_MULT = 4;
+        /// Emits multiplication signs as "\times".
+        /// Applies to LaTeX emit.
+        const TIMES = 8;
     }
 }
 
@@ -58,6 +61,7 @@ impl From<Vec<String>> for EmitConfig {
                 "frac" => EmitConfig::FRAC,
                 "define-assign" => EmitConfig::DEFINE_ASSIGN,
                 "implicit-mult" => EmitConfig::IMPLICIT_MULT,
+                "times" => EmitConfig::TIMES,
                 _ => unreachable!(),
             }
         }
@@ -284,10 +288,11 @@ impl Emit for BinaryOperator {
         self.emit_pretty(config)
     }
 
-    fn emit_latex(&self, _config: EmitConfig) -> String {
+    fn emit_latex(&self, config: EmitConfig) -> String {
         match self {
             Self::Plus => "+",
             Self::Minus => "-",
+            Self::Mult if config.contains(EmitConfig::TIMES) => "\\times",
             Self::Mult => "*",
             Self::Div => "/",
             Self::Mod => "\\bmod",

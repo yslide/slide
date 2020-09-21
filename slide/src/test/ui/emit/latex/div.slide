@@ -1,14 +1,15 @@
 !!!args
 --parse-only
 -o latex
+--emit-config div
 !!!args
 
 ===in
-6 / 2
+1 / 2 / (3 / 4) / [5 / 6 / a]
 ===in
 
 ~~~stdout
-$6 / 2$
+$1 \div 2 \div \left(3 \div 4\right) \div \left[5 \div 6 \div a\right]$
 ~~~stdout
 
 ~~~stderr

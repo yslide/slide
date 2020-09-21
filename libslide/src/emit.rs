@@ -50,6 +50,9 @@ bitflags::bitflags! {
         /// Emits multiplication signs as "\times".
         /// Applies to LaTeX emit.
         const TIMES = 8;
+        /// Emits divisions as "\div".
+        /// Applies to LaTeX emit.
+        const DIV = 16;
     }
 }
 
@@ -62,6 +65,7 @@ impl From<Vec<String>> for EmitConfig {
                 "define-assign" => EmitConfig::DEFINE_ASSIGN,
                 "implicit-mult" => EmitConfig::IMPLICIT_MULT,
                 "times" => EmitConfig::TIMES,
+                "div" => EmitConfig::DIV,
                 _ => unreachable!(),
             }
         }
@@ -294,6 +298,7 @@ impl Emit for BinaryOperator {
             Self::Minus => "-",
             Self::Mult if config.contains(EmitConfig::TIMES) => "\\times",
             Self::Mult => "*",
+            Self::Div if config.contains(EmitConfig::DIV) => "\\div",
             Self::Div => "/",
             Self::Mod => "\\bmod",
             Self::Exp => "^",

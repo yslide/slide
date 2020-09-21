@@ -378,7 +378,8 @@ on commit ${this.commit}.
             this.showLatexEmitImg = code === 0 && this.emitFormat === "latex";
             if (this.showLatexEmitImg) {
               // slice(1, -1) to strip inline math mode: $<expr>$
-              const latex = encodeURIComponent(this.output.slice(1, -1));
+              const math = this.output.startsWith("$") ? this.output.slice(1, -1) : this.output;
+              const latex = encodeURIComponent(math);
               this.latexEmitImgUrl = `https://latex.codecogs.com/svg.latex?${latex}`;
             }
           },

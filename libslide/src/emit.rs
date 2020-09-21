@@ -181,6 +181,21 @@ impl Emit for StmtList {
     fn emit_latex(&self, config: EmitConfig) -> String {
         join_emits(self.iter(), |s| s.emit_latex(config))
     }
+
+    fn emit_wrapped_latex(&self, config: EmitConfig) -> String {
+        let latex = self.emit_latex(config);
+        let lines: Vec<_> = latex.lines().collect();
+        if lines.len() > 1 {
+            format!(
+                r#"\begin{{align*}}
+{}
+\end{{align*}}"#,
+                lines.join("\\\\\n")
+            )
+        } else {
+            format!("${}$", lines.join(""))
+        }
+    }
 }
 
 fmt_emit_impl!(Stmt);

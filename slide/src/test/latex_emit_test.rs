@@ -18,7 +18,11 @@ impl LaTeXEmitTest {
         };
         let stdout = stdout.trim();
 
-        let math_mode_inner = &stdout[1..(stdout.len() - 1)];
+        let math_mode_inner = if stdout.starts_with('$') {
+            &stdout[1..(stdout.len() - 1)]
+        } else {
+            &stdout
+        };
         let latex_img_url = format!(
             "https://latex.codecogs.com/png.latex?\\dpi{{400}}{}",
             math_mode_inner

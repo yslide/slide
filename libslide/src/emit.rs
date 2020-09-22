@@ -210,9 +210,11 @@ impl Emit for Stmt {
     fn emit_s_expression(&self, config: EmitConfig) -> String {
         match self {
             Self::Expr(expr) => expr.emit_s_expression(config),
-            Self::Assignment(Assignment { var, rhs }) => {
-                format!("(= {} {})", var, rhs.emit_s_expression(config))
-            }
+            Self::Assignment(Assignment {
+                var,
+                rhs,
+                asgn_op: _,
+            }) => format!("(= {} {})", var, rhs.emit_s_expression(config)),
         }
     }
 

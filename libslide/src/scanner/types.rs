@@ -30,6 +30,9 @@ pub enum TokenType {
     /// = symbol
     Equal,
 
+    /// := symbol
+    AssignDefine,
+
     /// ( symbol
     OpenParen,
 
@@ -76,6 +79,7 @@ impl fmt::Display for TokenType {
                 Mod => "%".into(),
                 Exp => "^".into(),
                 Equal => "=".into(),
+                AssignDefine => ":=".into(),
                 OpenParen => "(".into(),
                 CloseParen => ")".into(),
                 OpenBracket => "[".into(),

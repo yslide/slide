@@ -1,4 +1,5 @@
 use super::*;
+use crate::Span;
 
 /// A list of statements in a slide program.
 #[derive(Clone, Debug)]
@@ -78,9 +79,18 @@ impl From<Assignment> for Stmt {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum AssignmentOp {
+    /// =
+    Equal(Span),
+    /// :=
+    AssignDefine(Span),
+}
+
 #[derive(Clone, Debug)]
 pub struct Assignment {
     pub var: String,
+    pub asgn_op: AssignmentOp,
     pub rhs: InternedExpr,
 }
 

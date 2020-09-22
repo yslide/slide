@@ -25,8 +25,13 @@ pub fn evaluate(stmt_list: StmtList, ctxt: &EvaluatorContext) -> Result<StmtList
         .into_iter()
         .map(|stmt| match stmt {
             Stmt::Expr(expr) => Stmt::Expr(evaluate_expr(expr, &built_rules, &ctxt)),
-            Stmt::Assignment(Assignment { var, rhs: expr }) => Stmt::Assignment(Assignment {
+            Stmt::Assignment(Assignment {
                 var,
+                asgn_op,
+                rhs: expr,
+            }) => Stmt::Assignment(Assignment {
+                var,
+                asgn_op,
                 rhs: evaluate_expr(expr, &built_rules, &ctxt),
             }),
         })

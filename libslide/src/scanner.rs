@@ -124,7 +124,7 @@ impl Scanner {
             ':' => {
                 if self.peek() == Some(&'=') {
                     self.next();
-                    Equal
+                    AssignDefine
                 } else {
                     span = Some(start..start + 1);
                     self.collect_while(|c| c.is_whitespace());

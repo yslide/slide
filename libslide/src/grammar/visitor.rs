@@ -3,9 +3,15 @@
 use super::*;
 use crate::Span;
 
-/// Describes a [statement][super::Stmt] visitor.
+/// Describes a [statement list][super::StmtList] visitor.
 pub trait StmtVisitor<'a> {
-    fn visit(&mut self, stmt: &'a Stmt) {
+    fn visit(&mut self, stmt_list: &'a StmtList) {
+        for stmt in stmt_list.iter() {
+            self.visit_stmt(stmt);
+        }
+    }
+
+    fn visit_stmt(&mut self, stmt: &'a Stmt) {
         match stmt {
             Stmt::Expr(expr) => self.visit_expr(expr),
             Stmt::Assignment(asgn) => self.visit_asgn(asgn),

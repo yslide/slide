@@ -75,9 +75,7 @@ impl<'a> StmtVisitor<'a> for RedundantNestingLinter<'a> {
 impl<'a> LintRule<'a, StmtList> for RedundantNestingLinter<'a> {
     fn lint(stmt_list: &StmtList, source: &'a str) -> Vec<Diagnostic> {
         let mut linter = Self::new(&source);
-        for stmt in stmt_list.iter() {
-            linter.visit(stmt);
-        }
+        linter.visit(stmt_list);
         linter.diagnostics
     }
 }

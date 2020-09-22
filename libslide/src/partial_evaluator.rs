@@ -2,6 +2,7 @@
 
 pub mod flatten;
 mod types;
+mod variable_expand;
 use flatten::flatten_expr;
 pub use types::*;
 

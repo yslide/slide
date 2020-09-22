@@ -21,3 +21,15 @@ macro_rules! parse_expr {
         }
     }};
 }
+
+/// Parses an assignment.
+#[macro_export]
+macro_rules! parse_asgn {
+    ($asgn:expr) => {{
+        use crate::grammar::*;
+        match crate::parse_stmt!($asgn).into_iter().next().unwrap() {
+            Stmt::Assignment(asgn) => asgn,
+            _ => unreachable!(),
+        }
+    }};
+}

@@ -71,10 +71,12 @@ impl<'a> StmtVisitor<'a> for UnarySeriesLinter<'a> {
     }
 }
 
-impl<'a> LintRule<'a, Stmt> for UnarySeriesLinter<'a> {
-    fn lint(stmt: &Stmt, source: &'a str) -> Vec<Diagnostic> {
+impl<'a> LintRule<'a, StmtList> for UnarySeriesLinter<'a> {
+    fn lint(stmt_list: &StmtList, source: &'a str) -> Vec<Diagnostic> {
         let mut linter = Self::new(&source);
-        linter.visit(stmt);
+        for stmt in stmt_list.iter() {
+            linter.visit(stmt);
+        }
         linter.diagnostics
     }
 }

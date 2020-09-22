@@ -65,10 +65,8 @@ impl DiagnosticRegistry for LintConfig {
 pub fn lint_stmt(stmt_list: &StmtList, source: &str) -> Vec<Diagnostic> {
     let config = LintConfig::default();
     let mut diags = vec![];
-    for stmt in stmt_list.iter() {
-        for linter in config.stmt_linters.iter() {
-            diags.extend(linter.lint(stmt, source))
-        }
+    for linter in config.stmt_linters.iter() {
+        diags.extend(linter.lint(stmt_list, source))
     }
     diags
 }

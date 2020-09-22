@@ -7,7 +7,7 @@ use unary_series::*;
 
 use super::{DiagnosticRecord, LintRule};
 use crate::diagnostics::Diagnostic;
-use crate::grammar::Stmt;
+use crate::grammar::StmtList;
 
 macro_rules! define_stmt_lints {
     ($($linter:ident,)*) => {
@@ -17,9 +17,9 @@ macro_rules! define_stmt_lints {
         }
 
         impl StmtLintRule {
-            pub fn lint(&self, stmt: &Stmt, source: &str) -> Vec<Diagnostic> {
+            pub fn lint(&self, stmt_list: &StmtList, source: &str) -> Vec<Diagnostic> {
                 match self {
-                    $(Self::$linter => $linter::lint(stmt, source)),*
+                    $(Self::$linter => $linter::lint(stmt_list, source)),*
                 }
             }
 

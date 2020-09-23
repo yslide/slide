@@ -26,7 +26,7 @@ pub trait StmtVisitor<'a> {
 
     fn visit_asgn_op(&mut self, _asgn_op: &'a AssignmentOp) {}
 
-    fn visit_expr(&mut self, expr: &'a InternedExpr) {
+    fn visit_expr(&mut self, expr: &'a RcExpr) {
         match expr.as_ref() {
             Expr::Const(k) => self.visit_const(k),
             Expr::Var(v) => self.visit_var(v),
@@ -39,11 +39,11 @@ pub trait StmtVisitor<'a> {
 
     fn visit_const(&mut self, _konst: &'a f64) {}
 
-    fn visit_var(&mut self, _var: &'a str) {}
+    fn visit_var(&mut self, _var: &'a InternedStr) {}
 
     fn visit_binary_op(&mut self, _op: BinaryOperator) {}
 
-    fn visit_binary(&mut self, expr: &'a BinaryExpr<InternedExpr>) {
+    fn visit_binary(&mut self, expr: &'a BinaryExpr<RcExpr>) {
         self.visit_expr(&expr.lhs);
         self.visit_binary_op(expr.op);
         self.visit_expr(&expr.rhs);
@@ -51,23 +51,23 @@ pub trait StmtVisitor<'a> {
 
     fn visit_unary_op(&mut self, _op: UnaryOperator) {}
 
-    fn visit_unary(&mut self, expr: &'a UnaryExpr<InternedExpr>, _span: Span) {
+    fn visit_unary(&mut self, expr: &'a UnaryExpr<RcExpr>, _span: Span) {
         self.visit_unary_op(expr.op);
         self.visit_expr(&expr.rhs);
     }
 
-    fn visit_parend(&mut self, expr: &'a InternedExpr, _span: Span) {
+    fn visit_parend(&mut self, expr: &'a RcExpr, _span: Span) {
         self.visit_expr(expr);
     }
 
-    fn visit_bracketed(&mut self, expr: &'a InternedExpr, _span: Span) {
+    fn visit_bracketed(&mut self, expr: &'a RcExpr, _span: Span) {
         self.visit_expr(expr);
     }
 }
 
 /// Describes an [expression pattern][super::ExprPat] visitor.
 pub trait ExprPatVisitor<'a> {
-    fn visit(&mut self, expr_pat: &'a InternedExprPat) {
+    fn visit(&mut self, expr_pat: &'a RcExprPat) {
         match expr_pat.as_ref() {
             ExprPat::Const(k) => self.visit_const(k),
             ExprPat::VarPat(v) => self.visit_var_pat(v, expr_pat.span),
@@ -90,7 +90,7 @@ pub trait ExprPatVisitor<'a> {
 
     fn visit_binary_op(&mut self, _op: BinaryOperator) {}
 
-    fn visit_binary(&mut self, expr: &'a BinaryExpr<InternedExprPat>) {
+    fn visit_binary(&mut self, expr: &'a BinaryExpr<RcExprPat>) {
         self.visit(&expr.lhs);
         self.visit_binary_op(expr.op);
         self.visit(&expr.rhs);
@@ -98,16 +98,16 @@ pub trait ExprPatVisitor<'a> {
 
     fn visit_unary_op(&mut self, _op: UnaryOperator) {}
 
-    fn visit_unary(&mut self, expr: &'a UnaryExpr<InternedExprPat>, _span: Span) {
+    fn visit_unary(&mut self, expr: &'a UnaryExpr<RcExprPat>, _span: Span) {
         self.visit_unary_op(expr.op);
         self.visit(&expr.rhs);
     }
 
-    fn visit_parend(&mut self, expr: &'a InternedExprPat, _span: Span) {
+    fn visit_parend(&mut self, expr: &'a RcExprPat, _span: Span) {
         self.visit(expr);
     }
 
-    fn visit_bracketed(&mut self, expr: &'a InternedExprPat, _span: Span) {
+    fn visit_bracketed(&mut self, expr: &'a RcExprPat, _span: Span) {
         self.visit(expr);
     }
 }

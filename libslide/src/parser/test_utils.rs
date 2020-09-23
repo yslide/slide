@@ -98,7 +98,7 @@ fn check_span(span: Span, input: &str, actual: String) {
     assert_eq!(expected_from_span, actual, "Spans mismatch!");
 }
 
-pub fn verify_expr_spans(expr: &InternedExpr, input: &str) {
+pub fn verify_expr_spans(expr: &RcExpr, input: &str) {
     check_span(expr.span, input, expr.to_string());
     match expr.as_ref() {
         Expr::BinaryExpr(BinaryExpr { lhs, rhs, .. }) => {
@@ -113,7 +113,7 @@ pub fn verify_expr_spans(expr: &InternedExpr, input: &str) {
     }
 }
 
-pub fn verify_expr_pat_spans(expr: &InternedExprPat, input: &str) {
+pub fn verify_expr_pat_spans(expr: &RcExprPat, input: &str) {
     check_span(expr.span, input, expr.to_string());
     match expr.as_ref() {
         ExprPat::BinaryExpr(BinaryExpr { lhs, rhs, .. }) => {

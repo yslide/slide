@@ -36,7 +36,7 @@ impl<'a> UnarySeriesLinter<'a> {
 }
 
 impl<'a> StmtVisitor<'a> for UnarySeriesLinter<'a> {
-    fn visit_unary(&mut self, expr: &'a UnaryExpr<InternedExpr>, start_span: Span) {
+    fn visit_unary(&mut self, expr: &'a UnaryExpr<RcExpr>, start_span: Span) {
         let mut is_neg = expr.op == UnaryOperator::SignNegative;
         let mut nested = &expr.rhs;
         let mut count = 1;

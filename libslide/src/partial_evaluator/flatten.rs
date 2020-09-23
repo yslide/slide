@@ -34,7 +34,7 @@ use std::collections::{BTreeMap, VecDeque};
 /// Expressions flattened to a binary operation have the following conditions:
 ///
 /// - Additions and subtractions become additions
-pub fn flatten_expr(expr: InternedExpr) -> InternedExpr {
+pub fn flatten_expr(expr: RcExpr) -> RcExpr {
     match expr.as_ref() {
         // #a -> #a, $a -> $a
         // We can't do better than this.
@@ -42,14 +42,14 @@ pub fn flatten_expr(expr: InternedExpr) -> InternedExpr {
 
         // (_a) -> _a, [_a] -> _a
         // We can't do better than this.
-        Expr::Parend(inner) | Expr::Bracketed(inner) => flatten_expr(*inner),
+        Expr::Parend(inner) | Expr::Bracketed(inner) => flatten_expr(inner.clone()),
 
         // _a + _b -> _c
         // _a - _b -> _c
         Expr::BinaryExpr(BinaryExpr { op, lhs, rhs })
             if op == &BinaryOperator::Plus || op == &BinaryOperator::Minus =>
         {
-            flatten_add_or_sub(*lhs, *rhs, op == &BinaryOperator::Minus)
+            flatten_add_or_sub(lhs.clone(), rhs.clone(), op == &BinaryOperator::Minus)
         }
 
         // _a * _b -> _c
@@ -57,22 +57,22 @@ pub fn flatten_expr(expr: InternedExpr) -> InternedExpr {
         Expr::BinaryExpr(BinaryExpr { op, lhs, rhs })
             if op == &BinaryOperator::Mult || op == &BinaryOperator::Div =>
         {
-            flatten_mul_or_div(*lhs, *rhs, op == &BinaryOperator::Div)
+            flatten_mul_or_div(lhs.clone(), rhs.clone(), op == &BinaryOperator::Div)
         }
 
         // TODO: handle everything else better
         Expr::BinaryExpr(BinaryExpr { op, lhs, rhs }) => {
-            let lhs = flatten_expr(*lhs);
-            let rhs = flatten_expr(*rhs);
-            intern_expr!(
+            let lhs = flatten_expr(lhs.clone());
+            let rhs = flatten_expr(rhs.clone());
+            rc_expr!(
                 Expr::BinaryExpr(BinaryExpr { op: *op, lhs, rhs }),
                 /* TODO: propagate span */ crate::DUMMY_SP
             )
         }
 
         Expr::UnaryExpr(UnaryExpr { op, rhs }) => {
-            let rhs = flatten_expr(*rhs);
-            intern_expr!(
+            let rhs = flatten_expr(rhs.clone());
+            rc_expr!(
                 Expr::UnaryExpr(UnaryExpr { op: *op, rhs }),
                 /* TODO: propagate span */ crate::DUMMY_SP
             )
@@ -86,18 +86,18 @@ pub fn flatten_expr(expr: InternedExpr) -> InternedExpr {
 /// ```text
 /// 1 + 2x - 3 + x -> -2 + 3x
 /// ```
-fn flatten_add_or_sub(o_lhs: InternedExpr, o_rhs: InternedExpr, is_subtract: bool) -> InternedExpr {
+fn flatten_add_or_sub(o_lhs: RcExpr, o_rhs: RcExpr, is_subtract: bool) -> RcExpr {
     let lhs = flatten_expr(o_lhs);
     let rhs = flatten_expr(o_rhs);
 
     // Leading coefficients to fold constants into.
     let mut coeff = 0.;
     // Terms -> coefficients present in the expression.
-    let mut terms = BTreeMap::<InternedExpr, f64>::new();
+    let mut terms = BTreeMap::<RcExpr, f64>::new();
 
     let mut args = VecDeque::with_capacity(2);
-    let base_args = [lhs, rhs];
-    args.extend(base_args.iter());
+    args.push_back(lhs);
+    args.push_back(rhs);
 
     // If this is not a subtraction, the first two args are both on the add side.
     let mut args_before_sub = if is_subtract { 1 } else { 2 };
@@ -106,7 +106,7 @@ fn flatten_add_or_sub(o_lhs: InternedExpr, o_rhs: InternedExpr, is_subtract: boo
         let sub_side = args_before_sub <= 0;
         args_before_sub -= 1;
 
-        let arg = unwrap_expr(arg);
+        let arg = unwrap_expr(arg.clone());
 
         match arg.as_ref() {
             Expr::Const(konst) => {
@@ -121,12 +121,12 @@ fn flatten_add_or_sub(o_lhs: InternedExpr, o_rhs: InternedExpr, is_subtract: boo
             Expr::BinaryExpr(BinaryExpr { op, lhs, rhs }) if op == &BinaryOperator::Plus => {
                 if sub_side {
                     // 1 - (2 + 3) -> 1 - 2 - 3; add both operands to the sub side.
-                    args.push_back(*lhs);
-                    args.push_back(*rhs);
+                    args.push_back(lhs.clone());
+                    args.push_back(rhs.clone());
                 } else {
                     // 1 + (2 + 3) -> 1 + 2 + 3
-                    args.push_front(*lhs);
-                    args.push_front(*rhs);
+                    args.push_front(lhs.clone());
+                    args.push_front(rhs.clone());
                     args_before_sub += 2;
                 }
             }
@@ -144,9 +144,9 @@ fn flatten_add_or_sub(o_lhs: InternedExpr, o_rhs: InternedExpr, is_subtract: boo
         }
     }
 
-    let mut new_args: Vec<InternedExpr> = Vec::with_capacity(1 + terms.len());
+    let mut new_args: Vec<RcExpr> = Vec::with_capacity(1 + terms.len());
     if coeff != 0. {
-        new_args.push(intern_expr!(
+        new_args.push(rc_expr!(
             Expr::Const(coeff),
             /* TODO: propagate span */ crate::DUMMY_SP
         ));
@@ -157,23 +157,23 @@ fn flatten_add_or_sub(o_lhs: InternedExpr, o_rhs: InternedExpr, is_subtract: boo
             continue;
         } else if (coeff - 1.).abs() < std::f64::EPSILON {
             // coeff == 1
-            new_args.push(term);
+            new_args.push(term.clone());
         } else if (coeff - -1.).abs() < std::f64::EPSILON {
             // coeff == -1
-            let neg = UnaryExpr::negate(term);
-            new_args.push(intern_expr!(
+            let neg = UnaryExpr::negate(term.clone());
+            new_args.push(rc_expr!(
                 Expr::UnaryExpr(neg),
                 /* TODO: propagate span */ crate::DUMMY_SP
             ));
         } else {
             let mult = BinaryExpr::mult(
-                intern_expr!(
+                rc_expr!(
                     Expr::Const(coeff),
                     /* TODO: propagate span */ crate::DUMMY_SP
                 ),
-                term,
+                term.clone(),
             );
-            new_args.push(intern_expr!(
+            new_args.push(rc_expr!(
                 Expr::BinaryExpr(mult),
                 /* TODO: propagate span */ crate::DUMMY_SP
             ));
@@ -181,7 +181,7 @@ fn flatten_add_or_sub(o_lhs: InternedExpr, o_rhs: InternedExpr, is_subtract: boo
     }
 
     match new_args.len() {
-        0 => intern_expr!(
+        0 => rc_expr!(
             Expr::Const(0.),
             /* TODO: propagate span */ crate::DUMMY_SP
         ),
@@ -391,17 +391,17 @@ fn flatten_add_or_sub(o_lhs: InternedExpr, o_rhs: InternedExpr, is_subtract: boo
 /// ```
 ///
 /// And now, all that needs to be done is to construct the flattened expression `2/5 * x^2 / y^-2`.
-fn flatten_mul_or_div(o_lhs: InternedExpr, o_rhs: InternedExpr, is_div: bool) -> InternedExpr {
+fn flatten_mul_or_div(o_lhs: RcExpr, o_rhs: RcExpr, is_div: bool) -> RcExpr {
     let lhs = flatten_expr(o_lhs);
     let rhs = flatten_expr(o_rhs);
 
     let mut coeff = 1.;
     // Term -> # of times it is multiplied. Negative values are equivalent to division.
-    let mut terms = BTreeMap::<InternedExpr, f64>::new();
+    let mut terms = BTreeMap::<RcExpr, f64>::new();
 
     let mut args = VecDeque::with_capacity(2);
-    let base_args = [lhs, rhs];
-    args.extend(base_args.iter());
+    args.push_back(lhs);
+    args.push_back(rhs);
 
     // If this is not a division, the first two args are both on the mul side.
     let mut args_before_div = if is_div { 1 } else { 2 };
@@ -410,7 +410,7 @@ fn flatten_mul_or_div(o_lhs: InternedExpr, o_rhs: InternedExpr, is_div: bool) ->
         let div_side = args_before_div <= 0;
         args_before_div -= 1;
 
-        let arg = unwrap_expr(arg);
+        let arg = unwrap_expr(arg.clone());
 
         match arg.as_ref() {
             Expr::Const(konst) => {
@@ -426,27 +426,27 @@ fn flatten_mul_or_div(o_lhs: InternedExpr, o_rhs: InternedExpr, is_div: bool) ->
                 if div_side {
                     if op == &BinaryOperator::Mult {
                         // 1 / (2 * 3) -> 1 / 2 / 3; add both operands to the div side.
-                        args.push_back(*lhs);
-                        args.push_back(*rhs);
+                        args.push_back(lhs.clone());
+                        args.push_back(rhs.clone());
                     } else {
                         // 1 / (2 / 3) -> 3 / 2; here we multiply by the reciprocal, so 3 goes on
                         // the mul side and 2 goes on the div side.
-                        args.push_front(*rhs);
+                        args.push_front(rhs.clone());
                         args_before_div = 1;
-                        args.push_back(*lhs);
+                        args.push_back(lhs.clone());
                     }
                 } else {
                     // mul side
                     if op == &BinaryOperator::Mult {
                         // 1 * (2 * 3) -> 1 * 2 * 3
-                        args.push_front(*lhs);
-                        args.push_front(*rhs);
+                        args.push_front(lhs.clone());
+                        args.push_front(rhs.clone());
                         args_before_div += 2;
                     } else {
                         // 1 * (2 / 3) -> 1 * 2 / 3; add 2 to the mul side and 3 to the div side.
-                        args.push_front(*lhs);
+                        args.push_front(lhs.clone());
                         args_before_div += 1;
-                        args.push_back(*rhs);
+                        args.push_back(rhs.clone());
                     }
                 }
             }
@@ -454,7 +454,7 @@ fn flatten_mul_or_div(o_lhs: InternedExpr, o_rhs: InternedExpr, is_div: bool) ->
                 // Otherwise the arg is something we cannot further decompose in this context
                 // (e.g. a variable or an exponentiation), so add it as a term.
                 // TODO: see if we can handle other things more granularly
-                let entry = terms.entry(arg).or_insert(0.);
+                let entry = terms.entry(arg.clone()).or_insert(0.);
                 if div_side {
                     *entry -= 1.;
                 } else {
@@ -464,10 +464,10 @@ fn flatten_mul_or_div(o_lhs: InternedExpr, o_rhs: InternedExpr, is_div: bool) ->
         }
     }
 
-    let mut new_args: Vec<InternedExpr> = Vec::with_capacity(1 + terms.len());
+    let mut new_args: Vec<RcExpr> = Vec::with_capacity(1 + terms.len());
     if (coeff - 1.).abs() >= std::f64::EPSILON {
         // coeff != 1
-        new_args.push(intern_expr!(
+        new_args.push(rc_expr!(
             Expr::Const(coeff),
             /* TODO: propagate span */ crate::DUMMY_SP
         ));
@@ -479,30 +479,30 @@ fn flatten_mul_or_div(o_lhs: InternedExpr, o_rhs: InternedExpr, is_div: bool) ->
         } else if (coeff - 1.).abs() < std::f64::EPSILON {
             // coeff == 1
             // 1 * x
-            new_args.push(term);
+            new_args.push(term.clone());
         } else if (coeff - -1.).abs() < std::f64::EPSILON {
             // coeff == -1
             // -1 * x ~ 1/x
             let reciprocal = BinaryExpr::div(
-                intern_expr!(
+                rc_expr!(
                     Expr::Const(1.),
                     /* TODO: propagate span */ crate::DUMMY_SP
                 ),
-                term,
+                term.clone(),
             );
-            new_args.push(intern_expr!(
+            new_args.push(rc_expr!(
                 Expr::BinaryExpr(reciprocal),
                 /* TODO: propagate span */ crate::DUMMY_SP
             ));
         } else {
             let exponentiation = BinaryExpr::exp(
-                term,
-                intern_expr!(
+                term.clone(),
+                rc_expr!(
                     Expr::Const(coeff,),
                     /* TODO: propagate span */ crate::DUMMY_SP
                 ),
             );
-            new_args.push(intern_expr!(
+            new_args.push(rc_expr!(
                 Expr::BinaryExpr(exponentiation),
                 /* TODO: propagate span */ crate::DUMMY_SP
             ));
@@ -510,7 +510,7 @@ fn flatten_mul_or_div(o_lhs: InternedExpr, o_rhs: InternedExpr, is_div: bool) ->
     }
 
     match new_args.len() {
-        0 => intern_expr!(
+        0 => rc_expr!(
             Expr::Const(1.),
             /* TODO: propagate span */ crate::DUMMY_SP
         ),
@@ -521,9 +521,9 @@ fn flatten_mul_or_div(o_lhs: InternedExpr, o_rhs: InternedExpr, is_div: bool) ->
 
 /// Unwraps an expression in parentheses/brackets, or returns the original expression if it cannot
 /// be unwrapped.
-fn unwrap_expr(arg: InternedExpr) -> InternedExpr {
+fn unwrap_expr(arg: RcExpr) -> RcExpr {
     match arg.as_ref() {
-        Expr::Parend(inner) | Expr::Bracketed(inner) => *inner,
+        Expr::Parend(inner) | Expr::Bracketed(inner) => inner.clone(),
         _ => arg,
     }
 }

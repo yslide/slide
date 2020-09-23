@@ -54,7 +54,7 @@ pub enum Stmt {
     /// ```
     ///
     /// contains one statement, that statement also being an expression.
-    Expr(InternedExpr),
+    Expr(RcExpr),
     /// An assignment binds some value to a variable. For example the statement
     ///
     /// ```text
@@ -67,8 +67,8 @@ pub enum Stmt {
 
 impl Grammar for Stmt {}
 
-impl From<InternedExpr> for Stmt {
-    fn from(expr: InternedExpr) -> Self {
+impl From<RcExpr> for Stmt {
+    fn from(expr: RcExpr) -> Self {
         Stmt::Expr(expr)
     }
 }
@@ -98,21 +98,21 @@ impl AssignmentOp {
 
 #[derive(Clone, Debug)]
 pub struct Assignment {
-    pub var: String,
+    pub var: InternedStr,
     pub asgn_op: AssignmentOp,
-    pub rhs: InternedExpr,
+    pub rhs: RcExpr,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Expr {
     Const(f64),
-    Var(String),
-    BinaryExpr(BinaryExpr<InternedExpr>),
-    UnaryExpr(UnaryExpr<InternedExpr>),
+    Var(InternedStr),
+    BinaryExpr(BinaryExpr<RcExpr>),
+    UnaryExpr(UnaryExpr<RcExpr>),
     /// An expression wrapped in parentheses
-    Parend(InternedExpr),
+    Parend(RcExpr),
     /// An expression wrapped in brackets
-    Bracketed(InternedExpr),
+    Bracketed(RcExpr),
 }
 
 impl Grammar for Expr {}
@@ -149,7 +149,7 @@ impl Ord for Expr {
     // For expression normalization.
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (Self::Var(a), Self::Var(b)) => a.cmp(b),
+            (Self::Var(a), Self::Var(b)) => a.get().cmp(&b.get()),
             (Self::Const(a), Self::Const(b)) => a.partial_cmp(b).unwrap(), // assume NaNs don't exist
             (Self::UnaryExpr(a), Self::UnaryExpr(b)) => a.cmp(b),
             (Self::BinaryExpr(a), Self::BinaryExpr(b)) => a.cmp(b),

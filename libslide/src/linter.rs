@@ -19,7 +19,7 @@ mod expr_pat;
 use expr_pat::*;
 
 use crate::diagnostics::{Diagnostic, DiagnosticRecord, DiagnosticRegistry};
-use crate::grammar::{Grammar, InternedExprPat, StmtList};
+use crate::grammar::{Grammar, RcExprPat, StmtList};
 
 /// Describes a slide program linter. A `Linter` is implemented on a slide [Grammar].
 ///
@@ -73,7 +73,7 @@ pub fn lint_stmt(stmt_list: &StmtList, source: &str) -> Vec<Diagnostic> {
 }
 
 /// Lints a slide [expression pattern](crate::grammar::ExprPat).
-pub fn lint_expr_pat(expr_pat: &InternedExprPat, source: &str) -> Vec<Diagnostic> {
+pub fn lint_expr_pat(expr_pat: &RcExprPat, source: &str) -> Vec<Diagnostic> {
     let config = LintConfig::default();
     let mut diags = vec![];
     for linter in config.expr_pat_linters {

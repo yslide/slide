@@ -36,7 +36,7 @@ impl<'a> RedundantNestingLinter<'a> {
 }
 
 impl<'a> RedundantNestingLinter<'a> {
-    fn visit_nesting(&mut self, mut expr: &'a InternedExpr, span: Span) {
+    fn visit_nesting(&mut self, mut expr: &'a RcExpr, span: Span) {
         let mut nestings = 1;
         while let Expr::Parend(inner) | Expr::Bracketed(inner) = expr.as_ref() {
             expr = inner;
@@ -63,11 +63,11 @@ impl<'a> RedundantNestingLinter<'a> {
 }
 
 impl<'a> StmtVisitor<'a> for RedundantNestingLinter<'a> {
-    fn visit_parend(&mut self, expr: &'a InternedExpr, span: Span) {
+    fn visit_parend(&mut self, expr: &'a RcExpr, span: Span) {
         self.visit_nesting(expr, span);
     }
 
-    fn visit_bracketed(&mut self, expr: &'a InternedExpr, span: Span) {
+    fn visit_bracketed(&mut self, expr: &'a RcExpr, span: Span) {
         self.visit_nesting(expr, span);
     }
 }

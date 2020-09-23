@@ -464,8 +464,8 @@ macro_rules! display_binary_expr {
         }
     };
 }
-display_binary_expr!(InternedExpr, Expr);
-display_binary_expr!(InternedExprPat, ExprPat);
+display_binary_expr!(RcExpr, Expr);
+display_binary_expr!(RcExprPat, ExprPat);
 
 fmt_emit_impl!(UnaryOperator);
 impl Emit for UnaryOperator {
@@ -516,8 +516,8 @@ macro_rules! display_unary_expr {
         }
     };
 }
-display_unary_expr!(InternedExpr, Expr);
-display_unary_expr!(InternedExprPat, ExprPat);
+display_unary_expr!(RcExpr, Expr);
+display_unary_expr!(RcExprPat, ExprPat);
 
 fmt_emit_impl!(ExprPat);
 impl Emit for ExprPat {

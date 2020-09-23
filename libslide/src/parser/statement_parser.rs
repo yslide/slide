@@ -28,7 +28,7 @@ impl<'a> ExpressionParser<'a> {
 
     fn assignment(&mut self, var: String, asgn_op: AssignmentOp) -> Stmt {
         Stmt::Assignment(Assignment {
-            var,
+            var: intern_str!(var),
             asgn_op,
             rhs: self.expr(),
         })
@@ -60,14 +60,14 @@ impl<'a> ExpressionParser<'a> {
         }
     }
 
-    fn parse_pattern(&mut self, name: String, span: Span) -> InternedExpr {
+    fn parse_pattern(&mut self, name: String, span: Span) -> RcExpr {
         self.push_diag(IllegalPattern!(span, name));
-        intern_expr!(Expr::Var(name), span)
+        rc_expr!(Expr::Var(intern_str!(name)), span)
     }
 }
 
 impl<'a> Parser<StmtList> for ExpressionParser<'a> {
-    type Expr = InternedExpr;
+    type Expr = RcExpr;
 
     fn input(&mut self) -> &mut PeekIter<Token> {
         &mut self._input
@@ -96,11 +96,11 @@ impl<'a> Parser<StmtList> for ExpressionParser<'a> {
     }
 
     fn parse_float(&mut self, f: f64, span: Span) -> Self::Expr {
-        intern_expr!(Expr::Const(f), span)
+        rc_expr!(Expr::Const(f), span)
     }
 
     fn parse_variable(&mut self, name: String, span: Span) -> Self::Expr {
-        intern_expr!(Expr::Var(name), span)
+        rc_expr!(Expr::Var(intern_str!(name)), span)
     }
 
     fn parse_var_pattern(&mut self, name: String, span: Span) -> Self::Expr {

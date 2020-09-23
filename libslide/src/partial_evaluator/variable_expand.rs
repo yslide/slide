@@ -9,14 +9,14 @@ use std::collections::HashMap;
 
 trait VariableExpander<'a> {
     /// Creates a new VariableExpander from an expression to expand.
-    fn new(expr: InternedExpr) -> Self;
+    fn new(expr: RcExpr) -> Self;
 
     /// Expands the variables matching the lhs of `asgn` with the assignment definition.
     /// Consumes and returns self, providing a chaining API.
     fn expand(self, asgn: &'a Assignment) -> Self;
 
     /// Consumes `self` and returns the owned expression with any variables expanded.
-    fn finish(self) -> InternedExpr;
+    fn finish(self) -> RcExpr;
 }
 
 /// Eagerly expands variables in an expression.
@@ -33,23 +33,23 @@ trait VariableExpander<'a> {
 /// For example, `"a".expand("a = a + a")` would expand to `"a + a"` rather than
 /// `"a + a + a + a + ..."`.
 struct EagerVariableExpander<'a> {
-    expr: InternedExpr,
+    expr: RcExpr,
     expand_def: Option<&'a Assignment>,
 }
 
 impl<'a> ExpressionTransformer<'a> for EagerVariableExpander<'a> {
-    fn transform_var(&self, var: &'a str, span: Span) -> InternedExpr {
+    fn transform_var(&self, var: &'a InternedStr, span: Span) -> RcExpr {
         let asgn = self.expand_def.unwrap();
-        if var == asgn.var {
-            asgn.rhs
+        if var == &asgn.var {
+            asgn.rhs.clone()
         } else {
-            intern_expr!(Expr::Var(var.to_owned()), span)
+            rc_expr!(Expr::Var(*var), span)
         }
     }
 }
 
 impl<'a> VariableExpander<'a> for EagerVariableExpander<'a> {
-    fn new(expr: InternedExpr) -> Self {
+    fn new(expr: RcExpr) -> Self {
         Self {
             expr,
             expand_def: None,
@@ -62,7 +62,7 @@ impl<'a> VariableExpander<'a> for EagerVariableExpander<'a> {
         self
     }
 
-    fn finish(self) -> InternedExpr {
+    fn finish(self) -> RcExpr {
         self.expr
     }
 }
@@ -81,21 +81,21 @@ impl<'a> VariableExpander<'a> for EagerVariableExpander<'a> {
 ///
 /// For example, `"a + a".expand("a = 1").expand("a = 10")` would expand to `"10 + 10"`.
 struct LazyVariableExpander<'a> {
-    expr: InternedExpr,
-    expand_defs: HashMap<&'a str, &'a InternedExpr>,
+    expr: RcExpr,
+    expand_defs: HashMap<&'a InternedStr, &'a RcExpr>,
 }
 
 impl<'a> ExpressionTransformer<'a> for LazyVariableExpander<'a> {
-    fn transform_var(&self, var: &'a str, span: Span) -> InternedExpr {
+    fn transform_var(&self, var: &'a InternedStr, span: Span) -> RcExpr {
         match self.expand_defs.get(var) {
-            Some(def) => **def,
-            None => intern_expr!(Expr::Var(var.to_owned()), span),
+            Some(&def) => def.clone(),
+            None => rc_expr!(Expr::Var(*var), span),
         }
     }
 }
 
 impl<'a> VariableExpander<'a> for LazyVariableExpander<'a> {
-    fn new(expr: InternedExpr) -> Self {
+    fn new(expr: RcExpr) -> Self {
         Self {
             expr,
             expand_defs: HashMap::new(),
@@ -107,7 +107,7 @@ impl<'a> VariableExpander<'a> for LazyVariableExpander<'a> {
         self
     }
 
-    fn finish(self) -> InternedExpr {
+    fn finish(self) -> RcExpr {
         self.transform(&self.expr)
     }
 }

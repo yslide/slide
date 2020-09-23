@@ -79,7 +79,7 @@ fn extra_tokens_diag(extra_tokens: &mut PeekIter<Token>) -> Diagnostic {
 trait Parser<T>
 where
     T: Grammar,
-    Self::Expr: InternedExpression,
+    Self::Expr: RcExpression,
 {
     type Expr;
 

@@ -155,8 +155,8 @@ impl<'a> ExprPatVisitor<'a> for SimilarNamesLinter<'a> {
     }
 }
 
-impl<'a> LintRule<'a, InternedExprPat> for SimilarNamesLinter<'a> {
-    fn lint(expr_pat: &InternedExprPat, _source: &'a str) -> Vec<Diagnostic> {
+impl<'a> LintRule<'a, RcExprPat> for SimilarNamesLinter<'a> {
+    fn lint(expr_pat: &RcExprPat, _source: &'a str) -> Vec<Diagnostic> {
         let mut linter = Self::default();
         linter.visit(expr_pat);
         linter.check_names()

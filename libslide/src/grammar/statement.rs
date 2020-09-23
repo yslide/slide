@@ -87,6 +87,15 @@ pub enum AssignmentOp {
     AssignDefine(Span),
 }
 
+impl AssignmentOp {
+    pub fn span(&self) -> &Span {
+        match self {
+            AssignmentOp::Equal(span) => span,
+            AssignmentOp::AssignDefine(span) => span,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Assignment {
     pub var: String,

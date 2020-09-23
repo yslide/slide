@@ -12,13 +12,13 @@ pub enum ExprPat {
     /// Pattern matching any expression
     AnyPat(String),
     /// A binary expression
-    BinaryExpr(BinaryExpr<InternedExprPat>),
+    BinaryExpr(BinaryExpr<RcExprPat>),
     /// A unary expression
-    UnaryExpr(UnaryExpr<InternedExprPat>),
+    UnaryExpr(UnaryExpr<RcExprPat>),
     /// A paranthesized expression
-    Parend(InternedExprPat),
+    Parend(RcExprPat),
     /// A bracketed expression
-    Bracketed(InternedExprPat),
+    Bracketed(RcExprPat),
 }
 
 impl Grammar for ExprPat {}

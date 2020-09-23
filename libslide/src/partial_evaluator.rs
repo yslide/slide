@@ -44,7 +44,7 @@ pub fn evaluate(stmt_list: StmtList, ctxt: &EvaluatorContext) -> Result<StmtList
 /// Evaluates an expression to as simplified a form as possible.
 /// The evaluation may be partial, as some values (like variables) may be unknown.
 /// The returned expression is [normalized](crate::utils::normalize).
-fn evaluate_expr(expr: InternedExpr, rules: &[Rule], ctxt: &EvaluatorContext) -> InternedExpr {
+fn evaluate_expr(expr: RcExpr, rules: &[Rule], ctxt: &EvaluatorContext) -> RcExpr {
     let mut simplified_expr = expr;
     // Try simplifying the expression with a rule set until the same expression is seen again,
     // meaning we can't simplify any further or are stuck in a cycle.

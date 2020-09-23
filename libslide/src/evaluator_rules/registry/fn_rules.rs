@@ -30,13 +30,13 @@ macro_rules! get_flattened_binary_args {
 macro_rules! get_unary_arg {
     ($expr:expr, $op:pat) => {
         match $expr.as_ref() {
-            Expr::UnaryExpr(UnaryExpr { op: $op, rhs }) => Some(*rhs),
+            Expr::UnaryExpr(UnaryExpr { op: $op, rhs }) => Some(rhs.clone()),
             _ => None,
         }
     };
 }
 
-pub(super) fn add(expr: InternedExpr) -> Option<InternedExpr> {
+pub(super) fn add(expr: RcExpr) -> Option<RcExpr> {
     let mut args = get_flattened_binary_args!(expr, BinaryOperator::Plus)?;
     let mut konst = 0.;
     let mut i = 0;
@@ -49,7 +49,7 @@ pub(super) fn add(expr: InternedExpr) -> Option<InternedExpr> {
             _ => i += 1,
         }
     }
-    args.push(intern_expr!(
+    args.push(rc_expr!(
         konst.into(),
         /* TODO: propagate span */ crate::DUMMY_SP
     ));
@@ -61,12 +61,12 @@ pub(super) fn add(expr: InternedExpr) -> Option<InternedExpr> {
     ))
 }
 
-pub(super) fn subtract(expr: InternedExpr) -> Option<InternedExpr> {
+pub(super) fn subtract(expr: RcExpr) -> Option<RcExpr> {
     let (l, r) = get_binary_args!(expr, BinaryOperator::Minus)?;
-    Some(intern_expr!(Expr::Const(l - r), expr.span))
+    Some(rc_expr!(Expr::Const(l - r), expr.span))
 }
 
-pub(super) fn multiply(expr: InternedExpr) -> Option<InternedExpr> {
+pub(super) fn multiply(expr: RcExpr) -> Option<RcExpr> {
     let mut args = get_flattened_binary_args!(expr, BinaryOperator::Mult)?;
     let mut konst = 1.;
     let mut i = 0;
@@ -79,7 +79,7 @@ pub(super) fn multiply(expr: InternedExpr) -> Option<InternedExpr> {
             _ => i += 1,
         }
     }
-    args.push(intern_expr!(
+    args.push(rc_expr!(
         konst.into(),
         /* TODO: propagate span */ crate::DUMMY_SP
     ));
@@ -91,7 +91,7 @@ pub(super) fn multiply(expr: InternedExpr) -> Option<InternedExpr> {
     ))
 }
 
-pub(super) fn divide(expr: InternedExpr) -> Option<InternedExpr> {
+pub(super) fn divide(expr: RcExpr) -> Option<RcExpr> {
     let og_span = expr.span;
     match expr.as_ref() {
         Expr::BinaryExpr(BinaryExpr {
@@ -99,27 +99,28 @@ pub(super) fn divide(expr: InternedExpr) -> Option<InternedExpr> {
             lhs,
             rhs,
         }) => match (lhs.as_ref(), rhs.as_ref()) {
-            (Expr::Const(l), Expr::Const(r)) => Some(intern_expr!(Expr::Const(l / r), og_span)),
+            (Expr::Const(l), Expr::Const(r)) => Some(rc_expr!(Expr::Const(l / r), og_span)),
             _ => {
                 // Now we try to convert the numerator/denominator into polynomials and cancel them.
-                let (numerator, relative_to) = Poly::from_expr(*lhs, None).ok()?;
+                let (numerator, relative_to) = Poly::from_expr(lhs.clone(), None).ok()?;
                 let relative_to = match relative_to {
                     Some(e) => e,
                     // Cancelling should only work with term'd polynomials. If the expression has
                     // no terms for whatever reason, let another rule take care of it.
                     None => return None,
                 };
-                let (denominator, _) = Poly::from_expr(*rhs, Some(relative_to)).ok()?;
+                let (denominator, _) =
+                    Poly::from_expr(rhs.clone(), Some(relative_to.clone())).ok()?;
                 let (_, numerator, denominator) = gcd_poly_zz_heu(numerator, denominator).ok()?;
 
                 // Woo! The polynomials have a gcd we can cancel them with.
-                let numer_expr = numerator.to_expr(relative_to);
+                let numer_expr = numerator.to_expr(relative_to.clone());
                 if denominator.is_one() {
                     Some(numer_expr)
                 } else {
                     let denom_expr = denominator.to_expr(relative_to);
                     let division = BinaryExpr::div(numer_expr, denom_expr);
-                    Some(intern_expr!(Expr::BinaryExpr(division), og_span))
+                    Some(rc_expr!(Expr::BinaryExpr(division), og_span))
                 }
             }
         },
@@ -127,23 +128,23 @@ pub(super) fn divide(expr: InternedExpr) -> Option<InternedExpr> {
     }
 }
 
-pub(super) fn modulo(expr: InternedExpr) -> Option<InternedExpr> {
+pub(super) fn modulo(expr: RcExpr) -> Option<RcExpr> {
     let (l, r) = get_binary_args!(expr, BinaryOperator::Mod)?;
-    Some(intern_expr!(Expr::Const(l % r), expr.span))
+    Some(rc_expr!(Expr::Const(l % r), expr.span))
 }
 
-pub(super) fn exponentiate(expr: InternedExpr) -> Option<InternedExpr> {
+pub(super) fn exponentiate(expr: RcExpr) -> Option<RcExpr> {
     let (l, r) = get_binary_args!(expr, BinaryOperator::Exp)?;
-    Some(intern_expr!(Expr::Const(l.powf(*r)), expr.span))
+    Some(rc_expr!(Expr::Const(l.powf(*r)), expr.span))
 }
 
-pub(super) fn posate(expr: InternedExpr) -> Option<InternedExpr> {
+pub(super) fn posate(expr: RcExpr) -> Option<RcExpr> {
     get_unary_arg!(expr, UnaryOperator::SignPositive)
 }
 
-pub(super) fn negate(expr: InternedExpr) -> Option<InternedExpr> {
+pub(super) fn negate(expr: RcExpr) -> Option<RcExpr> {
     match get_unary_arg!(expr, UnaryOperator::SignNegative)?.as_ref() {
-        Expr::Const(n) => Some(intern_expr!(Expr::Const(-n), expr.span)),
+        Expr::Const(n) => Some(rc_expr!(Expr::Const(-n), expr.span)),
         _ => None,
     }
 }

@@ -10,8 +10,8 @@ use std::error::Error;
 /// A mapping between two expression patterns.
 #[derive(Clone, Debug)]
 pub struct PatternMap {
-    pub from: InternedExprPat,
-    pub to: InternedExprPat,
+    pub from: RcExprPat,
+    pub to: RcExprPat,
 }
 
 impl fmt::Display for PatternMap {
@@ -23,7 +23,7 @@ impl fmt::Display for PatternMap {
 #[derive(Debug)]
 pub struct UnresolvedMapping {
     map: PatternMap,
-    unresolved_pats: Vec<InternedExprPat>,
+    unresolved_pats: Vec<RcExprPat>,
 }
 
 impl fmt::Display for UnresolvedMapping {
@@ -99,7 +99,7 @@ impl PatternMap {
     pub fn validate(&self) -> Option<UnresolvedMapping> {
         let unresolved_pats: Vec<_> = unique_pats(&self.to)
             .difference(&unique_pats(&self.from))
-            .map(|p| **p)
+            .map(|&p| p.clone())
             .collect();
 
         if unresolved_pats.is_empty() {
@@ -115,11 +115,11 @@ impl PatternMap {
 
 pub enum Rule {
     PatternMap(PatternMap),
-    Evaluate(fn(InternedExpr) -> Option<InternedExpr>),
+    Evaluate(fn(RcExpr) -> Option<RcExpr>),
 }
 
 impl Rule {
-    pub fn from_fn(f: fn(InternedExpr) -> Option<InternedExpr>) -> Self {
+    pub fn from_fn(f: fn(RcExpr) -> Option<RcExpr>) -> Self {
         Self::Evaluate(f)
     }
 
@@ -128,7 +128,7 @@ impl Rule {
     }
 }
 
-impl Transformer<InternedExpr, InternedExpr> for Rule {
+impl Transformer<RcExpr, RcExpr> for Rule {
     /// Attempts to apply a rule on a target expression by
     ///
     /// 1. Applying the rule recursively on the target's subexpression to obtain a
@@ -147,74 +147,66 @@ impl Transformer<InternedExpr, InternedExpr> for Rule {
     /// "$x + 0 -> $x".try_apply("x + 1")  // None
     /// "$x + 0 -> $x".try_apply("x")      // None
     /// ```
-    fn transform(&self, target: InternedExpr) -> InternedExpr {
-        fn fill(
-            cache: &mut HashMap<u64, InternedExpr>,
-            t: InternedExpr,
-            r: InternedExpr,
-        ) -> InternedExpr {
-            *cache.entry(hash(t.as_ref())).or_insert_with(|| r)
+    fn transform(&self, target: RcExpr) -> RcExpr {
+        fn fill(cache: &mut HashMap<u64, RcExpr>, t: RcExpr, r: RcExpr) -> RcExpr {
+            cache.entry(hash(t.as_ref())).or_insert_with(|| r).clone()
         }
 
         fn transform_inner(
             rule: &Rule,
-            target: InternedExpr,
-            cache: &mut HashMap<u64, InternedExpr>,
-        ) -> InternedExpr {
+            target: RcExpr,
+            cache: &mut HashMap<u64, RcExpr>,
+        ) -> RcExpr {
             match target.as_ref() {
                 Expr::Const(_) => target,
                 Expr::Var(_) => target,
-                Expr::BinaryExpr(binary_expr) => intern_expr!(
+                Expr::BinaryExpr(binary_expr) => rc_expr!(
                     Expr::BinaryExpr(BinaryExpr {
                         op: binary_expr.op,
-                        lhs: transform(rule, binary_expr.lhs, cache),
-                        rhs: transform(rule, binary_expr.rhs, cache),
+                        lhs: transform(rule, binary_expr.lhs.clone(), cache),
+                        rhs: transform(rule, binary_expr.rhs.clone(), cache),
                     }),
                     target.span
                 ),
-                Expr::UnaryExpr(unary_expr) => intern_expr!(
+                Expr::UnaryExpr(unary_expr) => rc_expr!(
                     Expr::UnaryExpr(UnaryExpr {
                         op: unary_expr.op,
-                        rhs: transform(rule, unary_expr.rhs, cache),
+                        rhs: transform(rule, unary_expr.rhs.clone(), cache),
                     }),
                     target.span
                 ),
                 Expr::Parend(expr) => {
-                    let inner = transform(rule, *expr, cache);
-                    intern_expr!(Expr::Parend(inner), target.span)
+                    let inner = transform(rule, expr.clone(), cache);
+                    rc_expr!(Expr::Parend(inner), target.span)
                 }
                 Expr::Bracketed(expr) => {
-                    let inner = transform(rule, *expr, cache);
-                    intern_expr!(Expr::Bracketed(inner), target.span)
+                    let inner = transform(rule, expr.clone(), cache);
+                    rc_expr!(Expr::Bracketed(inner), target.span)
                 }
             }
         }
 
-        fn transform(
-            rule: &Rule,
-            target: InternedExpr,
-            cache: &mut HashMap<u64, InternedExpr>,
-        ) -> InternedExpr {
+        fn transform(rule: &Rule, target: RcExpr, cache: &mut HashMap<u64, RcExpr>) -> RcExpr {
             if let Some(result) = cache.get(&hash(target.as_ref())) {
-                return *result;
+                return result.clone();
             }
 
-            let mut result = target;
+            let mut result = target.clone();
             match rule {
                 Rule::PatternMap(PatternMap { from, to }) => {
-                    for target in get_symmetric_expressions(target) {
+                    for target in get_symmetric_expressions(target.clone()) {
                         // First, apply the rule recursively on the target's subexpressions.
                         let partially_transformed = transform_inner(rule, target, cache);
                         if partially_transformed.complexity() < result.complexity() {
-                            result = partially_transformed;
+                            result = partially_transformed.clone();
                         }
 
                         if let Some(transformed) =
-                            PatternMatch::match_rule(*from, partially_transformed)
+                            PatternMatch::match_rule(from.clone(), partially_transformed)
                                 // If the rule was matched on the expression, we have replacements for rule
                                 // patterns -> target subexpressions. Apply the rule by transforming the
                                 // rule's RHS with the replacements.
-                                .map(|repls| repls.transform(*to))
+                                .map(|repls| repls.transform(to.clone()))
                         {
                             result = transformed;
                         }
@@ -222,39 +214,39 @@ impl Transformer<InternedExpr, InternedExpr> for Rule {
                 }
                 Rule::Evaluate(f) => {
                     // First, apply the rule recursively on the target's subexpressions.
-                    let partially_transformed = transform_inner(rule, target, cache);
-                    result = f(partially_transformed).unwrap_or(partially_transformed);
+                    let partially_transformed = transform_inner(rule, target.clone(), cache);
+                    result = f(partially_transformed.clone()).unwrap_or(partially_transformed);
                 }
             }
 
             fill(cache, target, result)
         }
 
-        let mut cache: HashMap<u64, InternedExpr> = HashMap::new();
+        let mut cache: HashMap<u64, RcExpr> = HashMap::new();
         transform(self, target, &mut cache)
     }
 }
 
-impl Transformer<InternedExprPat, InternedExprPat> for Rule {
+impl Transformer<RcExprPat, RcExprPat> for Rule {
     /// Bootstraps a rule with another (or possibly the same) rule.
-    fn transform(&self, target: InternedExprPat) -> InternedExprPat {
+    fn transform(&self, target: RcExprPat) -> RcExprPat {
         // First, apply the rule recursively on the target's subexpressions.
         let og_span = target.span;
         let partially_transformed = match target.as_ref() {
             ExprPat::Const(_) | ExprPat::VarPat(_) | ExprPat::ConstPat(_) | ExprPat::AnyPat(_) => {
                 target
             }
-            ExprPat::BinaryExpr(binary_expr) => intern_expr_pat!(
+            ExprPat::BinaryExpr(binary_expr) => rc_expr_pat!(
                 ExprPat::BinaryExpr(BinaryExpr {
                     op: binary_expr.op,
-                    lhs: self.transform(binary_expr.lhs),
-                    rhs: self.transform(binary_expr.rhs),
+                    lhs: self.transform(binary_expr.lhs.clone()),
+                    rhs: self.transform(binary_expr.rhs.clone()),
                 }),
                 og_span
             ),
             ExprPat::UnaryExpr(unary_expr) => {
-                let rhs = self.transform(unary_expr.rhs);
-                intern_expr_pat!(
+                let rhs = self.transform(unary_expr.rhs.clone());
+                rc_expr_pat!(
                     ExprPat::UnaryExpr(UnaryExpr {
                         op: unary_expr.op,
                         rhs,
@@ -263,19 +255,19 @@ impl Transformer<InternedExprPat, InternedExprPat> for Rule {
                 )
             }
             ExprPat::Parend(expr) => {
-                let inner = self.transform(*expr);
-                intern_expr_pat!(ExprPat::Parend(inner), og_span)
+                let inner = self.transform(expr.clone());
+                rc_expr_pat!(ExprPat::Parend(inner), og_span)
             }
             ExprPat::Bracketed(expr) => {
-                let inner = self.transform(*expr);
-                intern_expr_pat!(ExprPat::Bracketed(inner), og_span)
+                let inner = self.transform(expr.clone());
+                rc_expr_pat!(ExprPat::Bracketed(inner), og_span)
             }
         };
 
         match self {
             Rule::PatternMap(PatternMap { from, to }) => {
-                PatternMatch::match_rule(*from, partially_transformed)
-                    .map(|repls| repls.transform(*to))
+                PatternMatch::match_rule(from.clone(), partially_transformed.clone())
+                    .map(|repls| repls.transform(to.clone()))
             }
             // Only pattern map rules can be used for bootstrapping. Function rules should be exact.
             _ => unreachable!(),

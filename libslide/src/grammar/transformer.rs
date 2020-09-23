@@ -9,7 +9,7 @@ pub trait Transformer<T: Grammar, U: Grammar> {
 
 /// A trait for transforming one expression into another.
 pub trait ExpressionTransformer<'a> {
-    fn transform(&self, expr: &'a InternedExpr) -> InternedExpr {
+    fn transform(&self, expr: &'a RcExpr) -> RcExpr {
         match expr.as_ref() {
             Expr::Const(k) => self.transform_const(k, expr.span),
             Expr::Var(v) => self.transform_var(v, expr.span),
@@ -20,20 +20,20 @@ pub trait ExpressionTransformer<'a> {
         }
     }
 
-    fn transform_const(&self, konst: &f64, span: Span) -> InternedExpr {
-        intern_expr!(Expr::Const(*konst), span)
+    fn transform_const(&self, konst: &f64, span: Span) -> RcExpr {
+        rc_expr!(Expr::Const(*konst), span)
     }
 
-    fn transform_var(&self, var: &'a str, span: Span) -> InternedExpr {
-        intern_expr!(Expr::Var(var.to_owned()), span)
+    fn transform_var(&self, var: &'a InternedStr, span: Span) -> RcExpr {
+        rc_expr!(Expr::Var(*var), span)
     }
 
     fn transform_binary_op(&self, op: BinaryOperator) -> BinaryOperator {
         op
     }
 
-    fn transform_binary(&self, expr: &'a BinaryExpr<InternedExpr>, span: Span) -> InternedExpr {
-        intern_expr!(
+    fn transform_binary(&self, expr: &'a BinaryExpr<RcExpr>, span: Span) -> RcExpr {
+        rc_expr!(
             Expr::BinaryExpr(BinaryExpr {
                 op: self.transform_binary_op(expr.op),
                 lhs: self.transform(&expr.lhs),
@@ -47,8 +47,8 @@ pub trait ExpressionTransformer<'a> {
         op
     }
 
-    fn transform_unary(&self, expr: &'a UnaryExpr<InternedExpr>, span: Span) -> InternedExpr {
-        intern_expr!(
+    fn transform_unary(&self, expr: &'a UnaryExpr<RcExpr>, span: Span) -> RcExpr {
+        rc_expr!(
             Expr::UnaryExpr(UnaryExpr {
                 op: self.transform_unary_op(expr.op),
                 rhs: self.transform(&expr.rhs),
@@ -57,11 +57,11 @@ pub trait ExpressionTransformer<'a> {
         )
     }
 
-    fn transform_parend(&self, expr: &'a InternedExpr, span: Span) -> InternedExpr {
-        intern_expr!(Expr::Parend(self.transform(expr)), span)
+    fn transform_parend(&self, expr: &'a RcExpr, span: Span) -> RcExpr {
+        rc_expr!(Expr::Parend(self.transform(expr)), span)
     }
 
-    fn transform_bracketed(&self, expr: &'a InternedExpr, span: Span) -> InternedExpr {
-        intern_expr!(Expr::Bracketed(self.transform(expr)), span)
+    fn transform_bracketed(&self, expr: &'a RcExpr, span: Span) -> RcExpr {
+        rc_expr!(Expr::Bracketed(self.transform(expr)), span)
     }
 }

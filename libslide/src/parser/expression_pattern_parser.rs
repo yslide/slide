@@ -6,7 +6,7 @@ use crate::scanner::types::Token;
 use crate::utils::PeekIter;
 
 /// Parses a tokenized slide expression pattern, emitting the result and any diagnostics.
-pub fn parse(input: Vec<Token>) -> (InternedExprPat, Vec<Diagnostic>) {
+pub fn parse(input: Vec<Token>) -> (RcExprPat, Vec<Diagnostic>) {
     let mut parser = ExpressionPatternParser::new(input);
     (parser.parse(), parser.diagnostics)
 }
@@ -25,8 +25,8 @@ impl ExpressionPatternParser {
     }
 }
 
-impl Parser<InternedExprPat> for ExpressionPatternParser {
-    type Expr = InternedExprPat;
+impl Parser<RcExprPat> for ExpressionPatternParser {
+    type Expr = RcExprPat;
 
     fn input(&mut self) -> &mut PeekIter<Token> {
         &mut self._input
@@ -36,7 +36,7 @@ impl Parser<InternedExprPat> for ExpressionPatternParser {
         self.diagnostics.push(diagnostic);
     }
 
-    fn parse(&mut self) -> InternedExprPat {
+    fn parse(&mut self) -> RcExprPat {
         let parsed = self.expr();
         if !self.done() {
             let extra_tokens_diag = extra_tokens_diag(self.input());
@@ -46,24 +46,24 @@ impl Parser<InternedExprPat> for ExpressionPatternParser {
     }
 
     fn parse_float(&mut self, f: f64, span: Span) -> Self::Expr {
-        intern_expr_pat!(ExprPat::Const(f), span)
+        rc_expr_pat!(ExprPat::Const(f), span)
     }
 
     fn parse_variable(&mut self, name: String, span: Span) -> Self::Expr {
         self.push_diag(IllegalVariable!(span, name));
-        intern_expr_pat!(ExprPat::VarPat(name), span)
+        rc_expr_pat!(ExprPat::VarPat(name), span)
     }
 
     fn parse_var_pattern(&mut self, name: String, span: Span) -> Self::Expr {
-        intern_expr_pat!(ExprPat::VarPat(name), span)
+        rc_expr_pat!(ExprPat::VarPat(name), span)
     }
 
     fn parse_const_pattern(&mut self, name: String, span: Span) -> Self::Expr {
-        intern_expr_pat!(ExprPat::ConstPat(name), span)
+        rc_expr_pat!(ExprPat::ConstPat(name), span)
     }
 
     fn parse_any_pattern(&mut self, name: String, span: Span) -> Self::Expr {
-        intern_expr_pat!(ExprPat::AnyPat(name), span)
+        rc_expr_pat!(ExprPat::AnyPat(name), span)
     }
 
     fn has_stmt_break(&mut self) -> bool {

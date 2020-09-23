@@ -7,14 +7,14 @@ use std::collections::HashMap;
 ///
 /// The rhs of a rule may be transfomed with an instance of `PatternMatch` to obtain the result of a
 /// rule applied on a target expression.
-pub struct PatternMatch<E: InternedExpression> {
+pub struct PatternMatch<E: RcExpression> {
     map: HashMap<
         u64, // pointer to rule pattern, like #a
         E,   // target expr,             like 10
     >,
 }
 
-impl<E: InternedExpression> Default for PatternMatch<E> {
+impl<E: RcExpression> Default for PatternMatch<E> {
     fn default() -> Self {
         Self {
             map: HashMap::new(),
@@ -22,20 +22,17 @@ impl<E: InternedExpression> Default for PatternMatch<E> {
     }
 }
 
-pub trait MatchRule<E: InternedExpression> {
+pub trait MatchRule<E: RcExpression> {
     /// Pattern matches a rule template against an expression. If successful, the results of the
     /// matching are returned as a mapping of rule to target expressions replacements.
     ///
     /// A sucessful pattern matching is one that matches the target expression wholly, abiding the
     /// expression pattern matching rules.
-    fn match_rule(rule: InternedExprPat, target: E) -> Option<PatternMatch<E>>;
+    fn match_rule(rule: RcExprPat, target: E) -> Option<PatternMatch<E>>;
 }
 
-impl MatchRule<InternedExpr> for PatternMatch<InternedExpr> {
-    fn match_rule(
-        rule: InternedExprPat,
-        target: InternedExpr,
-    ) -> Option<PatternMatch<InternedExpr>> {
+impl MatchRule<RcExpr> for PatternMatch<RcExpr> {
+    fn match_rule(rule: RcExprPat, target: RcExpr) -> Option<PatternMatch<RcExpr>> {
         match (rule.as_ref(), target.as_ref()) {
             // The happiest path -- if a pattern matches an expression, return replacements for it!
             (ExprPat::VarPat(_), Expr::Var(_))
@@ -59,8 +56,8 @@ impl MatchRule<InternedExpr> for PatternMatch<InternedExpr> {
                 }
                 // Expressions are of the same type; match the rest of the expression by recursing on
                 // the arguments.
-                let replacements_lhs = Self::match_rule(rule.lhs, expr.lhs)?;
-                let replacements_rhs = Self::match_rule(rule.rhs, expr.rhs)?;
+                let replacements_lhs = Self::match_rule(rule.lhs.clone(), expr.lhs.clone())?;
+                let replacements_rhs = Self::match_rule(rule.rhs.clone(), expr.rhs.clone())?;
                 PatternMatch::try_merge(replacements_lhs, replacements_rhs)
             }
             (ExprPat::UnaryExpr(rule), Expr::UnaryExpr(expr)) => {
@@ -69,20 +66,21 @@ impl MatchRule<InternedExpr> for PatternMatch<InternedExpr> {
                 }
                 // Expressions are of the same type; match the rest of the expression by recursing on
                 // the argument.
-                Self::match_rule(rule.rhs, expr.rhs)
+                Self::match_rule(rule.rhs.clone(), expr.rhs.clone())
             }
-            (ExprPat::Parend(rule), Expr::Parend(expr)) => Self::match_rule(*rule, *expr),
-            (ExprPat::Bracketed(rule), Expr::Bracketed(expr)) => Self::match_rule(*rule, *expr),
+            (ExprPat::Parend(rule), Expr::Parend(expr)) => {
+                Self::match_rule(rule.clone(), expr.clone())
+            }
+            (ExprPat::Bracketed(rule), Expr::Bracketed(expr)) => {
+                Self::match_rule(rule.clone(), expr.clone())
+            }
             _ => None,
         }
     }
 }
 
-impl MatchRule<InternedExprPat> for PatternMatch<InternedExprPat> {
-    fn match_rule(
-        rule: InternedExprPat,
-        target: InternedExprPat,
-    ) -> Option<PatternMatch<InternedExprPat>> {
+impl MatchRule<RcExprPat> for PatternMatch<RcExprPat> {
+    fn match_rule(rule: RcExprPat, target: RcExprPat) -> Option<PatternMatch<RcExprPat>> {
         match (rule.as_ref(), target.as_ref()) {
             (ExprPat::VarPat(_), ExprPat::VarPat(_))
             | (ExprPat::ConstPat(_), ExprPat::ConstPat(_))
@@ -101,24 +99,28 @@ impl MatchRule<InternedExprPat> for PatternMatch<InternedExprPat> {
                 if rule.op != expr.op {
                     return None;
                 }
-                let replacements_lhs = Self::match_rule(rule.lhs, expr.lhs)?;
-                let replacements_rhs = Self::match_rule(rule.rhs, expr.rhs)?;
+                let replacements_lhs = Self::match_rule(rule.lhs.clone(), expr.lhs.clone())?;
+                let replacements_rhs = Self::match_rule(rule.rhs.clone(), expr.rhs.clone())?;
                 PatternMatch::try_merge(replacements_lhs, replacements_rhs)
             }
             (ExprPat::UnaryExpr(rule), ExprPat::UnaryExpr(expr)) => {
                 if rule.op != expr.op {
                     return None;
                 }
-                Self::match_rule(rule.rhs, expr.rhs)
+                Self::match_rule(rule.rhs.clone(), expr.rhs.clone())
             }
-            (ExprPat::Parend(rule), ExprPat::Parend(expr)) => Self::match_rule(*rule, *expr),
-            (ExprPat::Bracketed(rule), ExprPat::Bracketed(expr)) => Self::match_rule(*rule, *expr),
+            (ExprPat::Parend(rule), ExprPat::Parend(expr)) => {
+                Self::match_rule(rule.clone(), expr.clone())
+            }
+            (ExprPat::Bracketed(rule), ExprPat::Bracketed(expr)) => {
+                Self::match_rule(rule.clone(), expr.clone())
+            }
             _ => None,
         }
     }
 }
 
-impl Transformer<InternedExprPat, InternedExpr> for PatternMatch<InternedExpr> {
+impl Transformer<RcExprPat, RcExpr> for PatternMatch<RcExpr> {
     /// Transforms a pattern expression into an expression by replacing patterns with target
     /// expressions known by the [`PatternMatch`].
     ///
@@ -126,21 +128,21 @@ impl Transformer<InternedExprPat, InternedExpr> for PatternMatch<InternedExpr> {
     /// using patterns matched between the LHS of the rule and the target expression.
     ///
     /// [`PatternMatch`]: PatternMatch
-    fn transform(&self, item: InternedExprPat) -> InternedExpr {
+    fn transform(&self, item: RcExprPat) -> RcExpr {
         fn transform(
-            repls: &PatternMatch<InternedExpr>,
-            item: InternedExprPat,
-            cache: &mut HashMap<u64, InternedExpr>,
-        ) -> InternedExpr {
+            repls: &PatternMatch<RcExpr>,
+            item: RcExprPat,
+            cache: &mut HashMap<u64, RcExpr>,
+        ) -> RcExpr {
             if let Some(result) = cache.get(&hash(item.as_ref())) {
-                return *result;
+                return result.clone();
             }
 
             let og_span = item.span;
-            let transformed: InternedExpr = match item.as_ref() {
+            let transformed: RcExpr = match item.as_ref() {
                 ExprPat::VarPat(_) | ExprPat::ConstPat(_) | ExprPat::AnyPat(_) => {
                     match repls.map.get(&hash(item.as_ref())) {
-                        Some(transformed) => *transformed,
+                        Some(transformed) => transformed.clone(),
 
                         // A pattern can only be transformed into an expression if it has an
                         // expression replacement. Patterns are be validated before transformation,
@@ -149,36 +151,36 @@ impl Transformer<InternedExprPat, InternedExpr> for PatternMatch<InternedExpr> {
                     }
                 }
 
-                ExprPat::Const(f) => intern_expr!(Expr::Const(*f), og_span),
-                ExprPat::BinaryExpr(binary_expr) => intern_expr!(
+                ExprPat::Const(f) => rc_expr!(Expr::Const(*f), og_span),
+                ExprPat::BinaryExpr(binary_expr) => rc_expr!(
                     Expr::BinaryExpr(BinaryExpr {
                         op: binary_expr.op,
-                        lhs: transform(repls, binary_expr.lhs, cache),
-                        rhs: transform(repls, binary_expr.rhs, cache),
+                        lhs: transform(repls, binary_expr.lhs.clone(), cache),
+                        rhs: transform(repls, binary_expr.rhs.clone(), cache),
                     }),
                     og_span
                 ),
-                ExprPat::UnaryExpr(unary_expr) => intern_expr!(
+                ExprPat::UnaryExpr(unary_expr) => rc_expr!(
                     Expr::UnaryExpr(UnaryExpr {
                         op: unary_expr.op,
-                        rhs: transform(repls, unary_expr.rhs, cache),
+                        rhs: transform(repls, unary_expr.rhs.clone(), cache),
                     }),
                     og_span
                 ),
                 ExprPat::Parend(expr) => {
-                    let inner = transform(repls, *expr, cache);
-                    intern_expr!(Expr::Parend(inner), og_span)
+                    let inner = transform(repls, expr.clone(), cache);
+                    rc_expr!(Expr::Parend(inner), og_span)
                 }
                 ExprPat::Bracketed(expr) => {
-                    let inner = transform(repls, *expr, cache);
-                    intern_expr!(Expr::Bracketed(inner), og_span)
+                    let inner = transform(repls, expr.clone(), cache);
+                    rc_expr!(Expr::Bracketed(inner), og_span)
                 }
             };
 
             let result = cache
                 .entry(hash(item.as_ref()))
                 .or_insert_with(|| transformed);
-            *result
+            result.clone()
         }
 
         // Expr pointer -> transformed expression. Assumes that transient expressions of the same
@@ -189,56 +191,56 @@ impl Transformer<InternedExprPat, InternedExpr> for PatternMatch<InternedExpr> {
     }
 }
 
-impl Transformer<InternedExprPat, InternedExprPat> for PatternMatch<InternedExprPat> {
-    fn transform(&self, item: InternedExprPat) -> InternedExprPat {
+impl Transformer<RcExprPat, RcExprPat> for PatternMatch<RcExprPat> {
+    fn transform(&self, item: RcExprPat) -> RcExprPat {
         fn transform(
-            repls: &PatternMatch<InternedExprPat>,
-            item: InternedExprPat,
-            cache: &mut HashMap<u64, InternedExprPat>,
-        ) -> InternedExprPat {
+            repls: &PatternMatch<RcExprPat>,
+            item: RcExprPat,
+            cache: &mut HashMap<u64, RcExprPat>,
+        ) -> RcExprPat {
             if let Some(result) = cache.get(&hash(item.as_ref())) {
-                return *result;
+                return result.clone();
             }
 
             let og_span = item.span;
-            let transformed: InternedExprPat = match item.as_ref() {
+            let transformed: RcExprPat = match item.as_ref() {
                 ExprPat::VarPat(_) | ExprPat::ConstPat(_) | ExprPat::AnyPat(_) => {
                     match repls.map.get(&hash(item.as_ref())) {
-                        Some(transformed) => *transformed,
+                        Some(transformed) => transformed.clone(),
                         None => unreachable!(),
                     }
                 }
 
-                ExprPat::Const(f) => intern_expr_pat!(ExprPat::Const(*f), og_span),
-                ExprPat::BinaryExpr(binary_expr) => intern_expr_pat!(
+                ExprPat::Const(f) => rc_expr_pat!(ExprPat::Const(*f), og_span),
+                ExprPat::BinaryExpr(binary_expr) => rc_expr_pat!(
                     ExprPat::BinaryExpr(BinaryExpr {
                         op: binary_expr.op,
-                        lhs: transform(repls, binary_expr.lhs, cache),
-                        rhs: transform(repls, binary_expr.rhs, cache),
+                        lhs: transform(repls, binary_expr.lhs.clone(), cache),
+                        rhs: transform(repls, binary_expr.rhs.clone(), cache),
                     }),
                     og_span
                 ),
-                ExprPat::UnaryExpr(unary_expr) => intern_expr_pat!(
+                ExprPat::UnaryExpr(unary_expr) => rc_expr_pat!(
                     ExprPat::UnaryExpr(UnaryExpr {
                         op: unary_expr.op,
-                        rhs: transform(repls, unary_expr.rhs, cache),
+                        rhs: transform(repls, unary_expr.rhs.clone(), cache),
                     }),
                     og_span
                 ),
                 ExprPat::Parend(expr) => {
-                    let inner = transform(repls, *expr, cache);
-                    intern_expr_pat!(ExprPat::Parend(inner), og_span)
+                    let inner = transform(repls, expr.clone(), cache);
+                    rc_expr_pat!(ExprPat::Parend(inner), og_span)
                 }
                 ExprPat::Bracketed(expr) => {
-                    let inner = transform(repls, *expr, cache);
-                    intern_expr_pat!(ExprPat::Bracketed(inner), og_span)
+                    let inner = transform(repls, expr.clone(), cache);
+                    rc_expr_pat!(ExprPat::Bracketed(inner), og_span)
                 }
             };
 
             let result = cache
                 .entry(hash(item.as_ref()))
                 .or_insert_with(|| transformed);
-            *result
+            result.clone()
         }
 
         // ExprPat pointer -> transformed expression. Assumes that transient expressions of the same
@@ -249,7 +251,7 @@ impl Transformer<InternedExprPat, InternedExprPat> for PatternMatch<InternedExpr
     }
 }
 
-impl<E: InternedExpression + Eq> PatternMatch<E> {
+impl<E: RcExpression + Eq> PatternMatch<E> {
     /// Merges two `PatternMatch`. If the `PatternMatch` are of incompatible state (i.e. contain
     /// different mappings), merging fails and nothing is returned.
     fn try_merge(left: PatternMatch<E>, right: PatternMatch<E>) -> Option<PatternMatch<E>> {
@@ -268,7 +270,7 @@ impl<E: InternedExpression + Eq> PatternMatch<E> {
         Some(replacements)
     }
 
-    fn insert(&mut self, k: &InternedExprPat, v: E) -> Option<E> {
+    fn insert(&mut self, k: &RcExprPat, v: E) -> Option<E> {
         self.map.insert(hash(k.as_ref()), v)
     }
 }
@@ -278,7 +280,7 @@ mod tests {
     use super::*;
     use crate::{parse_expr, parse_expression_pattern, scan};
 
-    fn parse_rule(prog: &str) -> InternedExprPat {
+    fn parse_rule(prog: &str) -> RcExprPat {
         let (expr, _) = parse_expression_pattern(scan(prog).tokens);
         expr
     }
@@ -288,17 +290,17 @@ mod tests {
 
         #[test]
         fn try_merge() {
-            let a = intern_expr_pat!(ExprPat::VarPat("a".into()), crate::DUMMY_SP);
-            let b = intern_expr_pat!(ExprPat::VarPat("b".into()), crate::DUMMY_SP);
-            let c = intern_expr_pat!(ExprPat::VarPat("c".into()), crate::DUMMY_SP);
+            let a = rc_expr_pat!(ExprPat::VarPat("a".into()), crate::DUMMY_SP);
+            let b = rc_expr_pat!(ExprPat::VarPat("b".into()), crate::DUMMY_SP);
+            let c = rc_expr_pat!(ExprPat::VarPat("c".into()), crate::DUMMY_SP);
 
-            let mut left: PatternMatch<InternedExpr> = PatternMatch::default();
-            left.insert(&a, intern_expr!(Expr::Const(1.), crate::DUMMY_SP));
-            left.insert(&b, intern_expr!(Expr::Const(2.), crate::DUMMY_SP));
+            let mut left: PatternMatch<RcExpr> = PatternMatch::default();
+            left.insert(&a, rc_expr!(Expr::Const(1.), crate::DUMMY_SP));
+            left.insert(&b, rc_expr!(Expr::Const(2.), crate::DUMMY_SP));
 
-            let mut right: PatternMatch<InternedExpr> = PatternMatch::default();
-            right.insert(&b, intern_expr!(Expr::Const(2.), crate::DUMMY_SP));
-            right.insert(&c, intern_expr!(Expr::Const(3.), crate::DUMMY_SP));
+            let mut right: PatternMatch<RcExpr> = PatternMatch::default();
+            right.insert(&b, rc_expr!(Expr::Const(2.), crate::DUMMY_SP));
+            right.insert(&c, rc_expr!(Expr::Const(3.), crate::DUMMY_SP));
 
             let merged = PatternMatch::try_merge(left, right).unwrap();
             assert_eq!(merged.map.len(), 3);
@@ -309,13 +311,13 @@ mod tests {
 
         #[test]
         fn try_merge_overlapping_non_matching() {
-            let a = intern_expr_pat!(ExprPat::VarPat("a".into()), crate::DUMMY_SP);
+            let a = rc_expr_pat!(ExprPat::VarPat("a".into()), crate::DUMMY_SP);
 
-            let mut left: PatternMatch<InternedExpr> = PatternMatch::default();
-            left.insert(&a, intern_expr!(Expr::Const(1.), crate::DUMMY_SP));
+            let mut left: PatternMatch<RcExpr> = PatternMatch::default();
+            left.insert(&a, rc_expr!(Expr::Const(1.), crate::DUMMY_SP));
 
-            let mut right: PatternMatch<InternedExpr> = PatternMatch::default();
-            right.insert(&a, intern_expr!(Expr::Const(2.), crate::DUMMY_SP));
+            let mut right: PatternMatch<RcExpr> = PatternMatch::default();
+            right.insert(&a, rc_expr!(Expr::Const(2.), crate::DUMMY_SP));
 
             let merged = PatternMatch::try_merge(left, right);
             assert!(merged.is_none());
@@ -334,7 +336,7 @@ mod tests {
                     let parsed_target = parse_expr!($target);
 
                     let repls = PatternMatch::match_rule(parsed_rule, parsed_target);
-                    let (repls, expected_repls): (PatternMatch<InternedExpr>, Vec<&str>) =
+                    let (repls, expected_repls): (PatternMatch<RcExpr>, Vec<&str>) =
                         match (repls, $expected_repls) {
                             (None, expected_matches) => {
                                 assert!(expected_matches.is_none());

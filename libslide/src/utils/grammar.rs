@@ -2,20 +2,20 @@ use crate::grammar::*;
 
 use std::collections::{HashSet, VecDeque};
 
-pub fn get_symmetric_expressions(expr: InternedExpr) -> Vec<InternedExpr> {
+pub fn get_symmetric_expressions(expr: RcExpr) -> Vec<RcExpr> {
     match expr.as_ref() {
         Expr::BinaryExpr(BinaryExpr { op, .. }) => match op {
             BinaryOperator::Plus | BinaryOperator::Mult => {
-                let args = get_flattened_binary_args(expr, *op);
+                let args = get_flattened_binary_args(expr.clone(), *op);
                 let mut sym_args = Vec::with_capacity(args.len());
                 let mut result = Vec::with_capacity((args.len() - 1) * 2);
                 for i in 0..args.len() {
-                    sym_args.push(args[i]);
+                    sym_args.push(args[i].clone());
                     for arg in args.iter().take(i) {
-                        sym_args.push(*arg);
+                        sym_args.push(arg.clone());
                     }
                     for arg in args.iter().skip(i + 1) {
-                        sym_args.push(*arg);
+                        sym_args.push(arg.clone());
                     }
                     result.push(unflatten_binary_expr(
                         &sym_args,
@@ -51,10 +51,7 @@ macro_rules! insert_back {
     };
 }
 
-pub fn get_flattened_binary_args(
-    expr: InternedExpr,
-    parent_op: BinaryOperator,
-) -> Vec<InternedExpr> {
+pub fn get_flattened_binary_args(expr: RcExpr, parent_op: BinaryOperator) -> Vec<RcExpr> {
     match expr.as_ref() {
         Expr::BinaryExpr(
             child
@@ -66,8 +63,8 @@ pub fn get_flattened_binary_args(
         ) if parent_op == BinaryOperator::Plus => {
             // ... + ((1 + 2) + (3 + 4)) => ... + 1, 2, 3, 4
             let mut args = VecDeque::with_capacity(2);
-            let flattened_left = get_flattened_binary_args(child.lhs, child.op);
-            let flattened_right = get_flattened_binary_args(child.rhs, child.op);
+            let flattened_left = get_flattened_binary_args(child.lhs.clone(), child.op);
+            let flattened_right = get_flattened_binary_args(child.rhs.clone(), child.op);
             insert_front!(args, flattened_left);
             insert_back!(args, flattened_right);
             args.into_iter().collect()
@@ -83,8 +80,8 @@ pub fn get_flattened_binary_args(
         ) if parent_op == BinaryOperator::Mult => {
             // ... * ((1 * 2) * (3 * 4)) => ... * 1, 2, 3, 4
             let mut args = VecDeque::with_capacity(2);
-            let flattened_left = get_flattened_binary_args(child.lhs, child.op);
-            let flattened_right = get_flattened_binary_args(child.rhs, child.op);
+            let flattened_left = get_flattened_binary_args(child.lhs.clone(), child.op);
+            let flattened_right = get_flattened_binary_args(child.rhs.clone(), child.op);
             insert_front!(args, flattened_left);
             insert_back!(args, flattened_right);
             args.into_iter().collect()
@@ -101,8 +98,8 @@ pub fn get_flattened_binary_args(
             // ... + (2 - 3) => ... + 2, -3
             // ... + ((1 + 2) - (2 + 3)) => ... + 1, 2, -2, -3
             let mut args = VecDeque::with_capacity(2);
-            let flattened_left = get_flattened_binary_args(child.lhs, child.op);
-            let flattened_right = get_flattened_binary_args(child.rhs, child.op);
+            let flattened_left = get_flattened_binary_args(child.lhs.clone(), child.op);
+            let flattened_right = get_flattened_binary_args(child.rhs.clone(), child.op);
             insert_front!(args, flattened_left);
             insert_back!(args, flattened_right.into_iter().map(negate));
             args.into_iter().collect()
@@ -111,51 +108,52 @@ pub fn get_flattened_binary_args(
     }
 }
 
-fn negate(expr: InternedExpr) -> InternedExpr {
+fn negate(expr: RcExpr) -> RcExpr {
+    let span = expr.span;
     match expr.as_ref() {
         // #a -> -#a
-        Expr::Const(f) => intern_expr!(Expr::Const(-f), expr.span),
+        Expr::Const(f) => rc_expr!(Expr::Const(-f), span),
 
         // $a -> -$a
-        Expr::Var(_) => intern_expr!(
+        Expr::Var(_) => rc_expr!(
             Expr::UnaryExpr(UnaryExpr {
                 op: UnaryOperator::SignNegative,
                 rhs: expr,
             }),
-            expr.span
+            span
         ),
 
         // +_a => -_a
         Expr::UnaryExpr(UnaryExpr {
             op: UnaryOperator::SignPositive,
             rhs,
-        }) => intern_expr!(
+        }) => rc_expr!(
             Expr::UnaryExpr(UnaryExpr {
                 op: UnaryOperator::SignPositive,
-                rhs: *rhs,
+                rhs: rhs.clone(),
             }),
-            expr.span
+            span
         ),
 
         // -_a => _a
         Expr::UnaryExpr(UnaryExpr {
             op: UnaryOperator::SignNegative,
             rhs,
-        }) => *rhs,
+        }) => rhs.clone(),
 
         // _a <op> _b => -(_a <op> _b)
         // TODO: We could expand factorable expressions further:
         //       -(_a + _b) = -_a + -_b
         //       -(_a - _b) = -_a - -_b
-        Expr::BinaryExpr(_) => intern_expr!(
+        Expr::BinaryExpr(_) => rc_expr!(
             Expr::UnaryExpr(UnaryExpr {
                 op: UnaryOperator::SignNegative,
                 rhs: expr,
             }),
-            expr.span
+            span
         ),
 
-        Expr::Parend(expr) | Expr::Bracketed(expr) => negate(*expr),
+        Expr::Parend(expr) | Expr::Bracketed(expr) => negate(expr.clone()),
     }
 }
 
@@ -166,26 +164,34 @@ pub enum UnflattenStrategy {
 
 pub fn unflatten_binary_expr<E>(args: &[E], op: BinaryOperator, strategy: UnflattenStrategy) -> E
 where
-    E: InternedExpression,
+    E: RcExpression,
 {
-    fn _left<E: InternedExpression>(args: &[E], op: BinaryOperator) -> E {
+    fn _left<E: RcExpression>(args: &[E], op: BinaryOperator) -> E {
         let mut args = args.iter();
-        let mut lhs = *args.next().unwrap();
+        let mut lhs = args.next().unwrap().clone();
         for rhs in args {
             lhs = E::binary(
-                BinaryExpr { op, lhs, rhs: *rhs },
+                BinaryExpr {
+                    op,
+                    lhs,
+                    rhs: rhs.clone(),
+                },
                 /* TODO: propagate span */ crate::DUMMY_SP,
             )
         }
         lhs
     }
 
-    fn _right<E: InternedExpression>(args: &[E], op: BinaryOperator) -> E {
+    fn _right<E: RcExpression>(args: &[E], op: BinaryOperator) -> E {
         let mut args = args.iter().rev();
-        let mut rhs = *args.next().unwrap();
+        let mut rhs = args.next().unwrap().clone();
         for lhs in args {
             rhs = E::binary(
-                BinaryExpr { op, lhs: *lhs, rhs },
+                BinaryExpr {
+                    op,
+                    lhs: lhs.clone(),
+                    rhs,
+                },
                 /* TODO: propagate span */ crate::DUMMY_SP,
             )
         }
@@ -199,8 +205,8 @@ where
 }
 
 /// Returns all unique patterns in a pattern expression.
-pub fn unique_pats<'a>(expr: &'a InternedExprPat) -> HashSet<&'a InternedExprPat> {
-    fn unique_pats<'a>(expr: &'a InternedExprPat, set: &mut HashSet<&'a InternedExprPat>) {
+pub fn unique_pats<'a>(expr: &'a RcExprPat) -> HashSet<&'a RcExprPat> {
+    fn unique_pats<'a>(expr: &'a RcExprPat, set: &mut HashSet<&'a RcExprPat>) {
         match expr.as_ref() {
             ExprPat::VarPat(_) | ExprPat::ConstPat(_) | ExprPat::AnyPat(_) => {
                 set.insert(expr);
@@ -224,33 +230,35 @@ pub fn unique_pats<'a>(expr: &'a InternedExprPat) -> HashSet<&'a InternedExprPat
     hs
 }
 
-pub fn normalize(expr: InternedExpr) -> InternedExpr {
+pub fn normalize(expr: RcExpr) -> RcExpr {
     match expr.as_ref() {
         Expr::BinaryExpr(BinaryExpr { op, lhs, rhs }) => {
             let partially_normalized = Expr::BinaryExpr(BinaryExpr {
                 op: *op,
-                lhs: normalize(*lhs),
-                rhs: normalize(*rhs),
+                lhs: normalize(lhs.clone()),
+                rhs: normalize(rhs.clone()),
             });
             let mut flattened_args =
-                get_flattened_binary_args(intern_expr!(partially_normalized, expr.span), *op);
+                get_flattened_binary_args(rc_expr!(partially_normalized, expr.span), *op);
             flattened_args.sort();
             unflatten_binary_expr(&flattened_args, *op, UnflattenStrategy::Left)
         }
-        Expr::UnaryExpr(UnaryExpr { op, rhs }) => intern_expr!(
+        Expr::UnaryExpr(UnaryExpr { op, rhs }) => rc_expr!(
             Expr::UnaryExpr(UnaryExpr {
                 op: *op,
-                rhs: normalize(*rhs),
+                rhs: normalize(rhs.clone()),
             }),
             expr.span
         ),
         Expr::Parend(expr) => {
-            let inner = normalize(*expr);
-            intern_expr!(Expr::Parend(inner), inner.span)
+            let inner = normalize(expr.clone());
+            let span = inner.span;
+            rc_expr!(Expr::Parend(inner), span)
         }
         Expr::Bracketed(expr) => {
-            let inner = normalize(*expr);
-            intern_expr!(Expr::Bracketed(inner), inner.span)
+            let inner = normalize(expr.clone());
+            let span = inner.span;
+            rc_expr!(Expr::Bracketed(inner), span)
         }
 
         _ => expr,
@@ -325,7 +333,7 @@ mod tests {
 
     #[test]
     fn unflatten_binary_expr_right() {
-        let args: Vec<InternedExpr> = vec!["1", "2", "3", "4"]
+        let args: Vec<RcExpr> = vec!["1", "2", "3", "4"]
             .into_iter()
             .map(|s| parse_expr!(s))
             .collect();
@@ -359,7 +367,7 @@ mod tests {
 
     #[test]
     fn unflatten_binary_expr_left() {
-        let args: Vec<InternedExpr> = vec!["1", "2", "3", "4"]
+        let args: Vec<RcExpr> = vec!["1", "2", "3", "4"]
             .into_iter()
             .map(|s| parse_expr!(s))
             .collect();

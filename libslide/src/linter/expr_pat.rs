@@ -5,7 +5,7 @@ use similar_names::*;
 
 use super::{DiagnosticRecord, LintRule};
 use crate::diagnostics::Diagnostic;
-use crate::grammar::InternedExprPat;
+use crate::grammar::RcExprPat;
 
 macro_rules! define_expr_pat_lints {
     ($($linter:ident,)*) => {
@@ -15,7 +15,7 @@ macro_rules! define_expr_pat_lints {
         }
 
         impl ExprPatLintRule {
-            pub fn lint(&self, expr_pat: &InternedExprPat, source: &str) -> Vec<Diagnostic> {
+            pub fn lint(&self, expr_pat: &RcExprPat, source: &str) -> Vec<Diagnostic> {
                 match self {
                     $(Self::$linter => $linter::lint(expr_pat, source)),*
                 }

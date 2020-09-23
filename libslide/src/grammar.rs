@@ -66,7 +66,7 @@ impl TryFrom<&Token> for BinaryOperator {
 }
 
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
-pub struct BinaryExpr<E: InternedExpression> {
+pub struct BinaryExpr<E: RcExpression> {
     pub op: BinaryOperator,
     pub lhs: E,
     pub rhs: E,
@@ -92,7 +92,7 @@ macro_rules! mkop {
 
 impl<E> BinaryExpr<E>
 where
-    E: InternedExpression,
+    E: RcExpression,
 {
     mkop! {
         mult: BinaryOperator::Mult
@@ -103,7 +103,7 @@ where
 
 impl<E> PartialOrd for BinaryExpr<E>
 where
-    E: InternedExpression,
+    E: RcExpression,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -112,7 +112,7 @@ where
 
 impl<E> Ord for BinaryExpr<E>
 where
-    E: InternedExpression,
+    E: RcExpression,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.op != other.op {
@@ -145,14 +145,14 @@ impl TryFrom<&Token> for UnaryOperator {
 }
 
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
-pub struct UnaryExpr<E: InternedExpression> {
+pub struct UnaryExpr<E: RcExpression> {
     pub op: UnaryOperator,
     pub rhs: E,
 }
 
 impl<E> UnaryExpr<E>
 where
-    E: InternedExpression,
+    E: RcExpression,
 {
     pub fn negate<T>(expr: T) -> Self
     where
@@ -167,7 +167,7 @@ where
 
 impl<E> PartialOrd for UnaryExpr<E>
 where
-    E: InternedExpression,
+    E: RcExpression,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -176,7 +176,7 @@ where
 
 impl<E> Ord for UnaryExpr<E>
 where
-    E: InternedExpression,
+    E: RcExpression,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.op.cmp(&other.op) {

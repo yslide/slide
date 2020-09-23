@@ -344,7 +344,18 @@
           },
 
           updateBugReportUrl(slideOpts) {
-            const optsStr = JSON.stringify(slideOpts, ["emit_format", "parse_only", "expr_pat"], 2);
+            const optsStr = JSON.stringify(
+              slideOpts,
+              [
+                "emit_format",
+                "emit_config",
+                "lint",
+                "parse_only",
+                "expr_pat",
+                "explain_diagnostic",
+              ],
+              2
+            );
             const body = `[slide playground](${window.location})
 
 Given the input
@@ -357,11 +368,15 @@ slide emits
 
 <pre>${this.output}</pre>
 
+<details>
+<summary>
 with the options
+</summary>
 
 \`\`\`json
 ${optsStr}
 \`\`\`
+</details>
 
 on commit ${this.commit}.
 

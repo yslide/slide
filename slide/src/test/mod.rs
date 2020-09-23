@@ -4,7 +4,6 @@ use std::error::Error;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
 
 #[macro_use]
 mod common;
@@ -158,12 +157,6 @@ variant_from_test! {
     SlideEmit from SlideEmitTest
     LaTeXEmit from LaTeXEmitTest
     FailedTestConstruction from ErrorMsgRef
-}
-
-/// Wraps an object in a thread-safe atomic mutex.
-#[inline]
-fn atomic_lock<T>(obj: T) -> Arc<Mutex<T>> {
-    Arc::new(Mutex::new(obj))
 }
 
 /// Returns the command to bless a test file.

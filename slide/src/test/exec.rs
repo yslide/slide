@@ -27,12 +27,13 @@ pub fn run_slide(args: &str, input: &str) -> Result<SlideOutput, Outcome> {
         }
     };
 
-    let slide::SlideResult {
-        stdout,
-        stderr,
-        code,
-        ..
-    } = slide::run_slide(opts);
-
-    Ok((stdout, stderr, code.to_string()))
+    match std::panic::catch_unwind(|| slide::run_slide(opts)) {
+        Ok(slide::SlideResult {
+            stdout,
+            stderr,
+            code,
+            ..
+        }) => Ok((stdout, stderr, code.to_string())),
+        Err(_) => Err(print_fail! { Failure: "Test panicked!"; }),
+    }
 }

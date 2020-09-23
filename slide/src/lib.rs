@@ -92,13 +92,12 @@ where
                     \tfrac          (latex):        Emit divisions as fractions.\n\
                     \ttimes         (latex):        Emit \"\\times\" for multiplications.\n\
                     \tdiv           (latex):        Emit \"\\div\" for divisions.\n\
-                    \tdefine-assign (pretty|latex): Use \":=\" for assignments.\n\
                     \timplicit-mult (pretty|latex): Use implicit multiplication where possible.\n\
                     ",
                 )
                 .hide_possible_values(true)
                 .takes_value(true)
-                .possible_values(&["frac", "times", "div", "define-assign", "implicit-mult"])
+                .possible_values(&["frac", "times", "div", "implicit-mult"])
                 .multiple(true),
         )
         .arg(

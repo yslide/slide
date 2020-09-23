@@ -41,9 +41,6 @@ bitflags::bitflags! {
         /// Emit divisions as fractions.
         /// Applies to LaTeX emit.
         const FRAC = 1;
-        /// Emit assignment operators as ":=".
-        /// Applies to pretty, LaTeX emit.
-        const DEFINE_ASSIGN = 2;
         /// Emits multiplications implicitly where possible.
         /// For example, `2*x` can be emitted as `2x`.
         const IMPLICIT_MULT = 4;
@@ -62,7 +59,6 @@ impl From<Vec<String>> for EmitConfig {
         for opt in opts {
             config |= match opt.as_ref() {
                 "frac" => EmitConfig::FRAC,
-                "define-assign" => EmitConfig::DEFINE_ASSIGN,
                 "implicit-mult" => EmitConfig::IMPLICIT_MULT,
                 "times" => EmitConfig::TIMES,
                 "div" => EmitConfig::DIV,
@@ -226,28 +222,52 @@ impl Emit for Stmt {
     }
 }
 
-fmt_emit_impl!(Assignment);
-impl Emit for Assignment {
-    fn emit_pretty(&self, config: EmitConfig) -> String {
-        let assign = if config.contains(EmitConfig::DEFINE_ASSIGN) {
-            ":="
-        } else {
-            "="
-        };
-        format!("{} {} {}", self.var, assign, self.rhs.emit_pretty(config))
+fmt_emit_impl!(AssignmentOp);
+impl Emit for AssignmentOp {
+    fn emit_pretty(&self, _config: EmitConfig) -> String {
+        match self {
+            AssignmentOp::Equal(_) => "=",
+            AssignmentOp::AssignDefine(_) => ":=",
+        }
+        .to_owned()
     }
 
     fn emit_s_expression(&self, config: EmitConfig) -> String {
-        format!("(= {} {})", self.var, self.rhs.emit_s_expression(config))
+        self.emit_pretty(config)
     }
 
     fn emit_latex(&self, config: EmitConfig) -> String {
-        let assign = if config.contains(EmitConfig::DEFINE_ASSIGN) {
-            ":="
-        } else {
-            "="
-        };
-        format!("{} {} {}", self.var, assign, self.rhs.emit_latex(config))
+        self.emit_pretty(config)
+    }
+}
+
+fmt_emit_impl!(Assignment);
+impl Emit for Assignment {
+    fn emit_pretty(&self, config: EmitConfig) -> String {
+        format!(
+            "{} {} {}",
+            self.var,
+            self.asgn_op.emit_pretty(config),
+            self.rhs.emit_pretty(config)
+        )
+    }
+
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
+        format!(
+            "({} {} {})",
+            self.asgn_op.emit_s_expression(config),
+            self.var,
+            self.rhs.emit_s_expression(config)
+        )
+    }
+
+    fn emit_latex(&self, config: EmitConfig) -> String {
+        format!(
+            "{} {} {}",
+            self.var,
+            self.asgn_op.emit_latex(config),
+            self.rhs.emit_latex(config)
+        )
     }
 }
 

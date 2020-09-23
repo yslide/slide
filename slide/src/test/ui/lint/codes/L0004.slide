@@ -1,0 +1,31 @@
+!!!args
+---explain L0004
+!!!args
+
+===in
+===in
+
+~~~stdout
+The homogenous assignment lint detects and warns on mixed use of assignment operators.
+
+For example, the following program uses both the equality and assign-define operators to
+assign variables:
+
+```text
+a = 1
+b := 1
+```
+
+This can be misleading or confusing, as these two operators are syntactically different (and
+semantically different in canonical mathematics notation), but are treated the same in slide.
+
+For this reason, it is suggested that exclusively `=` or `:=` are used for assignments in
+slide programs.
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

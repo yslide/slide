@@ -1,7 +1,9 @@
 //! Lints for a statement in a slide program.
 
+mod homogenous_assignment;
 mod redundant_nesting;
 mod unary_series;
+use homogenous_assignment::*;
 use redundant_nesting::*;
 use unary_series::*;
 
@@ -35,4 +37,5 @@ macro_rules! define_stmt_lints {
 define_stmt_lints! {
     UnarySeriesLinter,
     RedundantNestingLinter,
+    HomogenousAssignmentLinter,
 }

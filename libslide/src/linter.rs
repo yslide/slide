@@ -45,6 +45,7 @@ impl Default for LintConfig {
             stmt_linters: vec![
                 StmtLintRule::UnarySeriesLinter,
                 StmtLintRule::RedundantNestingLinter,
+                StmtLintRule::HomogenousAssignmentLinter,
             ],
             expr_pat_linters: vec![ExprPatLintRule::SimilarNamesLinter],
         }

@@ -1,0 +1,51 @@
+!!!args
+--lint
+!!!args
+
+===in
+a = 1
+b := 2
+c := 3
+d = 4
+e := 5
+===in
+
+~~~stdout
+a = 1
+b = 2
+c = 3
+d = 4
+e = 5
+~~~stdout
+
+~~~stderr
+warning[L0004]: Mixed use of assignment operators
+  |
+1 | a = 1
+  |   - note: first use of "=" as an assignment operator here
+2 | b := 2
+  |   -- expected "=" here
+  |
+
+warning[L0004]: Mixed use of assignment operators
+  |
+1 | a = 1
+  |   - note: first use of "=" as an assignment operator here
+2 | b := 2
+3 | c := 3
+  |   -- expected "=" here
+  |
+
+warning[L0004]: Mixed use of assignment operators
+  |
+1 | a = 1
+  |   - note: first use of "=" as an assignment operator here
+...
+5 | e := 5 
+  |   -- expected "=" here
+  |
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

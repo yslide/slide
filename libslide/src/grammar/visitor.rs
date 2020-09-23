@@ -20,8 +20,11 @@ pub trait StmtVisitor<'a> {
 
     fn visit_asgn(&mut self, asgn: &'a Assignment) {
         self.visit_var(&asgn.var);
+        self.visit_asgn_op(&asgn.asgn_op);
         self.visit_expr(&asgn.rhs);
     }
+
+    fn visit_asgn_op(&mut self, _asgn_op: &'a AssignmentOp) {}
 
     fn visit_expr(&mut self, expr: &'a InternedExpr) {
         match expr.as_ref() {

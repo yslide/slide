@@ -43,7 +43,7 @@ macro_rules! printer {
 macro_rules! fail {
     ($report:expr) => {
         libtest_mimic::Outcome::Failed {
-            msg: Some(atomic_lock($report)),
+            msg: Some(std::sync::Arc::new(std::sync::Mutex::new($report))),
         }
     };
 }

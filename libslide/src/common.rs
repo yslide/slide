@@ -37,7 +37,7 @@ impl Span {
             .into_iter()
             .chain(indices)
             .nth(self.hi - self.lo)
-            .unwrap_or_else(|| std::cmp::max(self.hi, lo));
+            .unwrap_or_else(|| content.len());
         &content[lo..hi]
     }
 }

@@ -182,4 +182,35 @@ define_errors! {
             ))
         }
     }
+
+    ///All closing delimiters with opening pairs must have that opening delimiter as a complement in
+    ///a slide program. In particular,
+    ///
+    ///  - `)` and `(` are complements (parantheses)
+    ///  - `]` and `[` are complements (brackets)
+    ///
+    ///An unmatched closing delimiter error occurs when corresponding opening delimiters are not
+    ///present earlier in the slide program. Some examples include:
+    ///
+    ///```text
+    ///1 + 2 )
+    ///      ^ unmatched closing delimiter
+    ///```
+    ///
+    ///```text
+    ///1 + 2
+    ///)]
+    ///^ unmatched closing delimiter
+    /// ^ unmatched closing delimiter
+    ///```
+    P0006: UnmatchedClosingDelimiter {
+        ($span:expr, $found:expr) => {
+            Diagnostic::span_err(
+                $span,
+                format!(r#"Unmatched closing delimiter "{}""#, $found),
+                UnmatchedClosingDelimiter::CODE,
+                format!(r#"has no matching opener "{}""#, $found.matcher()),
+            )
+        }
+    }
 }

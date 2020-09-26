@@ -140,7 +140,7 @@ impl Scanner {
             ']' => CloseBracket,
             c => Invalid(c.to_string()),
         };
-        let span = span.unwrap_or_else(|| start..self.pos);
+        let span = span.unwrap_or(start..self.pos);
 
         if matches!(ty, Invalid(..)) {
             self.push_diag(InvalidToken!(span.clone(), did_you_mean));

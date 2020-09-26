@@ -37,6 +37,7 @@ macro_rules! get_unary_arg {
 }
 
 pub(super) fn add(expr: RcExpr) -> Option<RcExpr> {
+    let span = expr.span;
     let mut args = get_flattened_binary_args!(expr, BinaryOperator::Plus)?;
     let mut konst = 0.;
     let mut i = 0;
@@ -49,10 +50,7 @@ pub(super) fn add(expr: RcExpr) -> Option<RcExpr> {
             _ => i += 1,
         }
     }
-    args.push(rc_expr!(
-        konst.into(),
-        /* TODO: propagate span */ crate::DUMMY_SP
-    ));
+    args.push(rc_expr!(konst.into(), span));
 
     Some(unflatten_binary_expr(
         &args,
@@ -67,6 +65,7 @@ pub(super) fn subtract(expr: RcExpr) -> Option<RcExpr> {
 }
 
 pub(super) fn multiply(expr: RcExpr) -> Option<RcExpr> {
+    let span = expr.span;
     let mut args = get_flattened_binary_args!(expr, BinaryOperator::Mult)?;
     let mut konst = 1.;
     let mut i = 0;
@@ -79,10 +78,7 @@ pub(super) fn multiply(expr: RcExpr) -> Option<RcExpr> {
             _ => i += 1,
         }
     }
-    args.push(rc_expr!(
-        konst.into(),
-        /* TODO: propagate span */ crate::DUMMY_SP
-    ));
+    args.push(rc_expr!(konst.into(), span));
 
     Some(unflatten_binary_expr(
         &args,
@@ -114,11 +110,11 @@ pub(super) fn divide(expr: RcExpr) -> Option<RcExpr> {
                 let (_, numerator, denominator) = gcd_poly_zz_heu(numerator, denominator).ok()?;
 
                 // Woo! The polynomials have a gcd we can cancel them with.
-                let numer_expr = numerator.to_expr(relative_to.clone());
+                let numer_expr = numerator.to_expr(relative_to.clone(), lhs.span);
                 if denominator.is_one() {
                     Some(numer_expr)
                 } else {
-                    let denom_expr = denominator.to_expr(relative_to);
+                    let denom_expr = denominator.to_expr(relative_to, rhs.span);
                     let division = BinaryExpr::div(numer_expr, denom_expr);
                     Some(rc_expr!(Expr::BinaryExpr(division), og_span))
                 }

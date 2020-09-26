@@ -170,13 +170,14 @@ where
         let mut args = args.iter();
         let mut lhs = args.next().unwrap().clone();
         for rhs in args {
+            let span = lhs.span().to(rhs.span());
             lhs = E::binary(
                 BinaryExpr {
                     op,
                     lhs,
                     rhs: rhs.clone(),
                 },
-                /* TODO: propagate span */ crate::DUMMY_SP,
+                span,
             )
         }
         lhs
@@ -186,13 +187,14 @@ where
         let mut args = args.iter().rev();
         let mut rhs = args.next().unwrap().clone();
         for lhs in args {
+            let span = lhs.span().to(rhs.span());
             rhs = E::binary(
                 BinaryExpr {
                     op,
                     lhs: lhs.clone(),
                     rhs,
                 },
-                /* TODO: propagate span */ crate::DUMMY_SP,
+                span,
             )
         }
         rhs

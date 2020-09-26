@@ -18,8 +18,8 @@ pub struct Span {
 /// Clearly this span is incorrect since lo = 10001 > 1 = hi, but a well-formed span must observe
 /// the invariant lo <= hi.
 ///
-/// NB: This is only to be used during migration and refactoring. Do *not* use this for new
-/// interned expressions.
+/// NB: This is only to be used during migration, refactoring, or where a span is not later
+/// consumed. Do *not* use this for interned expressions exposed to users.
 pub(crate) static DUMMY_SP: Span = Span { lo: 10001, hi: 1 };
 
 impl Span {

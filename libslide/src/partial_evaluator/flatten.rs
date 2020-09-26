@@ -66,16 +66,13 @@ pub fn flatten_expr(expr: RcExpr) -> RcExpr {
             let rhs = flatten_expr(rhs.clone());
             rc_expr!(
                 Expr::BinaryExpr(BinaryExpr { op: *op, lhs, rhs }),
-                /* TODO: propagate span */ crate::DUMMY_SP
+                expr.span
             )
         }
 
         Expr::UnaryExpr(UnaryExpr { op, rhs }) => {
             let rhs = flatten_expr(rhs.clone());
-            rc_expr!(
-                Expr::UnaryExpr(UnaryExpr { op: *op, rhs }),
-                /* TODO: propagate span */ crate::DUMMY_SP
-            )
+            rc_expr!(Expr::UnaryExpr(UnaryExpr { op: *op, rhs }), expr.span)
         }
     }
 }
@@ -87,6 +84,7 @@ pub fn flatten_expr(expr: RcExpr) -> RcExpr {
 /// 1 + 2x - 3 + x -> -2 + 3x
 /// ```
 fn flatten_add_or_sub(o_lhs: RcExpr, o_rhs: RcExpr, is_subtract: bool) -> RcExpr {
+    let o_span = o_lhs.span.to(o_rhs.span);
     let lhs = flatten_expr(o_lhs);
     let rhs = flatten_expr(o_rhs);
 
@@ -146,10 +144,7 @@ fn flatten_add_or_sub(o_lhs: RcExpr, o_rhs: RcExpr, is_subtract: bool) -> RcExpr
 
     let mut new_args: Vec<RcExpr> = Vec::with_capacity(1 + terms.len());
     if coeff != 0. {
-        new_args.push(rc_expr!(
-            Expr::Const(coeff),
-            /* TODO: propagate span */ crate::DUMMY_SP
-        ));
+        new_args.push(rc_expr!(Expr::Const(coeff), o_span));
     }
     for (term, coeff) in terms {
         if coeff == 0. {
@@ -161,30 +156,15 @@ fn flatten_add_or_sub(o_lhs: RcExpr, o_rhs: RcExpr, is_subtract: bool) -> RcExpr
         } else if (coeff - -1.).abs() < std::f64::EPSILON {
             // coeff == -1
             let neg = UnaryExpr::negate(term.clone());
-            new_args.push(rc_expr!(
-                Expr::UnaryExpr(neg),
-                /* TODO: propagate span */ crate::DUMMY_SP
-            ));
+            new_args.push(rc_expr!(Expr::UnaryExpr(neg), o_span));
         } else {
-            let mult = BinaryExpr::mult(
-                rc_expr!(
-                    Expr::Const(coeff),
-                    /* TODO: propagate span */ crate::DUMMY_SP
-                ),
-                term.clone(),
-            );
-            new_args.push(rc_expr!(
-                Expr::BinaryExpr(mult),
-                /* TODO: propagate span */ crate::DUMMY_SP
-            ));
+            let mult = BinaryExpr::mult(rc_expr!(Expr::Const(coeff), o_span), term.clone());
+            new_args.push(rc_expr!(Expr::BinaryExpr(mult), o_span));
         }
     }
 
     match new_args.len() {
-        0 => rc_expr!(
-            Expr::Const(0.),
-            /* TODO: propagate span */ crate::DUMMY_SP
-        ),
+        0 => rc_expr!(Expr::Const(0.), o_span),
         1 => new_args.remove(0),
         _ => unflatten_binary_expr(&new_args, BinaryOperator::Plus, UnflattenStrategy::Left),
     }
@@ -392,6 +372,7 @@ fn flatten_add_or_sub(o_lhs: RcExpr, o_rhs: RcExpr, is_subtract: bool) -> RcExpr
 ///
 /// And now, all that needs to be done is to construct the flattened expression `2/5 * x^2 / y^-2`.
 fn flatten_mul_or_div(o_lhs: RcExpr, o_rhs: RcExpr, is_div: bool) -> RcExpr {
+    let o_span = o_lhs.span.to(o_rhs.span);
     let lhs = flatten_expr(o_lhs);
     let rhs = flatten_expr(o_rhs);
 
@@ -467,10 +448,7 @@ fn flatten_mul_or_div(o_lhs: RcExpr, o_rhs: RcExpr, is_div: bool) -> RcExpr {
     let mut new_args: Vec<RcExpr> = Vec::with_capacity(1 + terms.len());
     if (coeff - 1.).abs() >= std::f64::EPSILON {
         // coeff != 1
-        new_args.push(rc_expr!(
-            Expr::Const(coeff),
-            /* TODO: propagate span */ crate::DUMMY_SP
-        ));
+        new_args.push(rc_expr!(Expr::Const(coeff), o_span));
     }
     for (term, coeff) in terms {
         if coeff == 0. {
@@ -483,37 +461,17 @@ fn flatten_mul_or_div(o_lhs: RcExpr, o_rhs: RcExpr, is_div: bool) -> RcExpr {
         } else if (coeff - -1.).abs() < std::f64::EPSILON {
             // coeff == -1
             // -1 * x ~ 1/x
-            let reciprocal = BinaryExpr::div(
-                rc_expr!(
-                    Expr::Const(1.),
-                    /* TODO: propagate span */ crate::DUMMY_SP
-                ),
-                term.clone(),
-            );
-            new_args.push(rc_expr!(
-                Expr::BinaryExpr(reciprocal),
-                /* TODO: propagate span */ crate::DUMMY_SP
-            ));
+            let reciprocal = BinaryExpr::div(rc_expr!(Expr::Const(1.), o_span), term.clone());
+            new_args.push(rc_expr!(Expr::BinaryExpr(reciprocal), o_span));
         } else {
-            let exponentiation = BinaryExpr::exp(
-                term.clone(),
-                rc_expr!(
-                    Expr::Const(coeff,),
-                    /* TODO: propagate span */ crate::DUMMY_SP
-                ),
-            );
-            new_args.push(rc_expr!(
-                Expr::BinaryExpr(exponentiation),
-                /* TODO: propagate span */ crate::DUMMY_SP
-            ));
+            let exponentiation =
+                BinaryExpr::exp(term.clone(), rc_expr!(Expr::Const(coeff,), o_span));
+            new_args.push(rc_expr!(Expr::BinaryExpr(exponentiation), o_span));
         }
     }
 
     match new_args.len() {
-        0 => rc_expr!(
-            Expr::Const(1.),
-            /* TODO: propagate span */ crate::DUMMY_SP
-        ),
+        0 => rc_expr!(Expr::Const(1.), o_span),
         1 => new_args.remove(0),
         _ => unflatten_binary_expr(&new_args, BinaryOperator::Mult, UnflattenStrategy::Left),
     }

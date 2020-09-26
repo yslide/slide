@@ -399,12 +399,16 @@ impl Poly {
 
     /// Converts a [Poly][Poly] polynomial, relative to some term, into an expression.
     ///
+    /// A artificial `span` the elements of the converted expression are derived from must be
+    /// provided. In general, `span` should be the span of an expression previously converted the
+    /// `Poly` this method is called on.
+    ///
     /// ## Examples
     ///
     /// ```ignore
     /// poly![1, 2, 3].to_expr("x") == "3 * (x ^ 2) + 2 * x + 1"
     /// ```
-    pub fn to_expr(&self, relative_to: RcExpr) -> RcExpr {
+    pub fn to_expr(&self, relative_to: RcExpr, span: crate::Span) -> RcExpr {
         let mut terms = Vec::with_capacity(self.vec.len());
         for (pow, coeff) in self.vec.iter().enumerate() {
             let term = match coeff {
@@ -414,39 +418,27 @@ impl Poly {
                 1 => relative_to.clone(),
                 _ => rc_expr!(
                     Expr::BinaryExpr(BinaryExpr::mult(
-                        rc_expr!(
-                            Expr::Const(*coeff as f64),
-                            /* TODO:propagate span */ crate::DUMMY_SP
-                        ),
+                        rc_expr!(Expr::Const(*coeff as f64), span),
                         relative_to.clone()
                     )),
-                    /* TODO: propagate span */ crate::DUMMY_SP
+                    span
                 ),
             };
 
             terms.push(match pow {
-                0 => rc_expr!(
-                    Expr::Const(*coeff as f64),
-                    /* TODO: propagate span */ crate::DUMMY_SP
-                ),
+                0 => rc_expr!(Expr::Const(*coeff as f64), span),
                 1 => term,
                 _ => rc_expr!(
                     Expr::BinaryExpr(BinaryExpr::exp(
                         term,
-                        rc_expr!(
-                            Expr::Const(pow as f64),
-                            /* TODO: propagate span */ crate::DUMMY_SP
-                        ),
+                        rc_expr!(Expr::Const(pow as f64), span),
                     )),
-                    /* TODO: propagate span */ crate::DUMMY_SP
+                    span
                 ),
             });
         }
         if terms.is_empty() {
-            return rc_expr!(
-                Expr::Const(0.),
-                /* TODO: propagate span */ crate::DUMMY_SP
-            );
+            return rc_expr!(Expr::Const(0.), span);
         }
 
         unflatten_binary_expr(
@@ -458,8 +450,11 @@ impl Poly {
 
     /// Prints the Poly as a polynomial string.
     pub fn to_string(&self, var: &str) -> String {
-        self.to_expr(rc_expr!(Expr::Var(intern_str!(var)), crate::DUMMY_SP))
-            .to_string()
+        self.to_expr(
+            rc_expr!(Expr::Var(intern_str!(var)), crate::DUMMY_SP),
+            crate::DUMMY_SP,
+        )
+        .to_string()
     }
 }
 
@@ -618,7 +613,7 @@ mod test {
             #[test]
             fn $case() {
                 let rel = parse_expr!($relative);
-                let expr = $poly.to_expr(rel);
+                let expr = $poly.to_expr(rel, crate::DUMMY_SP);
                 assert_eq!(expr.to_string(), $expected);
             }
         )*

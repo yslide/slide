@@ -1,0 +1,36 @@
+!!!args
+--explain P0006
+!!!args
+
+===in
+===in
+
+~~~stdout
+All closing delimiters with opening pairs must have that opening delimiter as a complement in
+a slide program. In particular,
+
+  - `)` and `(` are complements (parantheses)
+  - `]` and `[` are complements (brackets)
+
+An unmatched closing delimiter error occurs when corresponding opening delimiters are not
+present earlier in the slide program. Some examples include:
+
+```text
+1 + 2 )
+      ^ unmatched closing delimiter
+```
+
+```text
+1 + 2
+)]
+^ unmatched closing delimiter
+ ^ unmatched closing delimiter
+```
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

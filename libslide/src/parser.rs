@@ -62,20 +62,6 @@ fn unclosed_delimiter(opener: Token, expected_closer: TT, found_closer: Token) -
                                 found found_str)
 }
 
-/// Returns a diagnostic for extra tokens following a primary item.
-/// `extra_tokens` will be consumed in the construction of the diagnostic.
-fn extra_tokens_diag(extra_tokens: &mut PeekIter<Token>) -> Diagnostic {
-    let Span { lo, mut hi } = extra_tokens.peek().unwrap().span;
-    while let Some(tok) = extra_tokens.next() {
-        if extra_tokens.peek().unwrap().ty == TT::EOF {
-            hi = tok.span.hi;
-            break;
-        }
-    }
-    let span = lo..hi;
-    ExtraTokens!(span)
-}
-
 trait Parser<T>
 where
     T: Grammar,
@@ -154,7 +140,7 @@ where
         let tok = self.next();
         let tok_span = tok.span;
         if matches!(tok.ty, TT::EOF) {
-            self.push_diag(ExpectedExpr!(tok.span, "expression"));
+            self.push_diag(ExpectedExpr!(tok.span, "end of file"));
             return Self::Expr::empty(tok.span);
         }
 
@@ -172,7 +158,11 @@ where
                 TT::OpenParen => self.parse_open_paren(tok),
                 TT::OpenBracket => self.parse_open_bracket(tok),
                 _ => {
-                    self.push_diag(ExpectedExpr!(tok.span, tok.to_string()));
+                    self.push_diag(if matches!(tok.ty, TT::CloseParen | TT::CloseBracket) {
+                        UnmatchedClosingDelimiter!(tok.span, tok.ty)
+                    } else {
+                        ExpectedExpr!(tok.span, tok.to_string())
+                    });
                     Self::Expr::empty(tok.span)
                 }
             }
@@ -197,6 +187,30 @@ where
         }
 
         node
+    }
+
+    /// Creates diagnostics for extra tokens following a primary item.
+    /// All remaining tokens will be consumed in the construction of the diagnostic.
+    ///
+    /// `additional_diags` applies additional diagnostic messages to the extra tokens diagnostic,
+    /// if one is produced.
+    fn extra_tokens_diag(&mut self, additional_diags: impl Fn(Diagnostic, Span) -> Diagnostic) {
+        while matches!(self.peek().ty, TT::CloseParen | TT::CloseBracket) {
+            let tok = self.next();
+            self.push_diag(UnmatchedClosingDelimiter!(tok.span, tok.ty));
+        }
+
+        if self.done() {
+            return;
+        }
+
+        let first_tok_span = self.peek().span;
+        let Span { lo, mut hi } = first_tok_span;
+        while self.peek().ty != TT::EOF {
+            hi = self.next().span.hi;
+        }
+        let diag = additional_diags(ExtraTokens!(lo..hi), first_tok_span);
+        self.push_diag(diag);
     }
 }
 

@@ -1,4 +1,4 @@
-use super::{errors::*, extra_tokens_diag, Parser};
+use super::{errors::*, Parser};
 use crate::common::Span;
 use crate::diagnostics::{Diagnostic, DiagnosticRecord};
 use crate::grammar::*;
@@ -83,12 +83,12 @@ impl<'a> Parser<StmtList> for ExpressionParser<'a> {
             stmts.push(self.parse_stmt());
 
             if !self.done() && !self.has_stmt_break() {
-                let next_span = self.peek().span;
-                let extra_tokens_diag = extra_tokens_diag(self.input()).with_spanned_help(
-                    next_span,
-                    "if you meant to specify another statement, add a newline before this token",
-                );
-                self.push_diag(extra_tokens_diag);
+                self.extra_tokens_diag(|diag, first_tok_span| {
+                    diag.with_spanned_help(
+                        first_tok_span,
+                        "if you meant to specify another statement, add a newline before this token"
+                    )
+                });
                 break;
             }
         }

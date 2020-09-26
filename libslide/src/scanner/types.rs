@@ -64,6 +64,18 @@ pub enum TokenType {
     EOF,
 }
 
+impl TokenType {
+    pub(crate) fn matcher(&self) -> Self {
+        match self {
+            TokenType::OpenParen => TokenType::CloseParen,
+            TokenType::CloseParen => TokenType::OpenParen,
+            TokenType::OpenBracket => TokenType::CloseBracket,
+            TokenType::CloseBracket => TokenType::OpenBracket,
+            els => unreachable!("{} has no matcher", els),
+        }
+    }
+}
+
 impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use TokenType::*;

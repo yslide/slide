@@ -6,7 +6,7 @@
 ~~~stdout
 
 ~~~stderr
-error[P0002]: Expected an expression, found expression
+error[P0002]: Expected an expression, found end of file
   |
 1 | 1 + 2 + ( 
   |          ^ expected an expression

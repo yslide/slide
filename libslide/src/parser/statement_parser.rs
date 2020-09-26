@@ -26,14 +26,6 @@ impl<'a> ExpressionParser<'a> {
         }
     }
 
-    fn assignment(&mut self, var: String, asgn_op: AssignmentOp) -> Stmt {
-        Stmt::Assignment(Assignment {
-            var: intern_str!(var),
-            asgn_op,
-            rhs: self.expr(),
-        })
-    }
-
     fn parse_stmt(&mut self) -> Stmt {
         let mut next_2 = self.input().peek_map_n(2, |tok| (tok.ty.clone(), tok.span));
         match (next_2.pop_front(), next_2.pop_front()) {
@@ -45,7 +37,7 @@ impl<'a> ExpressionParser<'a> {
                 Some((TokenType::Variable(name), _)),
                 Some((asgn_ty @ TokenType::AssignDefine, asgn_span)),
             ) => {
-                self.input().next();
+                let Span { lo, .. } = self.input().next().unwrap().span;
                 self.input().next();
 
                 let asgn_op = if matches!(asgn_ty, TokenType::Equal) {
@@ -53,7 +45,14 @@ impl<'a> ExpressionParser<'a> {
                 } else {
                     AssignmentOp::AssignDefine(asgn_span)
                 };
-                self.assignment(name, asgn_op)
+                let rhs = self.expr();
+                let span = (lo..rhs.span.hi).into();
+                Stmt::Assignment(Assignment {
+                    var: intern_str!(name),
+                    asgn_op,
+                    rhs,
+                    span,
+                })
             }
 
             _ => Stmt::Expr(self.expr()),

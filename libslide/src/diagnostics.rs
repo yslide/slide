@@ -8,7 +8,7 @@
 //! - easily transformable into some output form by downstream customers (namely the slide app)
 
 use crate::common::Span;
-use crate::{LintConfig, ParseErrors, ScanErrors};
+use crate::{LintConfig, ParseErrors, PartialEvaluatorErrors, ScanErrors};
 
 use std::collections::HashMap;
 
@@ -148,6 +148,8 @@ impl Diagnostic {
     }
 
     with_spanned_diag! {
+        /// Adds an error to the diagnostic, possibly at a different span.
+        with_spanned_err as Error
         /// Adds a help message to the diagnostic, possibly at a different span.
         with_spanned_help as Help
         /// Adds a note to the diagnostic, possibly at a different span.
@@ -187,7 +189,7 @@ macro_rules! include_diagnostic_registries {
                     assert_eq!(code.len(), 5);
                     assert!(matches!(
                         code.chars().next(),
-                        Some('L') | Some('S') | Some('P')
+                        Some('L') | Some('S') | Some('P') | Some('V')
                     ));
                     for ch in code.chars().skip(1) {
                         assert!(matches!(ch, '0'..='9'));
@@ -202,4 +204,5 @@ include_diagnostic_registries! {
     LintConfig
     ParseErrors
     ScanErrors
+    PartialEvaluatorErrors
 }

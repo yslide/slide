@@ -95,6 +95,7 @@ where
     E: RcExpression,
 {
     mkop! {
+        sub: BinaryOperator::Minus
         mult: BinaryOperator::Mult
         div:  BinaryOperator::Div
         exp:  BinaryOperator::Exp

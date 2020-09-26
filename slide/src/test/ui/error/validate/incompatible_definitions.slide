@@ -1,0 +1,91 @@
+===in
+a := 1
+b = 2
+a := 3 ^ 5
+b = 4 - 2
+a := (v - v) * 2
+b = v + v - (2v + 1)
+
+c = v
+c = v + 1
+===in
+
+~~~stdout
+a := 1
+b = 2
+a := 243
+b = 2
+a := 0
+b = -1
+c = v
+c = v + 1
+~~~stdout
+
+~~~stderr
+error[V0001]: Definitions of "a" are incompatible
+  |
+1 | a := 1
+  | ^^^^^^ this definition evaluates to "a := 1"
+2 | b = 2
+3 | a := 3 ^ 5
+  | ^^^^^^^^^^ this definition evaluates to "a := 243"
+  |
+  = note: "1" and "243" are never equal
+
+error[V0001]: Definitions of "a" are incompatible
+  |
+1 | a := 1
+  | ^^^^^^ this definition evaluates to "a := 1"
+...
+5 | a := (v - v) * 2
+  | ^^^^^^^^^^^^^^^^ this definition evaluates to "a := 0"
+  |
+  = note: "1" and "0" are never equal
+
+error[V0001]: Definitions of "b" are incompatible
+  |
+1 | a := 1
+2 | b = 2
+  | ^^^^^ this definition evaluates to "b = 2"
+...
+6 | b = v + v - (2v + 1)
+  | ^^^^^^^^^^^^^^^^^^^^ this definition evaluates to "b = -1"
+  |
+  = note: "2" and "-1" are never equal
+
+error[V0001]: Definitions of "a" are incompatible
+  |
+...
+3 | a := 3 ^ 5
+  | ^^^^^^^^^^ this definition evaluates to "a := 243"
+4 | b = 4 - 2
+5 | a := (v - v) * 2
+  | ^^^^^^^^^^^^^^^^ this definition evaluates to "a := 0"
+  |
+  = note: "243" and "0" are never equal
+
+error[V0001]: Definitions of "b" are incompatible
+  |
+...
+4 | b = 4 - 2
+  | ^^^^^^^^^ this definition evaluates to "b = 2"
+5 | a := (v - v) * 2
+6 | b = v + v - (2v + 1)
+  | ^^^^^^^^^^^^^^^^^^^^ this definition evaluates to "b = -1"
+  |
+  = note: "2" and "-1" are never equal
+
+error[V0001]: Definitions of "c" are incompatible
+  |
+...
+8 | c = v
+  | ^^^^^ this definition evaluates to "c = v"
+9 | c = v + 1 
+  | ^^^^^^^^^ this definition evaluates to "c = v + 1"
+  |
+  = note: "v" and "v + 1" are never equal
+~~~stderr
+
+~~~exitcode
+1
+~~~exitcode

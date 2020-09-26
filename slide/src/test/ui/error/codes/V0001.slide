@@ -1,0 +1,44 @@
+!!!args
+--explain=V0001
+!!!args
+
+===in
+===in
+
+~~~stdout
+This error is fired on variable definitions provided to a slide program that can never be
+compatible. For example, given the program
+
+```text
+a := 1
+a := 12 - 10
+```
+
+"a" is defined as "1" and "2" simultaneously, which are incompatible definitions.
+
+This error is only fired when slide is able to statically detect incompatibility of
+defintions. For example, without having information on what "c" is defined as, the program
+
+```text
+a := c
+a := 2c
+```
+
+would not have an incompatible definitions error, because the program is valid when "c = 0".
+However, if slide knew about that value of "c", as it would in the program
+
+```text
+a := c
+a := 2c
+c := 1
+```
+
+an incompatible definitions error could now be fired on the two definitions of "a".
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

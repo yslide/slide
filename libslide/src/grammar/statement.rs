@@ -101,6 +101,7 @@ pub struct Assignment {
     pub var: InternedStr,
     pub asgn_op: AssignmentOp,
     pub rhs: RcExpr,
+    pub span: Span,
 }
 
 #[derive(Clone, PartialEq, Debug)]

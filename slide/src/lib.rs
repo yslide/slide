@@ -314,12 +314,21 @@ impl<'a> ProgramEvaluator<'a> {
 
         if self.parse_only {
             self.result.emit(&parse_tree);
-        } else {
-            let simplified = evaluate(parse_tree, &EvaluatorContext::default()).unwrap();
-            self.result.emit(&simplified);
-        }
 
-        self.result.ok()
+            self.result.ok()
+        } else {
+            let (simplified, diagnostics) =
+                evaluate(parse_tree, &EvaluatorContext::default()).unwrap();
+
+            self.result.err(&diagnostics);
+            self.result.emit(&simplified);
+
+            if diagnostics.is_empty() {
+                self.result.ok()
+            } else {
+                self.result.failed()
+            }
+        }
     }
 
     /// Handles evaluation of a slide expression pattern.

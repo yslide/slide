@@ -3,6 +3,8 @@
 use super::*;
 use crate::Span;
 
+use rug::Rational;
+
 /// Describes a [statement list][super::StmtList] visitor.
 pub trait StmtVisitor<'a> {
     fn visit(&mut self, stmt_list: &'a StmtList) {
@@ -37,7 +39,7 @@ pub trait StmtVisitor<'a> {
         }
     }
 
-    fn visit_const(&mut self, _konst: &'a f64) {}
+    fn visit_const(&mut self, _konst: &'a Rational) {}
 
     fn visit_var(&mut self, _var: &'a InternedStr) {}
 
@@ -80,7 +82,7 @@ pub trait ExprPatVisitor<'a> {
         }
     }
 
-    fn visit_const(&mut self, _konst: &f64) {}
+    fn visit_const(&mut self, _konst: &'a Rational) {}
 
     fn visit_var_pat(&mut self, _var_pat: &'a str, _span: Span) {}
 

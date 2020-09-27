@@ -1,5 +1,6 @@
 use crate::grammar::*;
 
+use rug::Rational;
 use std::collections::{HashSet, VecDeque};
 
 pub fn get_symmetric_expressions(expr: RcExpr) -> Vec<RcExpr> {
@@ -112,7 +113,7 @@ fn negate(expr: RcExpr) -> RcExpr {
     let span = expr.span;
     match expr.as_ref() {
         // #a -> -#a
-        Expr::Const(f) => rc_expr!(Expr::Const(-f), span),
+        Expr::Const(n) => rc_expr!(Expr::Const(Rational::from(-n)), span),
 
         // $a -> -$a
         Expr::Var(_) => rc_expr!(
@@ -403,7 +404,11 @@ mod tests {
 
     #[test]
     fn unique_pats() {
-        let parsed = parse_expression_pattern(scan("$a + _b * (#c - [$d]) / $a").tokens).0;
+        let parsed = parse_expression_pattern(
+            scan("$a + _b * (#c - [$d]) / $a").tokens,
+            &crate::ProgramContext::test(),
+        )
+        .0;
         let pats = super::unique_pats(&parsed);
 
         let mut pats: Vec<_> = pats

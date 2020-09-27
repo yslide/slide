@@ -43,7 +43,7 @@ impl MatchRule<RcExpr> for PatternMatch<RcExpr> {
                 Some(replacements)
             }
             (ExprPat::Const(a), Expr::Const(b)) => {
-                if (a - b).abs() > std::f64::EPSILON {
+                if a != b {
                     // Constants don't match; rule can't be applied.
                     return None;
                 }
@@ -90,7 +90,7 @@ impl MatchRule<RcExprPat> for PatternMatch<RcExprPat> {
                 Some(replacements)
             }
             (ExprPat::Const(a), ExprPat::Const(b)) => {
-                if (a - b).abs() > std::f64::EPSILON {
+                if a != b {
                     return None;
                 }
                 Some(PatternMatch::default())
@@ -151,7 +151,7 @@ impl Transformer<RcExprPat, RcExpr> for PatternMatch<RcExpr> {
                     }
                 }
 
-                ExprPat::Const(f) => rc_expr!(Expr::Const(*f), og_span),
+                ExprPat::Const(f) => rc_expr!(Expr::Const(f.clone()), og_span),
                 ExprPat::BinaryExpr(binary_expr) => rc_expr!(
                     Expr::BinaryExpr(BinaryExpr {
                         op: binary_expr.op,
@@ -211,7 +211,7 @@ impl Transformer<RcExprPat, RcExprPat> for PatternMatch<RcExprPat> {
                     }
                 }
 
-                ExprPat::Const(f) => rc_expr_pat!(ExprPat::Const(*f), og_span),
+                ExprPat::Const(f) => rc_expr_pat!(ExprPat::Const(f.clone()), og_span),
                 ExprPat::BinaryExpr(binary_expr) => rc_expr_pat!(
                     ExprPat::BinaryExpr(BinaryExpr {
                         op: binary_expr.op,
@@ -278,10 +278,12 @@ impl<E: RcExpression + Eq> PatternMatch<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{parse_expr, parse_expression_pattern, scan};
+    use crate::{parse_expr, parse_expression_pattern, scan, ProgramContext};
+
+    use rug::Rational;
 
     fn parse_rule(prog: &str) -> RcExprPat {
-        let (expr, _) = parse_expression_pattern(scan(prog).tokens);
+        let (expr, _) = parse_expression_pattern(scan(prog).tokens, &ProgramContext::test());
         expr
     }
 
@@ -295,12 +297,12 @@ mod tests {
             let c = rc_expr_pat!(ExprPat::VarPat("c".into()), crate::DUMMY_SP);
 
             let mut left: PatternMatch<RcExpr> = PatternMatch::default();
-            left.insert(&a, rc_expr!(Expr::Const(1.), crate::DUMMY_SP));
-            left.insert(&b, rc_expr!(Expr::Const(2.), crate::DUMMY_SP));
+            left.insert(&a, rc_expr!(Rational::from(1).into(), crate::DUMMY_SP));
+            left.insert(&b, rc_expr!(Rational::from(2).into(), crate::DUMMY_SP));
 
             let mut right: PatternMatch<RcExpr> = PatternMatch::default();
-            right.insert(&b, rc_expr!(Expr::Const(2.), crate::DUMMY_SP));
-            right.insert(&c, rc_expr!(Expr::Const(3.), crate::DUMMY_SP));
+            right.insert(&b, rc_expr!(Rational::from(2).into(), crate::DUMMY_SP));
+            right.insert(&c, rc_expr!(Rational::from(3).into(), crate::DUMMY_SP));
 
             let merged = PatternMatch::try_merge(left, right).unwrap();
             assert_eq!(merged.map.len(), 3);
@@ -314,10 +316,16 @@ mod tests {
             let a = rc_expr_pat!(ExprPat::VarPat("a".into()), crate::DUMMY_SP);
 
             let mut left: PatternMatch<RcExpr> = PatternMatch::default();
-            left.insert(&a, rc_expr!(Expr::Const(1.), crate::DUMMY_SP));
+            left.insert(
+                &a,
+                rc_expr!(Expr::Const(Rational::from(1)), crate::DUMMY_SP),
+            );
 
             let mut right: PatternMatch<RcExpr> = PatternMatch::default();
-            right.insert(&a, rc_expr!(Expr::Const(2.), crate::DUMMY_SP));
+            right.insert(
+                &a,
+                rc_expr!(Expr::Const(Rational::from(2)), crate::DUMMY_SP),
+            );
 
             let merged = PatternMatch::try_merge(left, right);
             assert!(merged.is_none());

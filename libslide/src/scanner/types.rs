@@ -1,13 +1,14 @@
 //! Definitions of types used in the libslide scanner.
 
 use crate::common::Span;
+
 use core::fmt;
 
 /// The type of a [Token][Token].
 #[derive(PartialEq, Clone, Debug)]
 pub enum TokenType {
-    /// Stores a scanned number in double precision.
-    Float(f64),
+    /// Stores a scanned number, not yet in any numeric form.
+    Num(String),
 
     /// + symbol
     Plus,
@@ -83,7 +84,7 @@ impl fmt::Display for TokenType {
             f,
             "{}",
             match self {
-                Float(num) => num.to_string(),
+                Num(num) => num.to_string(),
                 Plus => "+".into(),
                 Minus => "-".into(),
                 Mult => "*".into(),
@@ -158,7 +159,7 @@ mod tests {
         }
 
         format_tests! {
-            float: Float(1.3), "1.3"
+            num: Num("1.3".into()), "1.3"
             plus: Plus, "+"
             minus: Minus, "-"
             mult: Mult, "*"

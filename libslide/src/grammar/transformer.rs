@@ -1,6 +1,8 @@
 use super::*;
 use crate::Span;
 
+use rug::Rational;
+
 /// A trait for transforming one grammar into another.
 /// This transformer takes ownership of the grammar it transforms.
 pub trait Transformer<T: Grammar, U: Grammar> {
@@ -20,8 +22,8 @@ pub trait ExpressionTransformer<'a> {
         }
     }
 
-    fn transform_const(&self, konst: &f64, span: Span) -> RcExpr {
-        rc_expr!(Expr::Const(*konst), span)
+    fn transform_const(&self, konst: &'a Rational, span: Span) -> RcExpr {
+        rc_expr!(Expr::Const(konst.clone()), span)
     }
 
     fn transform_var(&self, var: &'a InternedStr, span: Span) -> RcExpr {

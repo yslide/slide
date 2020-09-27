@@ -1,6 +1,8 @@
 use super::*;
 use crate::Span;
 
+use rug::Rational;
+
 /// A list of statements in a slide program.
 #[derive(Clone, Debug)]
 pub struct StmtList {
@@ -104,11 +106,15 @@ pub struct Assignment {
     pub span: Span,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub enum Expr {
-    Const(f64),
+    /// A constant
+    Const(Rational),
+    /// A variable
     Var(InternedStr),
+    /// A binary expression
     BinaryExpr(BinaryExpr<RcExpr>),
+    /// A unary expression
     UnaryExpr(UnaryExpr<RcExpr>),
     /// An expression wrapped in parentheses
     Parend(RcExpr),
@@ -130,15 +136,13 @@ impl Expr {
     }
 
     /// Gets the constant value stored in this expression, if any.
-    pub fn get_const(&self) -> Option<f64> {
+    pub fn get_const(&self) -> Option<&Rational> {
         match self {
-            Self::Const(c) => Some(*c),
+            Self::Const(num) => Some(num),
             _ => None,
         }
     }
 }
-
-impl Eq for Expr {}
 
 impl PartialOrd for Expr {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -181,27 +185,8 @@ impl Ord for Expr {
     }
 }
 
-// TODO: We can do better than hashing to a string as well, but we'll save that til we have an
-// arbitrary-precision numeric type.
-#[allow(clippy::derive_hash_xor_eq)]
-impl core::hash::Hash for Expr {
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        use Expr::*;
-        match self {
-            // TODO: We can do better than hashing to a string as well, but we'll save that til we
-            // have an arbitrary-precision numeric type.
-            Const(f) => state.write(f.to_string().as_bytes()),
-            Var(v) => v.hash(state),
-            BinaryExpr(e) => e.hash(state),
-            UnaryExpr(e) => e.hash(state),
-            e @ Parend(_) => e.to_string().hash(state),
-            e @ Bracketed(_) => e.to_string().hash(state),
-        }
-    }
-}
-
-impl From<f64> for Expr {
-    fn from(f: f64) -> Self {
-        Self::Const(f)
+impl From<Rational> for Expr {
+    fn from(num: Rational) -> Self {
+        Self::Const(num)
     }
 }

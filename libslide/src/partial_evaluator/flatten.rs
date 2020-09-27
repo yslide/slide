@@ -20,6 +20,7 @@
 use crate::grammar::*;
 use crate::utils::{unflatten_binary_expr, UnflattenStrategy};
 
+use rug::Rational;
 use std::collections::{BTreeMap, VecDeque};
 
 /// Attempts to flatten an expression, folding constant expressions and like terms.
@@ -89,9 +90,9 @@ fn flatten_add_or_sub(o_lhs: RcExpr, o_rhs: RcExpr, is_subtract: bool) -> RcExpr
     let rhs = flatten_expr(o_rhs);
 
     // Leading coefficients to fold constants into.
-    let mut coeff = 0.;
+    let mut coeff = Rational::from(0);
     // Terms -> coefficients present in the expression.
-    let mut terms = BTreeMap::<RcExpr, f64>::new();
+    let mut terms = BTreeMap::<RcExpr, Rational>::new();
 
     let mut args = VecDeque::with_capacity(2);
     args.push_back(lhs);
@@ -132,11 +133,11 @@ fn flatten_add_or_sub(o_lhs: RcExpr, o_rhs: RcExpr, is_subtract: bool) -> RcExpr
                 // Otherwise the arg is something we cannot further decompose in an add/sub context
                 // (e.g. a variable or an exponentiation), so add it as a term.
                 // TODO: see if we can handle other things more granularly
-                let entry = terms.entry(arg).or_insert(0.);
+                let entry = terms.entry(arg).or_insert_with(|| Rational::from(0));
                 if sub_side {
-                    *entry -= 1.;
+                    *entry -= 1;
                 } else {
-                    *entry += 1.;
+                    *entry += 1;
                 }
             }
         }
@@ -150,11 +151,9 @@ fn flatten_add_or_sub(o_lhs: RcExpr, o_rhs: RcExpr, is_subtract: bool) -> RcExpr
         if coeff == 0. {
             // The happiest path :)
             continue;
-        } else if (coeff - 1.).abs() < std::f64::EPSILON {
-            // coeff == 1
+        } else if coeff == 1 {
             new_args.push(term.clone());
-        } else if (coeff - -1.).abs() < std::f64::EPSILON {
-            // coeff == -1
+        } else if coeff == -1 {
             let neg = UnaryExpr::negate(term.clone());
             new_args.push(rc_expr!(Expr::UnaryExpr(neg), o_span));
         } else {
@@ -164,7 +163,7 @@ fn flatten_add_or_sub(o_lhs: RcExpr, o_rhs: RcExpr, is_subtract: bool) -> RcExpr
     }
 
     match new_args.len() {
-        0 => rc_expr!(Expr::Const(0.), o_span),
+        0 => rc_expr!(Expr::Const(Rational::from(0)), o_span),
         1 => new_args.remove(0),
         _ => unflatten_binary_expr(&new_args, BinaryOperator::Plus, UnflattenStrategy::Left),
     }
@@ -376,9 +375,9 @@ fn flatten_mul_or_div(o_lhs: RcExpr, o_rhs: RcExpr, is_div: bool) -> RcExpr {
     let lhs = flatten_expr(o_lhs);
     let rhs = flatten_expr(o_rhs);
 
-    let mut coeff = 1.;
+    let mut coeff = Rational::from(1);
     // Term -> # of times it is multiplied. Negative values are equivalent to division.
-    let mut terms = BTreeMap::<RcExpr, f64>::new();
+    let mut terms = BTreeMap::<RcExpr, Rational>::new();
 
     let mut args = VecDeque::with_capacity(2);
     args.push_back(lhs);
@@ -435,43 +434,45 @@ fn flatten_mul_or_div(o_lhs: RcExpr, o_rhs: RcExpr, is_div: bool) -> RcExpr {
                 // Otherwise the arg is something we cannot further decompose in this context
                 // (e.g. a variable or an exponentiation), so add it as a term.
                 // TODO: see if we can handle other things more granularly
-                let entry = terms.entry(arg.clone()).or_insert(0.);
+                let entry = terms
+                    .entry(arg.clone())
+                    .or_insert_with(|| Rational::from(0));
                 if div_side {
-                    *entry -= 1.;
+                    *entry -= 1;
                 } else {
-                    *entry += 1.;
+                    *entry += 1;
                 }
             }
         }
     }
 
     let mut new_args: Vec<RcExpr> = Vec::with_capacity(1 + terms.len());
-    if (coeff - 1.).abs() >= std::f64::EPSILON {
-        // coeff != 1
+    if coeff != 1 {
         new_args.push(rc_expr!(Expr::Const(coeff), o_span));
     }
     for (term, coeff) in terms {
         if coeff == 0. {
             // The happiest path :)
             continue;
-        } else if (coeff - 1.).abs() < std::f64::EPSILON {
-            // coeff == 1
+        } else if coeff == 1 {
             // 1 * x
             new_args.push(term.clone());
-        } else if (coeff - -1.).abs() < std::f64::EPSILON {
-            // coeff == -1
+        } else if coeff == -1 {
             // -1 * x ~ 1/x
-            let reciprocal = BinaryExpr::div(rc_expr!(Expr::Const(1.), o_span), term.clone());
+            let reciprocal = BinaryExpr::div(
+                rc_expr!(Expr::Const(Rational::from(1)), o_span),
+                term.clone(),
+            );
             new_args.push(rc_expr!(Expr::BinaryExpr(reciprocal), o_span));
         } else {
             let exponentiation =
-                BinaryExpr::exp(term.clone(), rc_expr!(Expr::Const(coeff,), o_span));
+                BinaryExpr::exp(term.clone(), rc_expr!(Expr::Const(coeff), o_span));
             new_args.push(rc_expr!(Expr::BinaryExpr(exponentiation), o_span));
         }
     }
 
     match new_args.len() {
-        0 => rc_expr!(Expr::Const(1.), o_span),
+        0 => rc_expr!(Expr::Const(Rational::from(1)), o_span),
         1 => new_args.remove(0),
         _ => unflatten_binary_expr(&new_args, BinaryOperator::Mult, UnflattenStrategy::Left),
     }
@@ -491,7 +492,7 @@ mod tests {
     use super::flatten_expr;
     use crate::parse_expr;
     use crate::utils::normalize;
-    use crate::Emit;
+    use crate::{Emit, EmitConfig, ProgramContext};
 
     static CASES: &[&str] = &[
         "1 + 2 + 3 -> 6",
@@ -525,7 +526,9 @@ mod tests {
             let expr = parse_expr!(lhs);
             let expected_flattened = split.next().unwrap();
 
-            let flattened = normalize(flatten_expr(expr)).emit_s_expression(Default::default());
+            let ctxt = ProgramContext::test();
+            let flattened =
+                normalize(flatten_expr(expr)).emit_s_expression(&EmitConfig::new(&ctxt, &[]));
 
             assert_eq!(flattened, expected_flattened);
         }

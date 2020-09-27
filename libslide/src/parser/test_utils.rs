@@ -4,6 +4,7 @@ macro_rules! __parse {
     (parse_statement, $inout:expr) => {{
         use crate::parser::parse_statement;
         use crate::scanner::scan;
+        use crate::ProgramContext;
 
         let inout: Vec<&str> = $inout.split(" => ").collect();
         let pin = inout[0];
@@ -13,13 +14,14 @@ macro_rules! __parse {
             pin.to_owned()
         };
         let tokens = scan(pin).tokens;
-        let (parsed, _) = parse_statement(tokens, pin);
+        let (parsed, _) = parse_statement(tokens, pin, &ProgramContext::test());
         (parsed, pin, pout)
     }};
 
     (parse_expression_pattern, $inout:expr) => {{
         use crate::parser::parse_expression_pattern;
         use crate::scanner::scan;
+        use crate::ProgramContext;
 
         let inout: Vec<&str> = $inout.split(" => ").collect();
         let pin = inout[0];
@@ -29,7 +31,7 @@ macro_rules! __parse {
             pin.to_owned()
         };
         let tokens = scan(pin).tokens;
-        let (parsed, _) = parse_expression_pattern(tokens);
+        let (parsed, _) = parse_expression_pattern(tokens, &ProgramContext::test());
         (parsed, pin, pout)
     }};
 }

@@ -11,7 +11,6 @@ pub use types::*;
 
 use crate::common::Span;
 use crate::diagnostics::{Diagnostic, DiagnosticRecord};
-use strtod::strtod;
 
 /// Describes the result of tokenizing a slide program.
 pub struct ScanResult {
@@ -152,16 +151,13 @@ impl Scanner {
     fn scan_num(&mut self) {
         let start = self.pos;
 
-        let mut float_str = self.collect_while(|c| c.is_digit(10));
+        let mut num = self.collect_while(|c| c.is_digit(10));
         if let Some('.') = self.peek() {
-            float_str.push(*self.next().unwrap());
-            float_str.push_str(&self.collect_while(|c| c.is_digit(10)));
+            num.push(*self.next().unwrap());
+            num.push_str(&self.collect_while(|c| c.is_digit(10)));
         }
-        // TODO(https://github.com/rust-lang/rust/issues/31407): rustc's float parser may drop some
-        // valid float literals. For now, use an external parser.
-        let float = strtod(&float_str).unwrap();
 
-        self.push_tok(TT::Float(float), (start, self.pos));
+        self.push_tok(TT::Num(num), (start, self.pos));
     }
 
     fn scan_var_str(&mut self) -> String {

@@ -16,6 +16,7 @@ use crate::diagnostics::Diagnostic;
 use crate::evaluator_rules::{BuildRuleErrors, Rule, RuleSet};
 use crate::grammar::*;
 use crate::utils::{hash, normalize};
+use crate::ProgramContext;
 
 use std::collections::HashSet;
 use std::error::Error;
@@ -24,13 +25,14 @@ use std::error::Error;
 /// The evaluation may be partial, as some values (like variables) may be unknown.
 pub fn evaluate(
     stmt_list: StmtList,
-    ctxt: &EvaluatorContext,
+    program_ctxt: &ProgramContext,
+    eval_ctxt: &EvaluatorContext,
 ) -> Result<(StmtList, Vec<Diagnostic>), Box<dyn Error>> {
-    let eval_rules = build_rules(ctxt)?;
+    let eval_rules = build_rules(program_ctxt, eval_ctxt)?;
     let evaluated = stmt_list
         .into_iter()
         .map(|stmt| match stmt {
-            Stmt::Expr(expr) => Stmt::Expr(evaluate_expr(expr, &eval_rules, &ctxt)),
+            Stmt::Expr(expr) => Stmt::Expr(evaluate_expr(expr, &eval_rules, &eval_ctxt)),
             Stmt::Assignment(Assignment {
                 var,
                 asgn_op,
@@ -39,14 +41,14 @@ pub fn evaluate(
             }) => Stmt::Assignment(Assignment {
                 var,
                 asgn_op,
-                rhs: evaluate_expr(expr, &eval_rules, &ctxt),
+                rhs: evaluate_expr(expr, &eval_rules, &eval_ctxt),
                 span,
             }),
         })
         .collect::<Vec<_>>();
 
     let stmt_list = StmtList::new(evaluated);
-    let diags = validate(&stmt_list, "", ctxt, &eval_rules); // TODO: propogate program text
+    let diags = validate(&stmt_list, "", eval_ctxt, &eval_rules); // TODO: propogate program text
     Ok((stmt_list, diags))
 }
 
@@ -73,19 +75,22 @@ fn evaluate_expr(expr: RcExpr, rules: &[Rule], ctxt: &EvaluatorContext) -> RcExp
 }
 
 /// Given an evaluator context, builds a set of evaluator rules to be used in partial evaluation.
-fn build_rules(ctxt: &EvaluatorContext) -> Result<Vec<Rule>, BuildRuleErrors> {
+fn build_rules<'a>(
+    program_ctxt: &'a ProgramContext,
+    eval_ctxt: &EvaluatorContext,
+) -> Result<Vec<Rule<'a>>, BuildRuleErrors> {
     let mut rule_set = RuleSet::default();
-    for rule in &ctxt.rule_denylist {
+    for rule in &eval_ctxt.rule_denylist {
         rule_set.remove(rule)
     }
-    rule_set.build()
+    rule_set.build(&program_ctxt)
 }
 
 #[cfg(test)]
 mod tests {
     use super::evaluate;
     use crate::evaluator_rules::RuleName;
-    use crate::{parse_stmt, EvaluatorContext};
+    use crate::{parse_stmt, EvaluatorContext, ProgramContext};
 
     macro_rules! partial_evaluator_tests {
         ($($name:ident: $program:expr => $result:expr)*) => {
@@ -93,7 +98,7 @@ mod tests {
             #[test]
             fn $name() {
                 let parsed = parse_stmt!($program);
-                let (evaluated, _) = evaluate(parsed.clone(), &EvaluatorContext::default()).unwrap();
+                let (evaluated, _) = evaluate(parsed.clone(), &ProgramContext::test(),&EvaluatorContext::default()).unwrap();
 
                 assert_eq!(evaluated.to_string(), $result.to_string());
             }
@@ -179,7 +184,7 @@ mod tests {
         let ctxt = EvaluatorContext::default()
             .with_denylist([RuleName::Add].to_vec())
             .always_flatten(false);
-        let (evaluated, _) = evaluate(parsed, &ctxt).unwrap();
+        let (evaluated, _) = evaluate(parsed, &ProgramContext::test(), &ctxt).unwrap();
         assert_eq!(evaluated.to_string(), "-1 + 12".to_string());
     }
 }

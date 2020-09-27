@@ -13,8 +13,8 @@ use diagnostics::{emit_slide_diagnostics, sanitize_source_for_diagnostics};
 use libslide::diagnostics::Diagnostic;
 use libslide::scanner::ScanResult;
 use libslide::{
-    evaluate, lint_expr_pat, lint_stmt, parse_expression_pattern, parse_statement, scan, Emit,
-    EmitConfig, EmitFormat, EvaluatorContext, Token,
+    evaluate, lint_expr_pat, lint_stmt, parse_expression_pattern, parse_statement, scan,
+    validate_precision, Emit, EmitConfig, EmitFormat, EvaluatorContext, ProgramContext, Token,
 };
 
 #[cfg(feature = "wasm")]
@@ -36,6 +36,8 @@ pub struct Opts {
     pub emit_format: String,
     /// Configuration options for slide emit.
     pub emit_config: Vec<String>,
+    /// Floating-point precision to use.
+    pub prec: u32,
     /// When true, lint warnings for the program will be emitted, if any.
     pub lint: bool,
     /// When true, slide will stop after parsing a program.
@@ -101,6 +103,15 @@ where
                 .multiple(true),
         )
         .arg(
+             clap::Arg::with_name("prec")
+                 .long("--precision")
+                 .short("-p")
+                 .help("Floating-point precision, in terms of number of significant bits.")
+                 .default_value("200")
+                 .takes_value(true)
+                 .validator(validate_precision),
+        )
+        .arg(
             clap::Arg::with_name("lint")
                 .long("--lint")
                 .help("Emit lint warnings for the program, if any."),
@@ -133,6 +144,7 @@ where
             .values_of("emit-config")
             .map(|opts| opts.map(str::to_owned).collect())
             .unwrap_or_default(),
+        prec: matches.value_of("prec").unwrap().parse().unwrap(),
         lint: matches.is_present("lint"),
         parse_only: matches.is_present("parse-only") || expr_pat,
         explain_diagnostic: matches.value_of("explain").map(str::to_owned),
@@ -165,7 +177,7 @@ struct SlideResultBuilder<'a> {
     /// Program source code sanitized for diagnostic emission.
     sanitized_program: String,
     emit_format: EmitFormat,
-    emit_config: EmitConfig,
+    emit_config: EmitConfig<'a>,
     color: bool,
     stdout: String,
     stderr: String,
@@ -177,7 +189,7 @@ impl<'a> SlideResultBuilder<'a> {
         file: Option<&'a str>,
         program: &'a str,
         emit_format: impl Into<EmitFormat>,
-        emit_config: impl Into<EmitConfig>,
+        emit_config: EmitConfig<'a>,
         color: bool,
     ) -> Self {
         Self {
@@ -185,7 +197,7 @@ impl<'a> SlideResultBuilder<'a> {
             org_program: program,
             sanitized_program: sanitize_source_for_diagnostics(program),
             emit_format: emit_format.into(),
-            emit_config: emit_config.into(),
+            emit_config,
             color,
             page: false,
             stdout: String::new(),
@@ -195,7 +207,7 @@ impl<'a> SlideResultBuilder<'a> {
 
     fn emit(&mut self, obj: &dyn Emit) {
         self.stdout
-            .push_str(&obj.emit(self.emit_format, self.emit_config));
+            .push_str(&obj.emit(self.emit_format, &self.emit_config));
     }
 
     fn err(&mut self, diagnostics: &[Diagnostic]) {
@@ -232,11 +244,12 @@ impl<'a> SlideResultBuilder<'a> {
 
 /// Runs slide end-to-end.
 pub fn run_slide(opts: Opts) -> SlideResult {
+    let program_context = ProgramContext::new(opts.prec);
     let mut result = SlideResultBuilder::new(
         None, // file: currently programs can only be read from stdin
         &opts.program,
         opts.emit_format,
-        opts.emit_config,
+        EmitConfig::new(&program_context, opts.emit_config.as_slice()),
         opts.color,
     );
 
@@ -266,7 +279,8 @@ pub fn run_slide(opts: Opts) -> SlideResult {
         return result.failed();
     }
 
-    let evaluator = ProgramEvaluator::new(result, tokens, opts.lint, opts.parse_only);
+    let evaluator =
+        ProgramEvaluator::new(program_context, result, tokens, opts.lint, opts.parse_only);
 
     if opts.expr_pat {
         evaluator.eval_expr_pat()
@@ -277,6 +291,7 @@ pub fn run_slide(opts: Opts) -> SlideResult {
 
 /// Evaluates a slide program either as a regular program or an expression pattern.
 struct ProgramEvaluator<'a> {
+    context: ProgramContext,
     result: SlideResultBuilder<'a>,
     tokens: Vec<Token>,
     lint: bool,
@@ -285,12 +300,14 @@ struct ProgramEvaluator<'a> {
 
 impl<'a> ProgramEvaluator<'a> {
     fn new(
+        context: ProgramContext,
         result: SlideResultBuilder<'a>,
         tokens: Vec<Token>,
         lint: bool,
         parse_only: bool,
     ) -> Self {
         Self {
+            context,
             result,
             tokens,
             lint,
@@ -300,7 +317,8 @@ impl<'a> ProgramEvaluator<'a> {
 
     /// Handles evaluation of a regular slide program (statements, expressions).
     fn eval_slide_program(mut self) -> SlideResult {
-        let (parse_tree, diagnostics) = parse_statement(self.tokens, &self.result.org_program);
+        let (parse_tree, diagnostics) =
+            parse_statement(self.tokens, &self.result.org_program, &self.context);
 
         self.result.err(&diagnostics);
         if !diagnostics.is_empty() {
@@ -318,7 +336,7 @@ impl<'a> ProgramEvaluator<'a> {
             self.result.ok()
         } else {
             let (simplified, diagnostics) =
-                evaluate(parse_tree, &EvaluatorContext::default()).unwrap();
+                evaluate(parse_tree, &self.context, &EvaluatorContext::default()).unwrap();
 
             self.result.err(&diagnostics);
             self.result.emit(&simplified);
@@ -333,7 +351,7 @@ impl<'a> ProgramEvaluator<'a> {
 
     /// Handles evaluation of a slide expression pattern.
     fn eval_expr_pat(mut self) -> SlideResult {
-        let (parse_tree, diagnostics) = parse_expression_pattern(self.tokens);
+        let (parse_tree, diagnostics) = parse_expression_pattern(self.tokens, &self.context);
         self.result.err(&diagnostics);
         if !diagnostics.is_empty() {
             return self.result.failed();

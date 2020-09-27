@@ -1,10 +1,12 @@
 use super::*;
 
+use rug::Rational;
+
 /// A slide expression pattern.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum ExprPat {
     /// A constant
-    Const(f64),
+    Const(Rational),
     /// Pattern matching a variable
     VarPat(String),
     /// Pattern matching a constant
@@ -22,46 +24,6 @@ pub enum ExprPat {
 }
 
 impl Grammar for ExprPat {}
-
-// TODO: We can't derive this because `f64` doesn't implement `Eq`.
-// This should be fixed by moving to a arbitrary-precision numeric type.
-impl Eq for ExprPat {}
-impl PartialEq for ExprPat {
-    fn eq(&self, other: &ExprPat) -> bool {
-        use ExprPat::*;
-        match (self, other) {
-            (Const(x), Const(y)) => (x - y).abs() < std::f64::EPSILON,
-            (VarPat(x), VarPat(y)) => x == y,
-            (ConstPat(x), ConstPat(y)) => x == y,
-            (AnyPat(x), AnyPat(y)) => x == y,
-            (BinaryExpr(x), BinaryExpr(y)) => x == y,
-            (UnaryExpr(x), UnaryExpr(y)) => x == y,
-            (Parend(x), Parend(y)) => x == y,
-            (Bracketed(x), Bracketed(y)) => x == y,
-            _ => false,
-        }
-    }
-}
-
-// TODO: We can do better than hashing to a string as well, but we'll save that til we have an
-// arbitrary-precision numeric type.
-impl core::hash::Hash for ExprPat {
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        use ExprPat::*;
-        match self {
-            // TODO: We can do better than hashing to a string as well, but we'll save that til we
-            // have an arbitrary-precision numeric type.
-            Const(f) => state.write(f.to_string().as_bytes()),
-            VarPat(v) => v.hash(state),
-            ConstPat(c) => c.hash(state),
-            AnyPat(a) => a.hash(state),
-            BinaryExpr(e) => e.hash(state),
-            UnaryExpr(e) => e.hash(state),
-            e @ Parend(_) => e.to_string().hash(state),
-            e @ Bracketed(_) => e.to_string().hash(state),
-        }
-    }
-}
 
 impl PartialOrd for ExprPat {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {

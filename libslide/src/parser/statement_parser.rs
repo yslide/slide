@@ -1,13 +1,17 @@
-use super::{errors::*, Parser};
-use crate::common::Span;
+use super::{errors::*, str2rat, Parser};
 use crate::diagnostics::{Diagnostic, DiagnosticRecord};
 use crate::grammar::*;
 use crate::scanner::types::{Token, TokenType};
 use crate::utils::{PeekIter, StringUtils};
+use crate::{ProgramContext, Span};
 
 /// Parses a tokenized slide program, emitting the result and any diagnostics.
-pub fn parse(input: Vec<Token>, program: &str) -> (StmtList, Vec<Diagnostic>) {
-    let mut parser = ExpressionParser::new(input, program);
+pub fn parse(
+    input: Vec<Token>,
+    program: &str,
+    program_context: &ProgramContext,
+) -> (StmtList, Vec<Diagnostic>) {
+    let mut parser = ExpressionParser::new(input, program, program_context);
     (parser.parse(), parser.diagnostics)
 }
 
@@ -15,14 +19,16 @@ pub struct ExpressionParser<'a> {
     _input: PeekIter<Token>,
     program: &'a str,
     diagnostics: Vec<Diagnostic>,
+    context: &'a ProgramContext,
 }
 
 impl<'a> ExpressionParser<'a> {
-    fn new(input: Vec<Token>, program: &'a str) -> Self {
+    fn new(input: Vec<Token>, program: &'a str, context: &'a ProgramContext) -> Self {
         Self {
             _input: PeekIter::new(input.into_iter()),
             program,
             diagnostics: vec![],
+            context,
         }
     }
 
@@ -94,8 +100,9 @@ impl<'a> Parser<StmtList> for ExpressionParser<'a> {
         StmtList::new(stmts)
     }
 
-    fn parse_float(&mut self, f: f64, span: Span) -> Self::Expr {
-        rc_expr!(Expr::Const(f), span)
+    fn parse_num(&mut self, num: String, span: Span) -> Self::Expr {
+        let num = str2rat(&num, self.context.prec);
+        rc_expr!(Expr::Const(num), span)
     }
 
     fn parse_variable(&mut self, name: String, span: Span) -> Self::Expr {

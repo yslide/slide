@@ -87,3 +87,33 @@ impl From<Span> for (usize, usize) {
         (span.lo, span.hi)
     }
 }
+
+/// Context to use across a slide program.
+#[derive(Copy, Clone)]
+pub struct ProgramContext {
+    /// Precision to use for [Float][rug::Float]s.
+    pub(crate) prec: u32,
+}
+
+/// Dummy FP precision, only for use in tests or where precision is not relevant.
+static DUMMY_PREC: u32 = 200;
+
+impl Default for ProgramContext {
+    /// Only to be used in situations where the program context is irrelevant; i.e. expressions are
+    /// being used outside of the primary program.
+    fn default() -> Self {
+        Self { prec: DUMMY_PREC }
+    }
+}
+
+impl ProgramContext {
+    /// Creates a new `ProgramContext`.
+    pub fn new(prec: u32) -> Self {
+        Self { prec }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test() -> Self {
+        Self::default()
+    }
+}

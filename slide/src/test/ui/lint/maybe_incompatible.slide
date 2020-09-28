@@ -23,7 +23,7 @@ warning[L0002]: Definitions of "a" may be incompatible
 1 | a := x
   | ------ this definition evaluates to "a := x"
 2 | a := 2x
-  | ^^^^^^^ this definition evaluates to "a := x * 2"
+  | ------- this definition evaluates to "a := x * 2"
   |
   = note: "x" and "x * 2" may not be equal
   = note: there is not enough information to conclude whether the definitions are compatible
@@ -34,7 +34,7 @@ warning[L0002]: Definitions of "b" may be incompatible
 4 | b := 2x + 2
   | ----------- this definition evaluates to "b := 2 + x * 2"
 5 | b := 3 ^ 3x 
-  | ^^^^^^^^^^^ this definition evaluates to "b := x * 27"
+  | ----------- this definition evaluates to "b := x * 27"
   |
   = note: "2 + x * 2" and "x * 27" may not be equal
   = note: there is not enough information to conclude whether the definitions are compatible

@@ -151,7 +151,7 @@ impl Diagnostic {
         /// Adds an error to the diagnostic, possibly at a different span.
         with_spanned_err as Error
         /// Adds a warning to the diagnostic, possibly at a different span.
-        with_spanned_warn as Error
+        with_spanned_warn as Warning
         /// Adds a help message to the diagnostic, possibly at a different span.
         with_spanned_help as Help
         /// Adds a note to the diagnostic, possibly at a different span.

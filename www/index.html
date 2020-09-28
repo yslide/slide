@@ -333,7 +333,7 @@
               .ansi_to_html(`${stderr}\n${stdout}`)
               .trim()
               .replace(
-                /(error|warning)\[([LSP]\d+)\]/g,
+                /(error|warning)\[([LSPV]\d+)\]/g,
                 '$1[<a href="#slide-output" v-on:click="explain(\'$2\')">$2</a>]'
               );
             this.ranOnce = true;

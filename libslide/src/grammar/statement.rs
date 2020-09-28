@@ -104,6 +104,14 @@ pub struct Assignment {
     pub span: Span,
 }
 
+impl Assignment {
+    /// Redefines the [`Assignment`][Assignment] with a definition-evaluating function `eval`.
+    pub fn redefine_with(mut self, eval: impl FnOnce(RcExpr) -> RcExpr) -> Self {
+        self.rhs = eval(self.rhs);
+        self
+    }
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub enum Expr {
     Const(f64),

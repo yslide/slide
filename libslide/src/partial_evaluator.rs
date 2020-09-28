@@ -26,21 +26,12 @@ pub fn evaluate(
     ctxt: &ProgramContext,
 ) -> Result<(StmtList, Vec<Diagnostic>), Box<dyn Error>> {
     let eval_rules = build_rules(ctxt)?;
+    let simplify = |expr: RcExpr| evaluate_expr(expr, &eval_rules, &ctxt);
     let evaluated = stmt_list
         .into_iter()
         .map(|stmt| match stmt {
-            Stmt::Expr(expr) => Stmt::Expr(evaluate_expr(expr, &eval_rules, &ctxt)),
-            Stmt::Assignment(Assignment {
-                var,
-                asgn_op,
-                rhs: expr,
-                span,
-            }) => Stmt::Assignment(Assignment {
-                var,
-                asgn_op,
-                rhs: evaluate_expr(expr, &eval_rules, &ctxt),
-                span,
-            }),
+            Stmt::Expr(expr) => Stmt::Expr(simplify(expr)),
+            Stmt::Assignment(asgn) => Stmt::Assignment(asgn.redefine_with(simplify)),
         })
         .collect::<Vec<_>>();
 

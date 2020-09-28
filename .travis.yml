@@ -60,10 +60,12 @@ script:
   - cargo build
   - popd
 
-after_success:
+before_deploy:
   - |
     if [ "$TRAVIS_BRANCH" == "master" ]; then
       if [ "$CHANNEL" == "stable" ]; then
+        cargo doc --no-deps --target-dir docs-public
+        cargo doc --document-private-items --no-deps --target-dir docs-internal
         export DEPLOY_DOCS=1
       elif [ "$CHANNEL" == "nightly" ]; then
         export DEPLOY_UI=1
@@ -81,40 +83,40 @@ after_success:
       fi
     fi
 
-  - cargo doc --document-private-items --no-deps
+DOCS_DEPLOY_DEFAULTS: &docs_deploy_defaults
+  provider: pages:git
+  edge: true
+  token: $GITHUB_TOKEN
+  keep_history: true
+  verbose: true
+  project_name: slide
+  name: slide-bot
+  email: vcaa1729@gmail.com
+  committer_from_gh: true
+  deployment_file: true
 
 deploy:
-  # Documentation
-  - provider: pages:git
-    edge: true
-    token: $GITHUB_TOKEN
-    target_branch: gh-pages
-    keep_history: true
-    verbose: true
-    local_dir: target/doc
-    fqdn: slide-dev.ayazhafiz.com
-    project_name: slide
-    name: slide-bot
-    email: vcaa1729@gmail.com
-    committer_from_gh: true
-    deployment_file: true
+  # Documentation:public
+  - <<: *docs_deploy_defaults
+    repo: yslide/docs
+    target_branch: master
+    local_dir: docs-public/doc
+    on:
+      branch: master
+      condition: $DEPLOY_DOCS = 1
+  # Documentation:internal
+  - <<: *docs_deploy_defaults
+    repo: yslide/internals
+    target_branch: master
+    local_dir: docs-internal/doc
     on:
       branch: master
       condition: $DEPLOY_DOCS = 1
   # Web UI
-  - provider: pages:git
-    edge: true
-    token: $GITHUB_TOKEN
+  - <<: *docs_deploy_defaults
     repo: yslide/yslide.github.io
     target_branch: master
-    keep_history: true
-    verbose: true
     local_dir: www/
-    project_name: slide
-    name: slide-bot
-    email: vcaa1729@gmail.com
-    committer_from_gh: true
-    deployment_file: true
     on:
       branch: master
       condition: $DEPLOY_UI = 1

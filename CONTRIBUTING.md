@@ -31,7 +31,7 @@ all slide users!
 ## Documentation
 
 Development documentation for slide, including documentation of private items, can be found in a
-rustdoc at [slide-dev.ayazhafiz.com](https://slide-dev.ayazhafiz.com/libslide).
+rustdoc at [yslide.github.io/docs/libslide][internal-docs].
 
 ## Testing 
 
@@ -57,9 +57,11 @@ Slide bot would then comment `3` on your issue!
 
 ## Where do I start?
 
-Take a look at the [libslide docs](https://slide-dev.ayazhafiz.com/libslide) for a general overview
-of slide's architecture.
+Take a look at the [internal documentation][internal-docs] for a general overview of slide's architecture.
 Every contribution no matter how little matters. With that said, refer to the issues marked as good
 [first issue](https://github.com/yslide/slide/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) or 
 [help wanted](https://github.com/yslide/slide/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%2)
 to begin contributing to slide.
+
+
+[internal-docs]: (https://yslide.github.io/docs/libslide)

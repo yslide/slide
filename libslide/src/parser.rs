@@ -1,4 +1,4 @@
-//! Parses slide programs into the slide [`grammar`][crate::grammar] IR and produces semantic
+//! Parses slide programs into the slide [`grammar`](crate::grammar) IR and produces semantic
 //! diagnostics.
 
 #[macro_use]

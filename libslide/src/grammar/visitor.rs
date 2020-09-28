@@ -3,7 +3,7 @@
 use super::*;
 use crate::Span;
 
-/// Describes a [statement list][super::StmtList] visitor.
+/// Describes a [statement list](super::StmtList) visitor.
 pub trait StmtVisitor<'a> {
     fn visit(&mut self, stmt_list: &'a StmtList) {
         for stmt in stmt_list.iter() {
@@ -65,7 +65,7 @@ pub trait StmtVisitor<'a> {
     }
 }
 
-/// Describes an [expression pattern][super::ExprPat] visitor.
+/// Describes an [expression pattern](super::ExprPat) visitor.
 pub trait ExprPatVisitor<'a> {
     fn visit(&mut self, expr_pat: &'a RcExprPat) {
         match expr_pat.as_ref() {

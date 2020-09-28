@@ -25,7 +25,7 @@ trait VariableExpander<'a> {
 /// [`expand`](VariableExpander::expand).
 ///
 /// For example, `"a + b".expand("a = b + 1").expand("b = c")` would expand to `"c + 1 + c"`.
-/// Compare this to a [`LazyVariableExpander`][LazyVariableExpander].
+/// Compare this to a [`LazyVariableExpander`](self::LazyVariableExpander).
 ///
 /// Note, however, that an `EagerVariableExpander` will not try to expand variables within an
 /// expanded variable definition on the same call to [`expand`](VariableExpander::expand).
@@ -74,7 +74,7 @@ impl<'a> VariableExpander<'a> for EagerVariableExpander<'a> {
 /// variable definition.
 ///
 /// For example, `"a + b".expand("a = b + 1").expand("b = c")` would expand to `"b + 1 + c"`.
-/// Compare this to an [`EagerVariableExpander`][EagerVariableExpander].
+/// Compare this to an [`EagerVariableExpander`](self::EagerVariableExpander).
 ///
 /// Furthermore, the variable definition used by a `LazyVariableExpander` is the last one given via
 /// [`expand`](VariableExpander::expand).

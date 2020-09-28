@@ -149,22 +149,22 @@ macro_rules! make_interner {
         impl Eq for $interned_struct {}
 
         impl Emit for $interned_struct {
-            fn emit_pretty(&self, config: &EmitConfig) -> String {
+            fn emit_pretty(&self, config: EmitConfig) -> String {
                 self.as_ref().emit_pretty(config)
             }
 
-            fn emit_s_expression(&self, config: &EmitConfig) -> String {
+            fn emit_s_expression(&self, config: EmitConfig) -> String {
                 self.as_ref().emit_s_expression(config)
             }
 
-            fn emit_latex(&self, config: &EmitConfig) -> String {
+            fn emit_latex(&self, config: EmitConfig) -> String {
                 self.as_ref().emit_latex(config)
             }
         }
 
         impl core::fmt::Display for $interned_struct {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                self.as_ref().fmt(f)
+                write!(f, "{}", self.emit_pretty(EmitConfig::default()))
             }
         }
 

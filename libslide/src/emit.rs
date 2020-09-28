@@ -1,8 +1,6 @@
 //! Emit strategies for the libslide grammar IR.
 
 use crate::grammar::*;
-use crate::rug_arith::fmt_rational;
-use crate::ProgramContext;
 
 use core::fmt;
 
@@ -36,16 +34,10 @@ impl From<String> for EmitFormat {
     }
 }
 
-/// Configuration options for emitting a slide grammar.
-pub struct EmitConfig<'a> {
-    flags: EmitFlags,
-    program_context: &'a ProgramContext,
-}
-
 bitflags::bitflags! {
+    /// Configuration options for emitting a slide grammar.
     #[derive(Default)]
-    /// Emit options.
-    struct EmitFlags: u32 {
+    pub struct EmitConfig: u32 {
         /// Emit divisions as fractions.
         /// Applies to LaTeX emit.
         const FRAC = 1;
@@ -61,24 +53,19 @@ bitflags::bitflags! {
     }
 }
 
-impl<'a> EmitConfig<'a> {
-    /// Creates a new `EmitConfig` from a [program context][crate::ProgramContext] and a set of
-    /// emit options.
-    pub fn new(program_context: &'a ProgramContext, opts: &[String]) -> Self {
-        let mut flags = EmitFlags::default();
+impl From<Vec<String>> for EmitConfig {
+    fn from(opts: Vec<String>) -> Self {
+        let mut config = EmitConfig::default();
         for opt in opts {
-            flags |= match opt.as_ref() {
-                "frac" => EmitFlags::FRAC,
-                "implicit-mult" => EmitFlags::IMPLICIT_MULT,
-                "times" => EmitFlags::TIMES,
-                "div" => EmitFlags::DIV,
+            config |= match opt.as_ref() {
+                "frac" => EmitConfig::FRAC,
+                "implicit-mult" => EmitConfig::IMPLICIT_MULT,
+                "times" => EmitConfig::TIMES,
+                "div" => EmitConfig::DIV,
                 _ => unreachable!(),
             }
         }
-        Self {
-            flags,
-            program_context,
-        }
+        config
     }
 }
 
@@ -94,7 +81,7 @@ where
     /// NB: This is a multiplexer of the corresponding `emit_` methods present on [Emit][Emit],
     /// except for [EmitFormat::Latex][EmitFormat::Latex], which is emitted via
     /// [emit_wrapped_latex][Emit::emit_wrapped_latex].
-    fn emit(&self, form: EmitFormat, config: &EmitConfig) -> String {
+    fn emit(&self, form: EmitFormat, config: EmitConfig) -> String {
         match form {
             EmitFormat::Pretty => self.emit_pretty(config),
             EmitFormat::SExpression => self.emit_s_expression(config),
@@ -104,21 +91,21 @@ where
     }
 
     /// Emit `self` with the [pretty emit format][EmitFormat::Pretty]
-    fn emit_pretty(&self, config: &EmitConfig) -> String;
+    fn emit_pretty(&self, config: EmitConfig) -> String;
 
     /// Emit `self` with the [debug emit format][EmitFormat::Debug]
-    fn emit_debug(&self, _config: &EmitConfig) -> String {
+    fn emit_debug(&self, _config: EmitConfig) -> String {
         format!("{:#?}", self)
     }
 
     /// Emit `self` with the [s_expression emit format][EmitFormat::SExpression]
-    fn emit_s_expression(&self, config: &EmitConfig) -> String;
+    fn emit_s_expression(&self, config: EmitConfig) -> String;
 
     /// Emit `self` with the [LaTeX emit format][EmitFormat::Latex]
-    fn emit_latex(&self, config: &EmitConfig) -> String;
+    fn emit_latex(&self, config: EmitConfig) -> String;
 
     /// Same as [emit_latex][Emit::emit_latex], but wraps the latex code in inline math mode.
-    fn emit_wrapped_latex(&self, config: &EmitConfig) -> String {
+    fn emit_wrapped_latex(&self, config: EmitConfig) -> String {
         format!("${}$", self.emit_latex(config))
     }
 }
@@ -128,7 +115,7 @@ where
 macro_rules! mk_free_emit_fns {
     ($($name:ident;)*) => {$(
         #[inline]
-        fn $name(arg: &impl Emit, config: &EmitConfig) -> String {
+        fn $name(arg: &impl Emit, config: EmitConfig) -> String {
             arg.$name(config)
         }
     )*};
@@ -145,9 +132,7 @@ macro_rules! fmt_emit_impl {
     ($S:path) => {
         impl core::fmt::Display for $S {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                let dummy_ctx = &ProgramContext::default();
-                let dummy_cfg = EmitConfig::new(dummy_ctx, &[]);
-                write!(f, "{}", self.emit_pretty(&dummy_cfg))
+                write!(f, "{}", self.emit_pretty(EmitConfig::default()))
             }
         }
     };
@@ -181,19 +166,19 @@ fn join_emits<'a, E: 'a + Emit>(
 
 fmt_emit_impl!(StmtList);
 impl Emit for StmtList {
-    fn emit_pretty(&self, config: &EmitConfig) -> String {
+    fn emit_pretty(&self, config: EmitConfig) -> String {
         join_emits(self.iter(), |s| s.emit_pretty(config))
     }
 
-    fn emit_s_expression(&self, config: &EmitConfig) -> String {
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
         join_emits(self.iter(), |s| s.emit_s_expression(config))
     }
 
-    fn emit_latex(&self, config: &EmitConfig) -> String {
+    fn emit_latex(&self, config: EmitConfig) -> String {
         join_emits(self.iter(), |s| s.emit_latex(config))
     }
 
-    fn emit_wrapped_latex(&self, config: &EmitConfig) -> String {
+    fn emit_wrapped_latex(&self, config: EmitConfig) -> String {
         let latex = self.emit_latex(config);
         let lines: Vec<_> = latex.lines().collect();
         if lines.len() > 1 {
@@ -211,14 +196,14 @@ impl Emit for StmtList {
 
 fmt_emit_impl!(Stmt);
 impl Emit for Stmt {
-    fn emit_pretty(&self, config: &EmitConfig) -> String {
+    fn emit_pretty(&self, config: EmitConfig) -> String {
         match self {
             Self::Expr(expr) => expr.emit_pretty(config),
             Self::Assignment(asgn) => asgn.emit_pretty(config),
         }
     }
 
-    fn emit_s_expression(&self, config: &EmitConfig) -> String {
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
         match self {
             Self::Expr(expr) => expr.emit_s_expression(config),
             Self::Assignment(Assignment { var, rhs, .. }) => {
@@ -227,7 +212,7 @@ impl Emit for Stmt {
         }
     }
 
-    fn emit_latex(&self, config: &EmitConfig) -> String {
+    fn emit_latex(&self, config: EmitConfig) -> String {
         match self {
             Self::Expr(expr) => expr.emit_latex(config),
             Self::Assignment(asgn) => asgn.emit_latex(config),
@@ -237,7 +222,7 @@ impl Emit for Stmt {
 
 fmt_emit_impl!(AssignmentOp);
 impl Emit for AssignmentOp {
-    fn emit_pretty(&self, _config: &EmitConfig) -> String {
+    fn emit_pretty(&self, _config: EmitConfig) -> String {
         match self {
             AssignmentOp::Equal(_) => "=",
             AssignmentOp::AssignDefine(_) => ":=",
@@ -245,18 +230,18 @@ impl Emit for AssignmentOp {
         .to_owned()
     }
 
-    fn emit_s_expression(&self, config: &EmitConfig) -> String {
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
         self.emit_pretty(config)
     }
 
-    fn emit_latex(&self, config: &EmitConfig) -> String {
+    fn emit_latex(&self, config: EmitConfig) -> String {
         self.emit_pretty(config)
     }
 }
 
 fmt_emit_impl!(Assignment);
 impl Emit for Assignment {
-    fn emit_pretty(&self, config: &EmitConfig) -> String {
+    fn emit_pretty(&self, config: EmitConfig) -> String {
         format!(
             "{} {} {}",
             self.var,
@@ -265,7 +250,7 @@ impl Emit for Assignment {
         )
     }
 
-    fn emit_s_expression(&self, config: &EmitConfig) -> String {
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
         format!(
             "({} {} {})",
             self.asgn_op.emit_s_expression(config),
@@ -274,7 +259,7 @@ impl Emit for Assignment {
         )
     }
 
-    fn emit_latex(&self, config: &EmitConfig) -> String {
+    fn emit_latex(&self, config: EmitConfig) -> String {
         format!(
             "{} {} {}",
             self.var,
@@ -286,9 +271,9 @@ impl Emit for Assignment {
 
 fmt_emit_impl!(Expr);
 impl Emit for Expr {
-    fn emit_pretty(&self, config: &EmitConfig) -> String {
+    fn emit_pretty(&self, config: EmitConfig) -> String {
         match self {
-            Self::Const(num) => fmt_rational(num, config.program_context.prec),
+            Self::Const(num) => num.to_string(),
             Self::Var(var) => var.to_string(),
             Self::BinaryExpr(binary_expr) => binary_expr.emit_pretty(config),
             Self::UnaryExpr(unary_expr) => unary_expr.emit_pretty(config),
@@ -297,9 +282,9 @@ impl Emit for Expr {
         }
     }
 
-    fn emit_s_expression(&self, config: &EmitConfig) -> String {
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
         match self {
-            Self::Const(num) => fmt_rational(num, config.program_context.prec),
+            Self::Const(konst) => konst.to_string(),
             Self::Var(var) => var.to_string(),
             Self::BinaryExpr(binary_expr) => binary_expr.emit_s_expression(config),
             Self::UnaryExpr(unary_expr) => unary_expr.emit_s_expression(config),
@@ -308,9 +293,9 @@ impl Emit for Expr {
         }
     }
 
-    fn emit_latex(&self, config: &EmitConfig) -> String {
+    fn emit_latex(&self, config: EmitConfig) -> String {
         match self {
-            Self::Const(num) => match fmt_rational(num, config.program_context.prec).as_ref() {
+            Self::Const(num) => match num.to_string().as_ref() {
                 "inf" => "\\infty",
                 other => other,
             }
@@ -326,7 +311,7 @@ impl Emit for Expr {
 
 fmt_emit_impl!(BinaryOperator);
 impl Emit for BinaryOperator {
-    fn emit_pretty(&self, _config: &EmitConfig) -> String {
+    fn emit_pretty(&self, _config: EmitConfig) -> String {
         match self {
             Self::Plus => "+",
             Self::Minus => "-",
@@ -338,17 +323,17 @@ impl Emit for BinaryOperator {
         .to_owned()
     }
 
-    fn emit_s_expression(&self, config: &EmitConfig) -> String {
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
         self.emit_pretty(config)
     }
 
-    fn emit_latex(&self, config: &EmitConfig) -> String {
+    fn emit_latex(&self, config: EmitConfig) -> String {
         match self {
             Self::Plus => "+",
             Self::Minus => "-",
-            Self::Mult if config.flags.contains(EmitFlags::TIMES) => "\\times",
+            Self::Mult if config.contains(EmitConfig::TIMES) => "\\times",
             Self::Mult => "*",
-            Self::Div if config.flags.contains(EmitFlags::DIV) => "\\div",
+            Self::Div if config.contains(EmitConfig::DIV) => "\\div",
             Self::Div => "/",
             Self::Mod => "\\bmod",
             Self::Exp => "^",
@@ -411,7 +396,7 @@ macro_rules! display_binary_expr {
     ($iexpr:ident, $expr:ident) => {
         fmt_emit_impl!(BinaryExpr<$iexpr>);
         impl Emit for BinaryExpr<$iexpr> {
-            fn emit_pretty(&self, config: &EmitConfig) -> String {
+            fn emit_pretty(&self, config: EmitConfig) -> String {
                 let lhs = format_binary_operand!(
                     $expr,
                     self,
@@ -434,7 +419,7 @@ macro_rules! display_binary_expr {
 
                 match self.op {
                     BinaryOperator::Mult
-                        if config.flags.contains(EmitFlags::IMPLICIT_MULT)
+                        if config.contains(EmitConfig::IMPLICIT_MULT)
                             && can_fold_mult!(rhs, '(', '[', self) =>
                     {
                         format!("{}{}", lhs, rhs)
@@ -443,7 +428,7 @@ macro_rules! display_binary_expr {
                 }
             }
 
-            fn emit_s_expression(&self, config: &EmitConfig) -> String {
+            fn emit_s_expression(&self, config: EmitConfig) -> String {
                 format!(
                     "({} {} {})",
                     self.op.emit_s_expression(config),
@@ -452,7 +437,7 @@ macro_rules! display_binary_expr {
                 )
             }
 
-            fn emit_latex(&self, config: &EmitConfig) -> String {
+            fn emit_latex(&self, config: EmitConfig) -> String {
                 let lhs = format_binary_operand!(
                     $expr, self, &self.lhs, false, emit_latex, latex_wrap, config
                 );
@@ -462,12 +447,12 @@ macro_rules! display_binary_expr {
                 );
                 match self.op {
                     BinaryOperator::Mult
-                        if config.flags.contains(EmitFlags::IMPLICIT_MULT)
+                        if config.contains(EmitConfig::IMPLICIT_MULT)
                             && can_fold_mult!(rhs, "\\left(", "\\left[", self) =>
                     {
                         format!("{}{}", lhs, rhs)
                     }
-                    BinaryOperator::Div if config.flags.contains(EmitFlags::FRAC) => {
+                    BinaryOperator::Div if config.contains(EmitConfig::FRAC) => {
                         format!("\\frac{{{}}}{{{}}}", lhs, rhs)
                     }
                     BinaryOperator::Exp => format!("{}^{{{}}}", lhs, rhs),
@@ -482,7 +467,7 @@ display_binary_expr!(RcExprPat, ExprPat);
 
 fmt_emit_impl!(UnaryOperator);
 impl Emit for UnaryOperator {
-    fn emit_pretty(&self, _config: &EmitConfig) -> String {
+    fn emit_pretty(&self, _config: EmitConfig) -> String {
         match self {
             Self::SignPositive => "+",
             Self::SignNegative => "-",
@@ -490,11 +475,11 @@ impl Emit for UnaryOperator {
         .to_owned()
     }
 
-    fn emit_s_expression(&self, config: &EmitConfig) -> String {
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
         self.emit_pretty(config)
     }
 
-    fn emit_latex(&self, config: &EmitConfig) -> String {
+    fn emit_latex(&self, config: EmitConfig) -> String {
         self.emit_pretty(config)
     }
 }
@@ -503,7 +488,7 @@ macro_rules! display_unary_expr {
     ($iexpr:ident, $expr:ident) => {
         fmt_emit_impl!(UnaryExpr<$iexpr>);
         impl Emit for UnaryExpr<$iexpr> {
-            fn emit_pretty(&self, config: &EmitConfig) -> String {
+            fn emit_pretty(&self, config: EmitConfig) -> String {
                 let format_arg = |arg: &$iexpr| match arg.as_ref() {
                     $expr::BinaryExpr(l) => normal_wrap!((l.emit_pretty(config))),
                     expr => expr.emit_pretty(config),
@@ -511,7 +496,7 @@ macro_rules! display_unary_expr {
                 format!("{}{}", self.op.emit_pretty(config), format_arg(&self.rhs))
             }
 
-            fn emit_s_expression(&self, config: &EmitConfig) -> String {
+            fn emit_s_expression(&self, config: EmitConfig) -> String {
                 format!(
                     "({} {})",
                     self.op.emit_s_expression(config),
@@ -519,7 +504,7 @@ macro_rules! display_unary_expr {
                 )
             }
 
-            fn emit_latex(&self, config: &EmitConfig) -> String {
+            fn emit_latex(&self, config: EmitConfig) -> String {
                 let format_arg = |arg: &$iexpr| match arg.as_ref() {
                     $expr::BinaryExpr(l) => latex_wrap!((l.emit_latex(config))),
                     expr => expr.emit_latex(config),
@@ -534,9 +519,9 @@ display_unary_expr!(RcExprPat, ExprPat);
 
 fmt_emit_impl!(ExprPat);
 impl Emit for ExprPat {
-    fn emit_pretty(&self, config: &EmitConfig) -> String {
+    fn emit_pretty(&self, config: EmitConfig) -> String {
         match self {
-            Self::Const(num) => fmt_rational(num, config.program_context.prec),
+            Self::Const(num) => num.to_string(),
             Self::VarPat(var) | Self::ConstPat(var) | Self::AnyPat(var) => var.to_string(),
             Self::BinaryExpr(binary_expr) => binary_expr.emit_pretty(config),
             Self::UnaryExpr(unary_expr) => unary_expr.emit_pretty(config),
@@ -545,9 +530,9 @@ impl Emit for ExprPat {
         }
     }
 
-    fn emit_s_expression(&self, config: &EmitConfig) -> String {
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
         match self {
-            Self::Const(num) => fmt_rational(num, config.program_context.prec),
+            Self::Const(konst) => konst.to_string(),
             Self::VarPat(pat) | Self::ConstPat(pat) | Self::AnyPat(pat) => pat.to_string(),
             Self::BinaryExpr(binary) => binary.emit_s_expression(config),
             Self::UnaryExpr(unary) => unary.emit_s_expression(config),
@@ -556,9 +541,9 @@ impl Emit for ExprPat {
         }
     }
 
-    fn emit_latex(&self, config: &EmitConfig) -> String {
+    fn emit_latex(&self, config: EmitConfig) -> String {
         match self {
-            Self::Const(num) => fmt_rational(num, config.program_context.prec),
+            Self::Const(konst) => konst.to_string(),
             Self::VarPat(pat) | Self::ConstPat(pat) | Self::AnyPat(pat) => {
                 // $a, #a, _a all need to be escaped as \$a, \#a, \_a.
                 format!("\\{}", pat.to_string())

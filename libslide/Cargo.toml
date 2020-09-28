@@ -25,7 +25,7 @@ required-features = ["benchmark-internals"]
 bitflags = "1.2.1"
 lasso = "0.3.1"
 lazy_static = "1.4.0"
-rug = "1.11.0"
+strtod = "0.0.1"
 
 [dependencies.num-traits]
 default-features = false

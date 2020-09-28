@@ -6,7 +6,6 @@ use crate::partial_evaluator::flatten::flatten_expr;
 use crate::utils::{get_flattened_binary_args, unflatten_binary_expr, UnflattenStrategy};
 
 use core::cmp::max;
-use rug::Rational;
 use std::collections::{HashMap, HashSet};
 
 /// A polynomial in integer space Z.
@@ -328,32 +327,26 @@ impl Poly {
         if let Some(ref term) = relative_to {
             uniq_terms.insert(term.clone());
         }
-        let mut konst_r = Rational::from(0);
+        let mut konst_f64 = 0.;
         for poly_part in poly_parts.iter() {
             match poly_part.as_ref() {
-                Expr::Const(c) => konst_r += c,
+                Expr::Const(c) => konst_f64 += c,
                 Expr::BinaryExpr(BinaryExpr {
                     op: BinaryOperator::Mult,
                     lhs,
                     rhs,
                 }) if lhs.is_const() || rhs.is_const() => {
-                    let (coeff_r, term) = if lhs.is_const() {
+                    let (c_f64, term) = if lhs.is_const() {
                         (lhs.get_const().unwrap(), rhs)
                     } else {
                         (rhs.get_const().unwrap(), lhs)
                     };
-
-                    // TODO: Use rug::Integer in Polys
-                    let coeff = if coeff_r.denom() == &1 {
-                        match coeff_r.numer().to_isize() {
-                            Some(c) => c,
-                            None => {
-                                return Err(format!("{} does not fit in an isize", coeff_r.numer()))
-                            }
-                        }
-                    } else {
-                        return Err(format!("Expected an integer coefficieny for {}", poly_part));
-                    };
+                    let coeff = c_f64 as isize;
+                    if (coeff as f64 - c_f64).abs() > std::f64::EPSILON {
+                        // Currently we only support `isize` for polynomial coefficients, so bail
+                        // out if the conversion is lossy.
+                        return Err(format!("Expected an integer coefficient for {}", poly_part));
+                    }
 
                     // Get the raw term and exponent.
                     let (term, pow) = term_and_pow_from_expr(term.clone())?;
@@ -381,15 +374,10 @@ impl Poly {
             }
         }
 
-        // TODO: Use rug::Integer in Polys
-        let konst = if konst_r.denom() == &1 {
-            match konst_r.numer().to_isize() {
-                Some(konst) => konst,
-                None => return Err(format!("{} does not fit in an isize", konst_r.numer())),
-            }
-        } else {
-            return Err(format!("Expected an integer constant, got {}", konst_r));
-        };
+        let konst = konst_f64 as isize;
+        if (konst as f64 - konst_f64).abs() > std::f64::EPSILON {
+            return Err(format!("Expected an integer constant, got {}", konst_f64));
+        }
 
         let degree = degree_coeffs.keys().max();
         match degree {
@@ -430,7 +418,7 @@ impl Poly {
                 1 => relative_to.clone(),
                 _ => rc_expr!(
                     Expr::BinaryExpr(BinaryExpr::mult(
-                        rc_expr!(Expr::Const(Rational::from(*coeff)), span),
+                        rc_expr!(Expr::Const(*coeff as f64), span),
                         relative_to.clone()
                     )),
                     span
@@ -438,19 +426,19 @@ impl Poly {
             };
 
             terms.push(match pow {
-                0 => rc_expr!(Expr::Const(Rational::from(*coeff)), span),
+                0 => rc_expr!(Expr::Const(*coeff as f64), span),
                 1 => term,
                 _ => rc_expr!(
                     Expr::BinaryExpr(BinaryExpr::exp(
                         term,
-                        rc_expr!(Expr::Const(Rational::from(pow)), span),
+                        rc_expr!(Expr::Const(pow as f64), span),
                     )),
                     span
                 ),
             });
         }
         if terms.is_empty() {
-            return rc_expr!(Expr::Const(Rational::from(0)), span);
+            return rc_expr!(Expr::Const(0.), span);
         }
 
         unflatten_binary_expr(
@@ -479,18 +467,12 @@ fn term_and_pow_from_expr(expr: RcExpr) -> Result<(RcExpr, usize), String> {
             lhs,
             rhs,
         }) if rhs.is_const() => {
-            let (pow_r, term) = (rhs.get_const().unwrap(), lhs);
-
-            // TODO: Use rug::Integer in Polys
-            let pow = if pow_r.denom() == &1 {
-                match pow_r.numer().to_usize() {
-                    Some(pow) => pow,
-                    None => return Err(format!("{} does not fit in an usize", pow_r.numer())),
-                }
-            } else {
-                return Err(format!("Expected a positive integer degree for {}", expr));
-            };
-
+            let (pow_f64, term) = (rhs.get_const().unwrap(), lhs);
+            let pow = pow_f64 as usize;
+            if (pow as f64 - pow_f64).abs() > std::f64::EPSILON {
+                // And we only support integer powers in the polynomial.
+                return Err(format!("Expected a positive term degree for {}", expr));
+            }
             Ok((term.clone(), pow))
         }
         // If there is no explicit exponentiation, just treat the whole expression

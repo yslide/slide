@@ -1,7 +1,7 @@
 use super::pattern_match::{MatchRule, PatternMatch};
 use crate::grammar::*;
 use crate::utils::{get_symmetric_expressions, hash, indent, unique_pats};
-use crate::{parse_expression_pattern, scan, ProgramContext};
+use crate::{parse_expression_pattern, scan};
 
 use core::fmt;
 use std::collections::HashMap;
@@ -60,11 +60,11 @@ impl PatternMap {
     /// ```
     ///
     /// Where `<expr>` is an expression pattern.
-    pub fn from_str(rule: &str, program_context: &ProgramContext) -> Self {
+    pub fn from_str(rule: &str) -> Self {
         let split = rule.split(" -> ");
         let mut split = split
-            .map(|s| scan(s).tokens)
-            .map(|toks| parse_expression_pattern(toks, program_context))
+            .map(|toks| scan(toks).tokens)
+            .map(parse_expression_pattern)
             .map(|(expr, _)| expr);
 
         // Unofficially, rustc's expression evaluation order is L2R, but officially it is undefined.
@@ -113,28 +113,22 @@ impl PatternMap {
     }
 }
 
-pub enum Rule<'a> {
+pub enum Rule {
     PatternMap(PatternMap),
-    Evaluate(
-        fn(RcExpr, &ProgramContext) -> Option<RcExpr>,
-        &'a ProgramContext,
-    ),
+    Evaluate(fn(RcExpr) -> Option<RcExpr>),
 }
 
-impl<'a> Rule<'a> {
-    pub fn from_fn(
-        f: fn(RcExpr, &ProgramContext) -> Option<RcExpr>,
-        context: &'a ProgramContext,
-    ) -> Self {
-        Self::Evaluate(f, context)
+impl Rule {
+    pub fn from_fn(f: fn(RcExpr) -> Option<RcExpr>) -> Self {
+        Self::Evaluate(f)
     }
 
-    pub fn from_str(s: &str, program_context: &ProgramContext) -> Self {
-        Self::PatternMap(PatternMap::from_str(s, program_context))
+    pub fn from_str(s: &str) -> Self {
+        Self::PatternMap(PatternMap::from_str(s))
     }
 }
 
-impl<'a> Transformer<RcExpr, RcExpr> for Rule<'a> {
+impl Transformer<RcExpr, RcExpr> for Rule {
     /// Attempts to apply a rule on a target expression by
     ///
     /// 1. Applying the rule recursively on the target's subexpression to obtain a
@@ -218,11 +212,10 @@ impl<'a> Transformer<RcExpr, RcExpr> for Rule<'a> {
                         }
                     }
                 }
-                Rule::Evaluate(f, context) => {
+                Rule::Evaluate(f) => {
                     // First, apply the rule recursively on the target's subexpressions.
                     let partially_transformed = transform_inner(rule, target.clone(), cache);
-                    result =
-                        f(partially_transformed.clone(), context).unwrap_or(partially_transformed);
+                    result = f(partially_transformed.clone()).unwrap_or(partially_transformed);
                 }
             }
 
@@ -234,7 +227,7 @@ impl<'a> Transformer<RcExpr, RcExpr> for Rule<'a> {
     }
 }
 
-impl<'a> Transformer<RcExprPat, RcExprPat> for Rule<'a> {
+impl Transformer<RcExprPat, RcExprPat> for Rule {
     /// Bootstraps a rule with another (or possibly the same) rule.
     fn transform(&self, target: RcExprPat) -> RcExprPat {
         // First, apply the rule recursively on the target's subexpressions.
@@ -288,24 +281,24 @@ fn fn_name<T>(_: T) -> &'static str {
     name.split("::").last().unwrap()
 }
 
-impl<'a> fmt::Display for Rule<'a> {
+impl fmt::Display for Rule {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
             match self {
                 Self::PatternMap(pm) => pm.to_string(),
-                Self::Evaluate(fun, _) => fn_name(fun).to_string(),
+                Self::Evaluate(fun) => fn_name(fun).to_string(),
             }
         )
     }
 }
 
-impl<'a> fmt::Debug for Rule<'a> {
+impl fmt::Debug for Rule {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::PatternMap(pm) => write!(f, "{:?}", pm),
-            Self::Evaluate(fun, _) => write!(f, "{}", fn_name(fun)),
+            Self::Evaluate(fun) => write!(f, "{}", fn_name(fun)),
         }
     }
 }
@@ -316,12 +309,9 @@ mod tests {
 
     #[test]
     fn validate_error() {
-        let err = PatternMap::from_str(
-            "_a + $b / #c * 3 -> 1 + $b * #e / _f",
-            &ProgramContext::test(),
-        )
-        .validate()
-        .unwrap();
+        let err = PatternMap::from_str("_a + $b / #c * 3 -> 1 + $b * #e / _f")
+            .validate()
+            .unwrap();
 
         assert_eq!(
             err.to_string(),
@@ -333,10 +323,8 @@ Specifically, source "_a + $b / #c * 3" is missing pattern(s) "#e", "_f" present
 
     #[test]
     fn validate_ok() {
-        assert!(
-            PatternMap::from_str("_a + $b / #c -> _a + $b", &ProgramContext::test())
-                .validate()
-                .is_none()
-        );
+        assert!(PatternMap::from_str("_a + $b / #c -> _a + $b")
+            .validate()
+            .is_none());
     }
 }

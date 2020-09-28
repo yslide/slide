@@ -3,7 +3,6 @@ mod fn_rules;
 use super::rule::*;
 use super::unbuilt_rule::UnbuiltRule;
 use crate::utils::indent;
-use crate::ProgramContext;
 use fn_rules::*;
 
 use core::fmt;
@@ -93,10 +92,7 @@ impl Default for RuleSet {
 
 impl RuleSet {
     /// Creates a list of `Rules`s from the unbuilt rule set.
-    pub fn build<'a>(
-        &self,
-        program_context: &'a ProgramContext,
-    ) -> Result<Vec<Rule<'a>>, BuildRuleErrors> {
+    pub fn build(&self) -> Result<Vec<Rule>, BuildRuleErrors> {
         // Order rules deterministically -- first order by name, then add custom rules.
         let mut unbuilt_named_rules: Vec<(&RuleName, &UnbuiltRule)> = self.rules.iter().collect();
         unbuilt_named_rules.sort_by(|&(a, _), &(b, _)| a.cmp(b));
@@ -118,11 +114,11 @@ impl RuleSet {
 
         let mut built_rules = Vec::with_capacity(num_rules);
         let mut errors: Vec<Box<dyn Error>> = Vec::new();
-        let bootstrapping_rules = Self::get_bootstrapping_rules(program_context);
+        let bootstrapping_rules = Self::get_bootstrapping_rules();
         let bootstrap_blacklist = Self::get_boostrap_blacklist();
         let mut mk_str_rule =
             |built_rules: &mut Vec<Rule>, rule_name: Option<&RuleName>, rule: &'static str| {
-                let pm = PatternMap::from_str(rule, program_context);
+                let pm = PatternMap::from_str(rule);
                 if let Some(err) = pm.validate() {
                     errors.push(err.into());
                     return;
@@ -143,7 +139,7 @@ impl RuleSet {
                         mk_str_rule(&mut built_rules, rule_name, rule);
                     }
                 }
-                UnbuiltRule::F(f) => built_rules.push(Rule::from_fn(*f, program_context)),
+                UnbuiltRule::F(f) => built_rules.push(Rule::from_fn(*f)),
             }
         }
 
@@ -166,7 +162,7 @@ impl RuleSet {
     }
 
     /// Retrieves a set of rules to be used in bootstrapping other rules.
-    fn get_bootstrapping_rules(program_context: &ProgramContext) -> Vec<Rule> {
+    fn get_bootstrapping_rules() -> Vec<Rule> {
         let bootstrapping_rules = [
             RuleName::UnwrapExplicitParens,
             RuleName::UnwrapExplicitBrackets,
@@ -177,12 +173,9 @@ impl RuleSet {
             .iter()
             .map(|r| rule_set.get(r).unwrap())
             .flat_map(|r| match r {
-                UnbuiltRule::S(s) => vec![Rule::from_str(s, program_context)],
-                UnbuiltRule::M(m) => m
-                    .iter()
-                    .map(|s| Rule::from_str(s, program_context))
-                    .collect(),
-                UnbuiltRule::F(f) => vec![Rule::from_fn(*f, program_context)],
+                UnbuiltRule::S(s) => vec![Rule::from_str(s)],
+                UnbuiltRule::M(m) => m.iter().map(|s| Rule::from_str(s)).collect(),
+                UnbuiltRule::F(f) => vec![Rule::from_fn(*f)],
             })
             .collect()
     }
@@ -232,8 +225,7 @@ mod tests {
     #[test]
     fn builds_rules() {
         let rule_set = RuleSet::default();
-        let ctxt = ProgramContext::test();
-        let built_rules = rule_set.build(&ctxt).unwrap();
+        let built_rules = rule_set.build().unwrap();
 
         assert!(built_rules
             .into_iter()
@@ -245,7 +237,7 @@ mod tests {
         let mut rule_set = RuleSet::default();
         rule_set.insert_custom("_a -> _b");
         rule_set.insert_custom("$a -> $a - _c");
-        let err = rule_set.build(&ProgramContext::test()).expect_err("");
+        let err = rule_set.build().expect_err("");
 
         assert_eq!(
             err.to_string(),

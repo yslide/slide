@@ -66,7 +66,7 @@ impl<'a> IncompatibleDefinitionsValidator<'a> {
             let diff = evaluate_expr(diff, evaluator_rules, context);
             match diff.get_const() {
                 None => continue,
-                Some(e) if e == &0 => continue,
+                Some(e) if e.abs() <= std::f64::EPSILON => continue,
                 Some(_) => diagnostics.push(IncompatibleDefinitions!(def_a.var, def_a, def_b)),
             }
         }

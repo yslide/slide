@@ -1,33 +1,31 @@
-use super::{errors::*, str2rat, Parser};
+use super::{errors::*, Parser};
+use crate::common::Span;
 use crate::diagnostics::{Diagnostic, DiagnosticRecord};
 use crate::grammar::*;
 use crate::scanner::types::Token;
 use crate::utils::PeekIter;
-use crate::{ProgramContext, Span};
 
 /// Parses a tokenized slide expression pattern, emitting the result and any diagnostics.
-pub fn parse(input: Vec<Token>, program_context: &ProgramContext) -> (RcExprPat, Vec<Diagnostic>) {
-    let mut parser = ExpressionPatternParser::new(input, program_context);
+pub fn parse(input: Vec<Token>) -> (RcExprPat, Vec<Diagnostic>) {
+    let mut parser = ExpressionPatternParser::new(input);
     (parser.parse(), parser.diagnostics)
 }
 
-pub struct ExpressionPatternParser<'a> {
+pub struct ExpressionPatternParser {
     _input: PeekIter<Token>,
     diagnostics: Vec<Diagnostic>,
-    context: &'a ProgramContext,
 }
 
-impl<'a> ExpressionPatternParser<'a> {
-    fn new(input: Vec<Token>, context: &'a ProgramContext) -> Self {
+impl ExpressionPatternParser {
+    fn new(input: Vec<Token>) -> Self {
         Self {
             _input: PeekIter::new(input.into_iter()),
             diagnostics: vec![],
-            context,
         }
     }
 }
 
-impl<'a> Parser<RcExprPat> for ExpressionPatternParser<'a> {
+impl Parser<RcExprPat> for ExpressionPatternParser {
     type Expr = RcExprPat;
 
     fn input(&mut self) -> &mut PeekIter<Token> {
@@ -46,9 +44,8 @@ impl<'a> Parser<RcExprPat> for ExpressionPatternParser<'a> {
         parsed
     }
 
-    fn parse_num(&mut self, num: String, span: Span) -> Self::Expr {
-        let num = str2rat(&num, self.context.prec);
-        rc_expr_pat!(ExprPat::Const(num), span)
+    fn parse_float(&mut self, f: f64, span: Span) -> Self::Expr {
+        rc_expr_pat!(ExprPat::Const(f), span)
     }
 
     fn parse_variable(&mut self, name: String, span: Span) -> Self::Expr {

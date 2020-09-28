@@ -2,10 +2,10 @@
 #[macro_export]
 macro_rules! parse_stmt {
     ($expr:expr) => {{
-        use crate::{parse_statement, scan, ProgramContext};
+        use crate::{parse_statement, scan};
 
         let tokens = scan($expr).tokens;
-        let (parsed, _) = parse_statement(tokens, $expr, &ProgramContext::test());
+        let (parsed, _) = parse_statement(tokens, $expr);
         parsed
     }};
 }

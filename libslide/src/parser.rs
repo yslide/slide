@@ -22,7 +22,6 @@ use crate::scanner::types::{Token, TokenType as TT};
 use crate::utils::PeekIter;
 
 use core::convert::TryFrom;
-use rug::{Float, Rational};
 
 macro_rules! binary_expr_parser {
     ($self:ident $($name:ident: lhs=$lhs_term:ident, rhs=$rhs_term:ident, op=[$($matching_op:tt)+])*) => {
@@ -52,19 +51,6 @@ macro_rules! binary_expr_parser {
     };
 }
 
-/// Parses a string into a [Rational][rug::Rational].
-fn str2rat(s: &str, prec: u32) -> Rational {
-    if s.contains('.') {
-        Float::parse(s)
-            .ok()
-            .map(|f| Float::with_val(prec, f))
-            .and_then(|f| f.to_rational())
-            .unwrap()
-    } else {
-        Rational::parse(s).map(Rational::from).unwrap()
-    }
-}
-
 /// Returns a diagnostic for an unclosed delimiter.
 fn unclosed_delimiter(opener: Token, expected_closer: TT, found_closer: Token) -> Diagnostic {
     let mut found_str = found_closer.to_string();
@@ -86,7 +72,7 @@ where
     // fn new(input: Vec<Token>) -> Self;
     fn input(&mut self) -> &mut PeekIter<Token>;
     fn parse(&mut self) -> T;
-    fn parse_num(&mut self, num: String, span: Span) -> Self::Expr;
+    fn parse_float(&mut self, f: f64, span: Span) -> Self::Expr;
     fn parse_variable(&mut self, name: String, span: Span) -> Self::Expr;
     fn parse_var_pattern(&mut self, name: String, span: Span) -> Self::Expr;
     fn parse_const_pattern(&mut self, name: String, span: Span) -> Self::Expr;
@@ -164,7 +150,7 @@ where
             Self::Expr::unary(UnaryExpr { op, rhs }, span)
         } else {
             match tok.ty {
-                TT::Num(n) => self.parse_num(n, tok.span),
+                TT::Float(f) => self.parse_float(f, tok.span),
                 TT::Variable(name) => self.parse_variable(name, tok.span),
                 TT::VariablePattern(name) => self.parse_var_pattern(name, tok.span),
                 TT::ConstPattern(name) => self.parse_const_pattern(name, tok.span),

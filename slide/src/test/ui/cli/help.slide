@@ -35,8 +35,6 @@ OPTIONS:
             	latex:        LaTeX math mode code, like "$\left\(1 + 2\right\)$".
             	debug:        Opaque internal representation. Note: this format is not stable.
              [default: pretty]
-    -p, --precision <prec>                Floating-point precision, in terms of number of significant bits. [default:
-                                          200]
 
 ARGS:
     <program>    Program to evaluate

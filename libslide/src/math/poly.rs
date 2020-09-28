@@ -29,7 +29,7 @@ impl From<&Vec<isize>> for Poly {
     }
 }
 
-/// Creates a new [Poly][Poly].
+/// Creates a new [Poly](self::Poly).
 ///
 /// # Examples:
 ///
@@ -49,13 +49,13 @@ macro_rules! poly {
 }
 
 impl Poly {
-    /// Creates a new [Poly][Poly] from a vector of coefficients, with the degree of each
+    /// Creates a new [Poly](self::Poly) from a vector of coefficients, with the degree of each
     /// coefficient being its index in the vector.
     pub fn new(vec: Vec<isize>) -> Self {
         Self { vec }.truncate_zeros()
     }
 
-    /// Creates an empty [Poly][Poly].
+    /// Creates an empty [Poly](self::Poly).
     pub fn empty() -> Self {
         Self::new(vec![]).truncate_zeros()
     }
@@ -397,7 +397,7 @@ impl Poly {
         }
     }
 
-    /// Converts a [Poly][Poly] polynomial, relative to some term, into an expression.
+    /// Converts a [Poly](self::Poly) polynomial, relative to some term, into an expression.
     ///
     /// A artificial `span` the elements of the converted expression are derived from must be
     /// provided. In general, `span` should be the span of an expression previously converted the

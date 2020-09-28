@@ -8,9 +8,16 @@
 # Options:
 #       --open    Open documentation after building
 
+set -e
+
 ARGS=("--document-private-items" "--no-deps")
 if [ "$1" = "--open" ]; then
   ARGS+=("--open")
 fi
+
+ALL_RUST_FILES=($(find . -type f -name "*.rs" -print))
+
+# Validate all link references exist
+scripts/_scripts/markdown/validate-link-refs.js '((?:^\s*(?:\/\/[\/|!]?).*$[\r]?\n)+)' '^\s*(?:\/\/[\/|!]?)' ${ALL_RUST_FILES[@]}
 
 cargo doc ${ARGS[@]}

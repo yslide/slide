@@ -1,6 +1,6 @@
 //! User-facing slide diagnostics.
 //!
-//! The diagnostics module demarshalls [libslide diagnostics][libslide::diagnostics] into a form
+//! The diagnostics module translates [libslide diagnostics](libslide::diagnostics) into a form
 //! pleasant for standard output.
 
 use libslide::diagnostics::{AssociatedDiagnostic, Diagnostic, DiagnosticKind};

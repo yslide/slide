@@ -105,7 +105,7 @@ pub struct Assignment {
 }
 
 impl Assignment {
-    /// Redefines the [`Assignment`][Assignment] with a definition-evaluating function `eval`.
+    /// Redefines `self` with a definition-evaluating function `eval`.
     pub fn redefine_with(mut self, eval: impl FnOnce(RcExpr) -> RcExpr) -> Self {
         self.rhs = eval(self.rhs);
         self

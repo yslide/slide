@@ -3,7 +3,7 @@
 use crate::common::Span;
 use core::fmt;
 
-/// The type of a [Token][Token].
+/// The type of a [Token](self::Token).
 #[derive(PartialEq, Clone, Debug)]
 pub enum TokenType {
     /// Stores a scanned number in double precision.

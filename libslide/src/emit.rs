@@ -69,18 +69,18 @@ impl From<Vec<String>> for EmitConfig {
     }
 }
 
-/// Implements the emission of a type in an [EmitFormat][EmitFormat].
+/// Implements the emission of a type in an [EmitFormat](self::EmitFormat).
 pub trait Emit
 where
     // These are trivially implementable using `emit_pretty` and `emit_debug`. The easiest way to
     // do this is with the `fmt_emit_impl` macro.
     Self: fmt::Display + fmt::Debug,
 {
-    /// Emit `self` with the given [EmitFormat][EmitFormat].
+    /// Emit `self` with the given [EmitFormat](self::EmitFormat).
     ///
-    /// NB: This is a multiplexer of the corresponding `emit_` methods present on [Emit][Emit],
-    /// except for [EmitFormat::Latex][EmitFormat::Latex], which is emitted via
-    /// [emit_wrapped_latex][Emit::emit_wrapped_latex].
+    /// NB: This is a multiplexer of the corresponding `emit_` methods present on
+    /// [Emit](self::Emit), except for [EmitFormat::Latex](EmitFormat::Latex), which is emitted via
+    /// [emit_wrapped_latex](Emit::emit_wrapped_latex).
     fn emit(&self, form: EmitFormat, config: EmitConfig) -> String {
         match form {
             EmitFormat::Pretty => self.emit_pretty(config),
@@ -90,21 +90,21 @@ where
         }
     }
 
-    /// Emit `self` with the [pretty emit format][EmitFormat::Pretty]
+    /// Emit `self` with the [pretty emit format](EmitFormat::Pretty)
     fn emit_pretty(&self, config: EmitConfig) -> String;
 
-    /// Emit `self` with the [debug emit format][EmitFormat::Debug]
+    /// Emit `self` with the [debug emit format](EmitFormat::Debug)
     fn emit_debug(&self, _config: EmitConfig) -> String {
         format!("{:#?}", self)
     }
 
-    /// Emit `self` with the [s_expression emit format][EmitFormat::SExpression]
+    /// Emit `self` with the [s_expression emit format](EmitFormat::SExpression)
     fn emit_s_expression(&self, config: EmitConfig) -> String;
 
-    /// Emit `self` with the [LaTeX emit format][EmitFormat::Latex]
+    /// Emit `self` with the [LaTeX emit format](EmitFormat::Latex)
     fn emit_latex(&self, config: EmitConfig) -> String;
 
-    /// Same as [emit_latex][Emit::emit_latex], but wraps the latex code in inline math mode.
+    /// Same as [emit_latex](Emit::emit_latex), but wraps the latex code in inline math mode.
     fn emit_wrapped_latex(&self, config: EmitConfig) -> String {
         format!("${}$", self.emit_latex(config))
     }

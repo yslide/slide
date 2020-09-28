@@ -21,7 +21,7 @@ lazy_static! {
     static ref EMPTY_STR: InternedStr = InternedStr::intern("");
 }
 
-/// An interned [String][std::string::String] type.
+/// An interned [String](std::string::String) type.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct InternedStr(Spur);
 

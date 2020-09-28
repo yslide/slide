@@ -1,4 +1,4 @@
-//! The slide app. For an overview of slide's design, see [libslide's documentation][libslide].
+//! The slide app. For an overview of slide's design, see [libslide's documentation](libslide).
 
 #![deny(warnings)]
 #![deny(missing_docs)]
@@ -42,14 +42,14 @@ pub struct Opts {
     pub parse_only: bool,
     /// When true, slide will expect the program to be an expression pattern.
     pub expr_pat: bool,
-    /// When is [Some][Option::Some], will explain a diagnostic code.
+    /// When is [Some](Option::Some) diagnostic code, will explain that code.
     pub explain_diagnostic: Option<String>,
     /// When true, slide emit will be colored.
     pub color: bool,
 }
 
-/// Parses [Opts][Opts] from the command line or given a parser that acts on the clap
-/// [App][clap::App].
+/// Parses [Opts](self::Opts) from the command line or given a parser that acts on the clap
+/// [App](clap::App).
 pub fn get_opts<P>(parser: P, color: bool) -> Result<Opts, clap::Error>
 where
     P: for<'a> FnOnce(clap::App<'a, '_>) -> Result<clap::ArgMatches<'a>, clap::Error>,
@@ -155,9 +155,9 @@ pub struct SlideResult {
     pub page: bool,
 }
 
-/// Builds a [SlideResult][SlideResult].
+/// Builds a [SlideResult](self::SlideResult).
 struct SlideResultBuilder<'a> {
-    /// File the program is defined in. [None][Option::None] if the program comes from a side
+    /// File the program is defined in. [None](Option::None) if the program comes from a side
     /// channel like stdin.
     file: Option<&'a str>,
     /// Original slide program source code.
@@ -355,8 +355,8 @@ impl<'a> ProgramEvaluator<'a> {
 }
 
 /// Runs slide through a wasm entry point.
-/// `opts` must be a JS object with the same fields as [Opts][Opts].
-/// Returns a JS object with the same fields as [SlideResult][SlideResult].
+/// `opts` must be a JS object with the same fields as [Opts](self::Opts).
+/// Returns a JS object with the same fields as [SlideResult](self::SlideResult).
 #[cfg(feature = "wasm")]
 #[wasm_bindgen]
 pub fn run_slide_wasm(opts: JsValue) -> JsValue {

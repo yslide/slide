@@ -4,7 +4,7 @@
 mod incompatible_definitions;
 use incompatible_definitions::*;
 
-use super::EvaluatorContext;
+use super::ProgramContext;
 
 use crate::diagnostics::Diagnostic;
 use crate::evaluator_rules::Rule;
@@ -14,7 +14,7 @@ trait Validator<'a> {
     fn validate(
         stmt_list: &StmtList,
         source: &'a str,
-        context: &EvaluatorContext,
+        context: &ProgramContext,
         evaluator_rules: &[Rule],
     ) -> Vec<Diagnostic>;
 }
@@ -30,7 +30,7 @@ macro_rules! register_validators {
                 &self,
                 stmt_list: &StmtList,
                 source: &'a str,
-                context: &EvaluatorContext,
+                context: &ProgramContext,
                 evaluator_rules: &[Rule],
             ) -> Vec<Diagnostic> {
                 match self {
@@ -43,7 +43,7 @@ macro_rules! register_validators {
         pub(super) fn validate<'a>(
             stmt_list: &StmtList,
             source: &'a str,
-            context: &EvaluatorContext,
+            context: &ProgramContext,
             evaluator_rules: &[Rule],
         ) -> Vec<Diagnostic> {
             [$(PEValidator::$validator),*]

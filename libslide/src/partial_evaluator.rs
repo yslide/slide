@@ -3,19 +3,18 @@
 #[macro_use]
 mod errors;
 pub mod flatten;
-mod types;
 mod validate;
 mod variable_expand;
 
 pub use errors::PartialEvaluatorErrors;
 use flatten::flatten_expr;
-pub use types::*;
 use validate::validate;
 
 use crate::diagnostics::Diagnostic;
 use crate::evaluator_rules::{BuildRuleErrors, Rule, RuleSet};
 use crate::grammar::*;
 use crate::utils::{hash, normalize};
+use crate::ProgramContext;
 
 use std::collections::HashSet;
 use std::error::Error;
@@ -24,7 +23,7 @@ use std::error::Error;
 /// The evaluation may be partial, as some values (like variables) may be unknown.
 pub fn evaluate(
     stmt_list: StmtList,
-    ctxt: &EvaluatorContext,
+    ctxt: &ProgramContext,
 ) -> Result<(StmtList, Vec<Diagnostic>), Box<dyn Error>> {
     let eval_rules = build_rules(ctxt)?;
     let evaluated = stmt_list
@@ -53,7 +52,7 @@ pub fn evaluate(
 /// Evaluates an expression to as simplified a form as possible.
 /// The evaluation may be partial, as some values (like variables) may be unknown.
 /// The returned expression is [normalized](crate::utils::normalize).
-fn evaluate_expr(expr: RcExpr, rules: &[Rule], ctxt: &EvaluatorContext) -> RcExpr {
+fn evaluate_expr(expr: RcExpr, rules: &[Rule], ctxt: &ProgramContext) -> RcExpr {
     let mut simplified_expr = expr;
     // Try simplifying the expression with a rule set until the same expression is seen again,
     // meaning we can't simplify any further or are stuck in a cycle.
@@ -73,7 +72,7 @@ fn evaluate_expr(expr: RcExpr, rules: &[Rule], ctxt: &EvaluatorContext) -> RcExp
 }
 
 /// Given an evaluator context, builds a set of evaluator rules to be used in partial evaluation.
-fn build_rules(ctxt: &EvaluatorContext) -> Result<Vec<Rule>, BuildRuleErrors> {
+fn build_rules(ctxt: &ProgramContext) -> Result<Vec<Rule>, BuildRuleErrors> {
     let mut rule_set = RuleSet::default();
     for rule in &ctxt.rule_denylist {
         rule_set.remove(rule)
@@ -85,7 +84,7 @@ fn build_rules(ctxt: &EvaluatorContext) -> Result<Vec<Rule>, BuildRuleErrors> {
 mod tests {
     use super::evaluate;
     use crate::evaluator_rules::RuleName;
-    use crate::{parse_stmt, EvaluatorContext};
+    use crate::{parse_stmt, ProgramContext};
 
     macro_rules! partial_evaluator_tests {
         ($($name:ident: $program:expr => $result:expr)*) => {
@@ -93,7 +92,7 @@ mod tests {
             #[test]
             fn $name() {
                 let parsed = parse_stmt!($program);
-                let (evaluated, _) = evaluate(parsed.clone(), &EvaluatorContext::default()).unwrap();
+                let (evaluated, _) = evaluate(parsed.clone(), &ProgramContext::default()).unwrap();
 
                 assert_eq!(evaluated.to_string(), $result.to_string());
             }
@@ -176,7 +175,7 @@ mod tests {
     #[test]
     fn remove_rule() {
         let parsed = parse_stmt!("1 - 2 + 3 * 4");
-        let ctxt = EvaluatorContext::default()
+        let ctxt = ProgramContext::default()
             .with_denylist([RuleName::Add].to_vec())
             .always_flatten(false);
         let (evaluated, _) = evaluate(parsed, &ctxt).unwrap();

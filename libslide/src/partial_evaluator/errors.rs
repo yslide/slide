@@ -75,4 +75,41 @@ define_errors! {
             ))
         }
     }
+
+    // TODO(#263): unify this with other lints.
+    ///This warning is fired on variable definitions that may be incompatible. For example, given
+    ///the program
+    ///
+    ///```text
+    ///a := b
+    ///a := 2*b
+    ///```
+    ///
+    ///The definitions of "a" are maybe-incompatible; in particular, they are compatible iff
+    ///"b := 0". This ambiguity is considered error-prone because it does not clearly communicate
+    ///intent of the definitions, and there is no information to validate the soundness of a program
+    ///in such a state.
+    ///
+    ///The behavior of maybe-incompatible definitions is considered undefined behavior.
+    L0005: MaybeIncompatibleDefinitions {
+        ($var:expr, $a_def:expr, $b_def:expr) => {
+            Diagnostic::span_warn(
+                $a_def.span,
+                format!(r#"Definitions of "{}" may be incompatible"#, $var),
+                "L0002",
+                format!(r#"this definition evaluates to "{}""#, $a_def),
+            )
+            .with_spanned_warn(
+                $b_def.span,
+                format!(r#"this definition evaluates to "{}""#, $b_def),
+            )
+            .with_note(format!(
+                r#""{}" and "{}" may not be equal"#,
+                $a_def.rhs, $b_def.rhs
+            ))
+            .with_note(
+                "there is not enough information to conclude whether the definitions are compatible"
+            )
+        }
+    }
 }

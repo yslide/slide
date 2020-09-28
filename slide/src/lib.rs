@@ -14,7 +14,7 @@ use libslide::diagnostics::Diagnostic;
 use libslide::scanner::ScanResult;
 use libslide::{
     evaluate, lint_expr_pat, lint_stmt, parse_expression_pattern, parse_statement, scan, Emit,
-    EmitConfig, EmitFormat, EvaluatorContext, Token,
+    EmitConfig, EmitFormat, ProgramContext, Token,
 };
 
 #[cfg(feature = "wasm")]
@@ -307,6 +307,7 @@ impl<'a> ProgramEvaluator<'a> {
             return self.result.failed();
         }
 
+        let program_context = ProgramContext::default().lint(self.lint);
         if self.lint {
             self.result
                 .err(&lint_stmt(&parse_tree, self.result.org_program));
@@ -317,8 +318,7 @@ impl<'a> ProgramEvaluator<'a> {
 
             self.result.ok()
         } else {
-            let (simplified, diagnostics) =
-                evaluate(parse_tree, &EvaluatorContext::default()).unwrap();
+            let (simplified, diagnostics) = evaluate(parse_tree, &program_context).unwrap();
 
             self.result.err(&diagnostics);
             self.result.emit(&simplified);

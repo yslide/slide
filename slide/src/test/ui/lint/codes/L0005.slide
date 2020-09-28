@@ -1,0 +1,30 @@
+!!!args
+--explain=L0005
+!!!args
+
+===in
+===in
+
+~~~stdout
+This warning is fired on variable definitions that may be incompatible. For example, given
+the program
+
+```text
+a := b
+a := 2*b
+```
+
+The definitions of "a" are maybe-incompatible; in particular, they are compatible iff
+"b := 0". This ambiguity is considered error-prone because it does not clearly communicate
+intent of the definitions, and there is no information to validate the soundness of a program
+in such a state.
+
+The behavior of maybe-incompatible definitions is considered undefined behavior.
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

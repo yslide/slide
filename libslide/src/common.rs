@@ -1,5 +1,7 @@
 //! Common types used by libslide.
 
+use crate::evaluator_rules::RuleName;
+
 use std::cmp::Ordering;
 
 /// Describes the character span of a substring in a text.
@@ -85,5 +87,50 @@ impl From<std::ops::Range<usize>> for Span {
 impl From<Span> for (usize, usize) {
     fn from(span: Span) -> Self {
         (span.lo, span.hi)
+    }
+}
+
+/// A context for evaluating a slide program.
+pub struct ProgramContext {
+    /// Rules that should not be included in the evaluation of an expression.
+    pub(crate) rule_denylist: Vec<RuleName>,
+
+    /// Whether an expression should always be flattened before it is further evaluated.
+    pub(crate) always_flatten: bool,
+
+    /// Whether "lint"-like diagnostics should be emitted.
+    pub(crate) lint: bool,
+}
+
+impl Default for ProgramContext {
+    fn default() -> Self {
+        Self {
+            rule_denylist: vec![],
+            always_flatten: true,
+            lint: false,
+        }
+    }
+}
+
+impl ProgramContext {
+    /// Set rules to exclude in evaluation.
+    pub fn with_denylist<T>(mut self, rule_denylist: T) -> Self
+    where
+        T: Into<Vec<RuleName>>,
+    {
+        self.rule_denylist = rule_denylist.into();
+        self
+    }
+
+    /// Whether expressions should always be flattened during evaluation.
+    pub fn always_flatten(mut self, flatten: bool) -> Self {
+        self.always_flatten = flatten;
+        self
+    }
+
+    /// Sets whether "lint"-like diagnostics should be emitted.
+    pub fn lint(mut self, lint: bool) -> Self {
+        self.lint = lint;
+        self
     }
 }

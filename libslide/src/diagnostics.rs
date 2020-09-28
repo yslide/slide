@@ -150,6 +150,8 @@ impl Diagnostic {
     with_spanned_diag! {
         /// Adds an error to the diagnostic, possibly at a different span.
         with_spanned_err as Error
+        /// Adds a warning to the diagnostic, possibly at a different span.
+        with_spanned_warn as Error
         /// Adds a help message to the diagnostic, possibly at a different span.
         with_spanned_help as Help
         /// Adds a note to the diagnostic, possibly at a different span.
@@ -173,6 +175,8 @@ macro_rules! include_diagnostic_registries {
             use super::{Diagnostic, DiagnosticRegistry};
             use crate::*;
 
+            use std::collections::{HashMap, BTreeSet};
+
             #[test]
             fn check_conflicts() {
                 let mut vec = Vec::new();
@@ -194,6 +198,26 @@ macro_rules! include_diagnostic_registries {
                     for ch in code.chars().skip(1) {
                         assert!(matches!(ch, '0'..='9'));
                     }
+                }
+            }
+
+            /// No code numbers should be skipped.
+            #[test]
+            fn check_density() {
+                let codes = Diagnostic::all_codes_with_explanations();
+                let mut segments: HashMap<&str, BTreeSet<usize>> = HashMap::new();
+
+                for code in codes.keys() {
+                    segments.entry(&code[0..1]).or_default().insert(code[1..].parse().unwrap());
+                }
+
+                for (segment, codes) in segments {
+                    let expected_codes: BTreeSet<_> = (1..=codes.len()).into_iter().collect();
+                    let missing: BTreeSet<_> = expected_codes.difference(&codes).collect();
+                    let unexpected: BTreeSet<_> = codes.difference(&expected_codes).collect();
+                    assert!(missing.is_empty(), r#"Expected {} "{}" codes
+Missing: {:?}
+Unexpected: {:?}"#, expected_codes.len(), segment, missing, unexpected);
                 }
             }
         }

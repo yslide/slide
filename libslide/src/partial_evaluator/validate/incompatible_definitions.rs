@@ -8,7 +8,8 @@ use super::Validator;
 use crate::diagnostics::Diagnostic;
 use crate::evaluator_rules::Rule;
 use crate::grammar::*;
-use crate::partial_evaluator::{evaluate_expr, EvaluatorContext};
+use crate::partial_evaluator::evaluate_expr;
+use crate::ProgramContext;
 
 use std::collections::HashMap;
 
@@ -55,7 +56,7 @@ impl<'a> IncompatibleDefinitionsValidator<'a> {
         definition_pairs
     }
 
-    fn validate(self, context: &EvaluatorContext, evaluator_rules: &[Rule]) -> Vec<Diagnostic> {
+    fn validate(self, context: &ProgramContext, evaluator_rules: &[Rule]) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
         let definition_pairs = self.all_ordered_definition_pairs();
         for (def_a, def_b) in definition_pairs.into_iter() {
@@ -64,11 +65,15 @@ impl<'a> IncompatibleDefinitionsValidator<'a> {
                 crate::DUMMY_SP
             );
             let diff = evaluate_expr(diff, evaluator_rules, context);
-            match diff.get_const() {
-                None => continue,
+            diagnostics.push(match diff.get_const() {
+                None if !context.lint => continue,
                 Some(e) if e.abs() <= std::f64::EPSILON => continue,
-                Some(_) => diagnostics.push(IncompatibleDefinitions!(def_a.var, def_a, def_b)),
-            }
+
+                // Difference is variable-dependent; defs are maybe-incompatible.
+                None => MaybeIncompatibleDefinitions!(def_a.var, def_a, def_b),
+                // Difference is a non-zero constant; defs are definitely incompatible.
+                Some(_) => IncompatibleDefinitions!(def_a.var, def_a, def_b),
+            });
         }
         diagnostics
     }
@@ -84,7 +89,7 @@ impl<'a> Validator<'a> for IncompatibleDefinitionsValidator<'a> {
     fn validate(
         stmt_list: &StmtList,
         _source: &'a str,
-        context: &EvaluatorContext,
+        context: &ProgramContext,
         evaluator_rules: &[Rule],
     ) -> Vec<Diagnostic> {
         let mut validator = IncompatibleDefinitionsValidator::default();

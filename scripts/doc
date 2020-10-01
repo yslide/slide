@@ -24,7 +24,10 @@ ALL_RUST_FILES=($(find . -type f -name "*.rs" -print))
 # Validate all link references exist
 scripts/_scripts/markdown/validate-link-refs.js '((?:^\s*(?:\/\/[\/|!]?).*$[\r]?\n)+)' '^\s*(?:\/\/[\/|!]?)' ${ALL_RUST_FILES[@]}
 
-# Validate links are valid
-cargo deadlinks --check-http
-
 cargo doc ${ARGS[@]}
+
+if rustc -V | grep -q "nightly"; then
+  # Validate links are valid. Only nightly supports intra-doc links, so guard on
+  # that until https://github.com/rust-lang/rfcs/pull/1946 is stabilized.
+  cargo deadlinks --check-http
+fi

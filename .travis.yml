@@ -67,12 +67,12 @@ after_success:
   - |
     if [ "$TRAVIS_BRANCH" == "master" ]; then
       if [ "$CHANNEL" == "stable" ]; then
+        export DEPLOY_UI=1
+        scripts/build_www
+      elif [ "$CHANNEL" == "nightly" ]; then
         cargo doc --no-deps --target-dir docs-public
         cargo doc --document-private-items --no-deps --target-dir docs-internal
         export DEPLOY_DOCS=1
-      elif [ "$CHANNEL" == "nightly" ]; then
-        export DEPLOY_UI=1
-        scripts/build_www
       fi
     fi
     if [ ! -z "$TRAVIS_TAG" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then

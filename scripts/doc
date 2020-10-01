@@ -10,6 +10,10 @@
 
 set -e
 
+if ! command -v cargo-deadlinks &> /dev/null; then
+  cargo install cargo-deadlinks
+fi
+
 ARGS=("--document-private-items" "--no-deps")
 if [ "$1" = "--open" ]; then
   ARGS+=("--open")
@@ -19,5 +23,8 @@ ALL_RUST_FILES=($(find . -type f -name "*.rs" -print))
 
 # Validate all link references exist
 scripts/_scripts/markdown/validate-link-refs.js '((?:^\s*(?:\/\/[\/|!]?).*$[\r]?\n)+)' '^\s*(?:\/\/[\/|!]?)' ${ALL_RUST_FILES[@]}
+
+# Validate links are valid
+cargo deadlinks --check-http
 
 cargo doc ${ARGS[@]}

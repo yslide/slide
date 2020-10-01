@@ -23,7 +23,7 @@ use crate::grammar::{Grammar, RcExprPat, StmtList};
 
 /// Describes a slide program linter. A `Linter` is implemented on a slide [Grammar].
 ///
-/// [Grammar]: [crate::grammar::Grammar].
+/// [Grammar]: crate::grammar::Grammar
 pub trait LintRule<'a, G>
 where
     Self: DiagnosticRecord,

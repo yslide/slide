@@ -1,6 +1,6 @@
 //! Detects incompatible variable definitions in a slide program.
 //!
-//! See the [`IncompatibleDefinitions`](crate::partial_evaluator::errors::IncompatibleDefinitions)
+//! See the [`IncompatibleDefinitions`](super::super::errors::IncompatibleDefinitions)
 //! error for more details.
 
 use super::Validator;

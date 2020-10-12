@@ -119,7 +119,7 @@ impl RuleSet {
         let mut mk_str_rule =
             |built_rules: &mut Vec<Rule>, rule_name: Option<&RuleName>, rule: &'static str| {
                 let pm = PatternMap::from_str(rule);
-                if let Some(err) = pm.validate() {
+                if let Err(err) = pm.validate() {
                     errors.push(err.into());
                     return;
                 }

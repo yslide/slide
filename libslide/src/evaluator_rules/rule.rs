@@ -23,7 +23,7 @@ impl fmt::Display for PatternMap {
 #[derive(Debug)]
 pub struct UnresolvedMapping {
     map: PatternMap,
-    unresolved_pats: Vec<RcExprPat>,
+    unresolved_pats: Vec<String>,
 }
 
 impl fmt::Display for UnresolvedMapping {
@@ -96,17 +96,17 @@ impl PatternMap {
     }
 
     /// Checks a `PatternMap` is resolvable, returning an error if it is not.
-    pub fn validate(&self) -> Option<UnresolvedMapping> {
+    pub fn validate(&self) -> Result<(), UnresolvedMapping> {
         let unresolved_pats: Vec<_> = unique_pats(&self.to)
             .difference(&unique_pats(&self.from))
-            .map(|&p| p.clone())
+            .map(|&p| p.to_string())
             .collect();
 
         if unresolved_pats.is_empty() {
-            return None;
+            return Ok(());
         }
 
-        Some(UnresolvedMapping {
+        Err(UnresolvedMapping {
             map: self.clone(),
             unresolved_pats,
         })
@@ -311,7 +311,7 @@ mod tests {
     fn validate_error() {
         let err = PatternMap::from_str("_a + $b / #c * 3 -> 1 + $b * #e / _f")
             .validate()
-            .unwrap();
+            .unwrap_err();
 
         assert_eq!(
             err.to_string(),
@@ -325,6 +325,6 @@ Specifically, source "_a + $b / #c * 3" is missing pattern(s) "#e", "_f" present
     fn validate_ok() {
         assert!(PatternMap::from_str("_a + $b / #c -> _a + $b")
             .validate()
-            .is_none());
+            .is_ok());
     }
 }

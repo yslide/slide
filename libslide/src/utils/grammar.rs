@@ -1,4 +1,5 @@
 use crate::grammar::*;
+use crate::Span;
 
 use std::collections::{HashSet, VecDeque};
 
@@ -206,30 +207,29 @@ where
     }
 }
 
-/// Returns all unique patterns in a pattern expression.
-pub fn unique_pats<'a>(expr: &'a RcExprPat) -> HashSet<&'a RcExprPat> {
-    fn unique_pats<'a>(expr: &'a RcExprPat, set: &mut HashSet<&'a RcExprPat>) {
-        match expr.as_ref() {
-            ExprPat::VarPat(_) | ExprPat::ConstPat(_) | ExprPat::AnyPat(_) => {
-                set.insert(expr);
-            }
-            ExprPat::BinaryExpr(BinaryExpr { lhs, rhs, .. }) => {
-                unique_pats(&lhs, set);
-                unique_pats(&rhs, set);
-            }
-            ExprPat::UnaryExpr(UnaryExpr { rhs, .. }) => {
-                unique_pats(&rhs, set);
-            }
-            ExprPat::Parend(e) | ExprPat::Bracketed(e) => {
-                unique_pats(&e, set);
-            }
-            ExprPat::Const(_) => {}
-        }
-    }
+/// Returns all unique pattern names in a pattern expression.
+pub fn unique_pats(expr: &RcExprPat) -> HashSet<&str> {
+    let mut collector = PatCollector::default();
+    collector.visit(expr);
+    collector.pats
+}
 
-    let mut hs = HashSet::new();
-    unique_pats(expr, &mut hs);
-    hs
+// TODO: Put collectors like these in a "collectors" module.
+#[derive(Default)]
+struct PatCollector<'a> {
+    pats: HashSet<&'a str>,
+}
+
+impl<'a> ExprPatVisitor<'a> for PatCollector<'a> {
+    fn visit_var_pat(&mut self, var_pat: &'a str, _span: Span) {
+        self.pats.insert(var_pat);
+    }
+    fn visit_const_pat(&mut self, const_pat: &'a str, _span: Span) {
+        self.pats.insert(const_pat);
+    }
+    fn visit_any_pat(&mut self, any_pat: &'a str, _span: Span) {
+        self.pats.insert(any_pat);
+    }
 }
 
 pub fn normalize(expr: RcExpr) -> RcExpr {
@@ -406,13 +406,7 @@ mod tests {
         let parsed = parse_expression_pattern(scan("$a + _b * (#c - [$d]) / $a").tokens).0;
         let pats = super::unique_pats(&parsed);
 
-        let mut pats: Vec<_> = pats
-            .iter()
-            .map(|p| match p.as_ref() {
-                ExprPat::VarPat(v) | ExprPat::ConstPat(v) | ExprPat::AnyPat(v) => v,
-                _ => unreachable!(),
-            })
-            .collect();
+        let mut pats: Vec<_> = pats.into_iter().collect();
         pats.sort_by(|a, b| a.as_bytes()[1].cmp(&b.as_bytes()[1]));
 
         assert_eq!(pats, vec!["$a", "_b", "#c", "$d"]);

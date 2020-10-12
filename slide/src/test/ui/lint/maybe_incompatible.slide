@@ -8,6 +8,12 @@ a := 2x
 
 b := 2x + 2
 b := 3 ^ 3x
+
+c := u + v
+c := u + w
+
+d := u + v + w
+d := u + x + y
 ===in
 
 ~~~stdout
@@ -15,6 +21,10 @@ a := x
 a := x * 2
 b := 2 + x * 2
 b := x * 27
+c := u + v
+c := u + w
+d := u + v + w
+d := u + x + y
 ~~~stdout
 
 ~~~stderr
@@ -26,6 +36,7 @@ warning[L0002]: Definitions of "a" may be incompatible
   | ------- this definition evaluates to "a := x * 2"
   |
   = note: "x" and "x * 2" may not be equal
+  = note: equivalence of the definitions depends on the variable "x"
   = note: there is not enough information to conclude whether the definitions are compatible
 
 warning[L0002]: Definitions of "b" may be incompatible
@@ -33,11 +44,41 @@ warning[L0002]: Definitions of "b" may be incompatible
 ...
 4 | b := 2x + 2
   | ----------- this definition evaluates to "b := 2 + x * 2"
-5 | b := 3 ^ 3x 
+5 | b := 3 ^ 3x
   | ----------- this definition evaluates to "b := x * 27"
   |
   = note: "2 + x * 2" and "x * 27" may not be equal
+  = note: equivalence of the definitions depends on the variable "x"
   = note: there is not enough information to conclude whether the definitions are compatible
+
+warning[L0002]: Definitions of "c" may be incompatible
+  |
+...
+7 | c := u + v
+  | ---------- this definition evaluates to "c := u + v"
+8 | c := u + w
+  | ---------- this definition evaluates to "c := u + w"
+  |
+  = note: "u + v" and "u + w" may not be equal
+  = note: equivalence of the definitions depends on the variables "v" and "w"
+  = note: there is not enough information to conclude whether the definitions are compatible
+
+warning[L0002]: Definitions of "d" may be incompatible
+   |
+ 1 | a := x
+ 2 | a := 2x
+ 3 | 
+ 4 | b := 2x + 2
+...
+ 9 | 
+10 | d := u + v + w
+   | -------------- this definition evaluates to "d := u + v + w"
+11 | d := u + x + y 
+   | -------------- this definition evaluates to "d := u + x + y"
+   |
+   = note: "u + v + w" and "u + x + y" may not be equal
+   = note: equivalence of the definitions depends on the variables "v", "w", "x", and "y"
+   = note: there is not enough information to conclude whether the definitions are compatible
 ~~~stderr
 
 ~~~exitcode

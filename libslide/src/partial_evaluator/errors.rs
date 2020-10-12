@@ -92,7 +92,21 @@ define_errors! {
     ///
     ///The behavior of maybe-incompatible definitions is considered undefined behavior.
     L0005: MaybeIncompatibleDefinitions {
-        ($var:expr, $a_def:expr, $b_def:expr) => {
+        ($var:expr, $a_def:expr, $b_def:expr, $dep_vars:expr) => {{
+            let last = $dep_vars.len() - 1;
+            let mut dep_vars = if last == 0 { "variable " } else { "variables " }.to_string();
+            for (i, var) in $dep_vars.into_iter().enumerate() {
+                // Cases:
+                //   a
+                //   a and b
+                //   a, b, and c
+                dep_vars.push_str(&match i {
+                    0 => format!("\"{}\"", var),
+                    1 if i == last => format!(" and \"{}\"", var),
+                    _ if i == last => format!(", and \"{}\"", var),
+                    _ => format!(", \"{}\"", var),
+                });
+            }
             Diagnostic::span_warn(
                 $a_def.span,
                 format!(r#"Definitions of "{}" may be incompatible"#, $var),
@@ -108,8 +122,11 @@ define_errors! {
                 $a_def.rhs, $b_def.rhs
             ))
             .with_note(
+                format!("equivalence of the definitions depends on the {}", dep_vars)
+            )
+            .with_note(
                 "there is not enough information to conclude whether the definitions are compatible"
             )
-        }
+        }}
     }
 }

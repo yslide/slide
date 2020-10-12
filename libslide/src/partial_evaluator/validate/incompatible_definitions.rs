@@ -8,10 +8,10 @@ use super::Validator;
 use crate::diagnostics::Diagnostic;
 use crate::evaluator_rules::Rule;
 use crate::grammar::*;
-use crate::partial_evaluator::evaluate_expr;
+use crate::partial_evaluator::compare::{cmp_eq, EqRelation};
 use crate::ProgramContext;
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 /// Max number of definition pairs we generate diagnostics for.
 ///
@@ -60,20 +60,22 @@ impl<'a> IncompatibleDefinitionsValidator<'a> {
         let mut diagnostics = Vec::new();
         let definition_pairs = self.all_ordered_definition_pairs();
         for (def_a, def_b) in definition_pairs.into_iter() {
-            let diff = rc_expr!(
-                Expr::BinaryExpr(BinaryExpr::sub(def_a.rhs.clone(), def_b.rhs.clone())),
-                crate::DUMMY_SP
+            diagnostics.push(
+                match cmp_eq(&def_a.rhs, &def_b.rhs, evaluator_rules, context) {
+                    EqRelation::AlwaysEquivalent => continue,
+                    EqRelation::NeverEquivalent => {
+                        IncompatibleDefinitions!(def_a.var, def_a, def_b)
+                    }
+                    EqRelation::DependsOn(_) if !context.lint => continue,
+                    EqRelation::DependsOn(dep_vars) => {
+                        let dep_vars = dep_vars // sort the vars deterministically
+                            .into_iter()
+                            .map(|v| v.to_string())
+                            .collect::<BTreeSet<_>>();
+                        MaybeIncompatibleDefinitions!(def_a.var, def_a, def_b, dep_vars)
+                    }
+                },
             );
-            let diff = evaluate_expr(diff, evaluator_rules, context);
-            diagnostics.push(match diff.get_const() {
-                None if !context.lint => continue,
-                Some(e) if e.abs() <= std::f64::EPSILON => continue,
-
-                // Difference is variable-dependent; defs are maybe-incompatible.
-                None => MaybeIncompatibleDefinitions!(def_a.var, def_a, def_b),
-                // Difference is a non-zero constant; defs are definitely incompatible.
-                Some(_) => IncompatibleDefinitions!(def_a.var, def_a, def_b),
-            });
         }
         diagnostics
     }

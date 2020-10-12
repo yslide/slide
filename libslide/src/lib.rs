@@ -202,6 +202,7 @@
 
 #[macro_use]
 mod grammar;
+pub(crate) use grammar::InternedStr;
 pub use grammar::{ExprPat, Grammar, Stmt, StmtList};
 
 mod common;

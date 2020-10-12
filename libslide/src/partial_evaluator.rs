@@ -2,6 +2,7 @@
 
 #[macro_use]
 mod errors;
+mod compare;
 pub mod flatten;
 mod validate;
 mod variable_expand;

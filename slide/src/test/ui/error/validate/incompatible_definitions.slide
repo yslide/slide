@@ -11,14 +11,6 @@ c = v + 1
 ===in
 
 ~~~stdout
-a := 1
-b = 2
-a := 243
-b = 2
-a := 0
-b = -1
-c = v
-c = v + 1
 ~~~stdout
 
 ~~~stderr

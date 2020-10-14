@@ -20,12 +20,20 @@ use crate::ProgramContext;
 use std::collections::HashSet;
 use std::error::Error;
 
+/// Describes the result of a slide program evaluation.
+pub struct EvaluationResult {
+    /// Input program statements, evaluated to as simple a form slide is able to.
+    pub simplified: StmtList,
+    /// Diagnostic
+    pub diagnostics: Vec<Diagnostic>,
+}
+
 /// Evaluates a list of statements to as simplified a form as possible for each.
 /// The evaluation may be partial, as some values (like variables) may be unknown.
 pub fn evaluate(
     stmt_list: StmtList,
     ctxt: &ProgramContext,
-) -> Result<(StmtList, Vec<Diagnostic>), Box<dyn Error>> {
+) -> Result<EvaluationResult, Box<dyn Error>> {
     let eval_rules = build_rules(ctxt)?;
     let simplify = |expr: RcExpr| evaluate_expr(expr, &eval_rules, &ctxt);
     let evaluated = stmt_list
@@ -36,9 +44,12 @@ pub fn evaluate(
         })
         .collect::<Vec<_>>();
 
-    let stmt_list = StmtList::new(evaluated);
-    let diags = validate(&stmt_list, "", ctxt, &eval_rules); // TODO: propogate program text
-    Ok((stmt_list, diags))
+    let simplified = StmtList::new(evaluated);
+    let diagnostics = validate(&simplified, "", ctxt, &eval_rules); // TODO: propogate program text
+    Ok(EvaluationResult {
+        simplified,
+        diagnostics,
+    })
 }
 
 /// Evaluates an expression to as simplified a form as possible.
@@ -74,7 +85,7 @@ fn build_rules(ctxt: &ProgramContext) -> Result<Vec<Rule>, BuildRuleErrors> {
 
 #[cfg(test)]
 mod tests {
-    use super::evaluate;
+    use super::{evaluate, EvaluationResult};
     use crate::evaluator_rules::RuleName;
     use crate::{parse_stmt, ProgramContext};
 
@@ -84,9 +95,10 @@ mod tests {
             #[test]
             fn $name() {
                 let parsed = parse_stmt!($program);
-                let (evaluated, _) = evaluate(parsed.clone(), &ProgramContext::default()).unwrap();
+                let EvaluationResult { simplified, .. } =
+                    evaluate(parsed.clone(), &ProgramContext::default()).unwrap();
 
-                assert_eq!(evaluated.to_string(), $result.to_string());
+                assert_eq!(simplified.to_string(), $result.to_string());
             }
         )*
         }
@@ -170,7 +182,7 @@ mod tests {
         let ctxt = ProgramContext::default()
             .with_denylist([RuleName::Add].to_vec())
             .always_flatten(false);
-        let (evaluated, _) = evaluate(parsed, &ctxt).unwrap();
-        assert_eq!(evaluated.to_string(), "-1 + 12".to_string());
+        let EvaluationResult { simplified, .. } = evaluate(parsed, &ctxt).unwrap();
+        assert_eq!(simplified.to_string(), "-1 + 12".to_string());
     }
 }

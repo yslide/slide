@@ -227,6 +227,7 @@ pub(crate) use linter::LintConfig;
 
 mod partial_evaluator;
 pub use partial_evaluator::evaluate;
+pub use partial_evaluator::EvaluationResult;
 pub(crate) use partial_evaluator::PartialEvaluatorErrors;
 
 mod evaluator_rules;

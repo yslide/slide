@@ -10,7 +10,11 @@ before_cache:
   - rm -rf /home/travis/.cargo/registry
     
 before_install:
-  - nvm install 12
+  - nvm install 12  # needed for scripts/_scripts/markdown/validate-link-refs.js
+
+install:
+  - rustup component add clippy || cargo install --git https://github.com/rust-lang/rust-clippy/ --force clippy
+  - rustup component add rustfmt
 
 jobs:
   fast_finish: true
@@ -48,20 +52,8 @@ jobs:
       os: osx
       env: CHANNEL="stable"
 
-script:
-  # Ensure slide builds
-  - cargo build --verbose --all
-  - scripts/check test
-  - rustup component add clippy || cargo install --git
-    https://github.com/rust-lang/rust-clippy/ --force clippy
-  - rustup component add rustfmt
-  - scripts/check lintformat
-  # Ensure documentation
-  - scripts/doc
-  # Ensure fuzzer builds
-  - pushd slide/fuzz
-  - cargo build
-  - popd
+# If more needs to be added here, it should be added to ladder.
+script: ./ladder ensure
 
 after_success:
   - |

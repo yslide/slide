@@ -19,10 +19,13 @@ d := u + x + y
 ~~~stdout
 a := x
 a := x * 2
+
 b := 2 + x * 2
 b := x * 27
+
 c := u + v
 c := u + w
+
 d := u + v + w
 d := u + x + y
 ~~~stdout

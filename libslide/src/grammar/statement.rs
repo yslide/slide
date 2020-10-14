@@ -43,9 +43,9 @@ impl IntoIterator for StmtList {
     }
 }
 
-/// A statement in a slide program.
+/// The kind of a statement.
 #[derive(Clone, Debug)]
-pub enum Stmt {
+pub enum StmtKind {
     /// An expression statement is a statement that consists solely of an expression. For example,
     /// the slide program
     ///
@@ -64,18 +64,52 @@ pub enum Stmt {
     /// binds the expression "1 + 1" to "x".
     Assignment(Assignment),
 }
-
-impl Grammar for Stmt {}
-
-impl From<RcExpr> for Stmt {
+impl From<RcExpr> for StmtKind {
     fn from(expr: RcExpr) -> Self {
-        Stmt::Expr(expr)
+        StmtKind::Expr(expr)
     }
 }
 
-impl From<Assignment> for Stmt {
+impl From<Assignment> for StmtKind {
     fn from(asgn: Assignment) -> Self {
-        Stmt::Assignment(asgn)
+        StmtKind::Assignment(asgn)
+    }
+}
+
+/// A statement in a slide program.
+#[derive(Clone, Debug)]
+pub struct Stmt {
+    /// The [kind](StmtKind) of the statement.
+    pub kind: StmtKind,
+    /// Vertical whitespace present before the statement.
+    vw: usize,
+}
+
+impl Grammar for Stmt {}
+
+impl Stmt {
+    /// Creates a new `Stmt`.
+    pub fn new(kind: StmtKind, vw: usize) -> Self {
+        Self { kind, vw }
+    }
+
+    /// Update `self` with a fresh statement [kind](StmtKind), given functions for how a statement
+    /// should be generated.
+    pub fn update_with(
+        self,
+        expr_update: impl FnOnce(RcExpr) -> RcExpr,
+        asgn_update: impl FnOnce(Assignment) -> Assignment,
+    ) -> Self {
+        let kind = match self.kind {
+            StmtKind::Expr(expr) => expr_update(expr).into(),
+            StmtKind::Assignment(asgn) => asgn_update(asgn).into(),
+        };
+        Self { kind, ..self }
+    }
+
+    /// Retrieve the number of vertical whitespace lines above this statement.
+    pub fn vw(&self) -> usize {
+        self.vw
     }
 }
 

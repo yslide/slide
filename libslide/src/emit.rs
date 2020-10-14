@@ -164,6 +164,11 @@ fn join_emits<'a, E: 'a + Emit>(
     list.map(emit).collect::<Vec<_>>().join("\n")
 }
 
+#[inline]
+fn vert_lines(n: usize) -> String {
+    str::repeat("\n", n)
+}
+
 fmt_emit_impl!(StmtList);
 impl Emit for StmtList {
     fn emit_pretty(&self, config: EmitConfig) -> String {
@@ -194,8 +199,8 @@ impl Emit for StmtList {
     }
 }
 
-fmt_emit_impl!(Stmt);
-impl Emit for Stmt {
+fmt_emit_impl!(StmtKind);
+impl Emit for StmtKind {
     fn emit_pretty(&self, config: EmitConfig) -> String {
         match self {
             Self::Expr(expr) => expr.emit_pretty(config),
@@ -217,6 +222,21 @@ impl Emit for Stmt {
             Self::Expr(expr) => expr.emit_latex(config),
             Self::Assignment(asgn) => asgn.emit_latex(config),
         }
+    }
+}
+
+fmt_emit_impl!(Stmt);
+impl Emit for Stmt {
+    fn emit_pretty(&self, config: EmitConfig) -> String {
+        vert_lines(self.vw()) + &self.kind.emit_pretty(config)
+    }
+
+    fn emit_s_expression(&self, config: EmitConfig) -> String {
+        vert_lines(self.vw()) + &self.kind.emit_s_expression(config)
+    }
+
+    fn emit_latex(&self, config: EmitConfig) -> String {
+        vert_lines(self.vw()) + &self.kind.emit_latex(config)
     }
 }
 

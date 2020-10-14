@@ -12,9 +12,13 @@ pub trait StmtVisitor<'a> {
     }
 
     fn visit_stmt(&mut self, stmt: &'a Stmt) {
-        match stmt {
-            Stmt::Expr(expr) => self.visit_expr(expr),
-            Stmt::Assignment(asgn) => self.visit_asgn(asgn),
+        self.visit_stmt_kind(&stmt.kind)
+    }
+
+    fn visit_stmt_kind(&mut self, stmt_kind: &'a StmtKind) {
+        match stmt_kind {
+            StmtKind::Expr(expr) => self.visit_expr(expr),
+            StmtKind::Assignment(asgn) => self.visit_asgn(asgn),
         }
     }
 

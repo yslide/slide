@@ -38,10 +38,7 @@ pub fn evaluate(
     let simplify = |expr: RcExpr| evaluate_expr(expr, &eval_rules, &ctxt);
     let evaluated = stmt_list
         .into_iter()
-        .map(|stmt| match stmt {
-            Stmt::Expr(expr) => Stmt::Expr(simplify(expr)),
-            Stmt::Assignment(asgn) => Stmt::Assignment(asgn.redefine_with(simplify)),
-        })
+        .map(|stmt| stmt.update_with(simplify, |asgn| asgn.redefine_with(simplify)))
         .collect::<Vec<_>>();
 
     let simplified = StmtList::new(evaluated);

@@ -11,6 +11,7 @@ lazy_static! {
         RwLock::new(HashMap::new());
     pub static ref BLESS: bool = std::env::var("BLESS") == Ok("1".into());
     pub static ref FAIL_TODO: bool = std::env::var("FAIL_TODO") == Ok("1".into());
+    pub static ref TEST_LATEX_EMIT: bool = std::env::var("NO_LATEX") != Ok("1".into());
 }
 
 macro_rules! prefix_severity {

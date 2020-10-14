@@ -16,6 +16,7 @@ DEFAULTS = SimpleNamespace(
     jobs=8,
     bless=False,
     fail_todo=False,
+    no_latex=False,
     open=False,
 )
 
@@ -75,6 +76,8 @@ def test(args, runner_args):
         env["BLESS"] = "1"
     if args.fail_todo:
         env["FAIL_TODO"] = "1"
+    if args.no_latex:
+        env["NO_LATEX"] = "1"
 
     process = subprocess.run(cargo_args, env=env)
     return process.returncode
@@ -194,6 +197,13 @@ test_parser.add_argument(
     action="store_true",
     default=DEFAULTS.bless,
     help="""Fail on tests with a @TODO annotation.
+This only affects system tests."""
+)
+test_parser.add_argument(
+    "--no-latex",
+    action="store_true",
+    default=DEFAULTS.no_latex,
+    help="""Do not run LaTeX emit tests. This may speed up local execution.
 This only affects system tests."""
 )
 test_parser.set_defaults(handler=test)

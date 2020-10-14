@@ -1,5 +1,5 @@
-//! Provides interners for slide [Grammar]s.
-//! An interned slide [Grammar] is itself a [Grammar] for convenience of use.
+//! Provides memory-based utilities for slide [Grammar]s, namely interners and reference-counted
+//! objects.
 //!
 //! [Grammar]: super::Grammar
 

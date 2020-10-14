@@ -1,13 +1,13 @@
 //! The primary libslide IR.
 
 #[macro_use]
-mod intern;
+mod mem;
 mod expression_pattern;
 mod statement;
 mod transformer;
 mod visitor;
 pub use expression_pattern::*;
-pub use intern::*;
+pub use mem::*;
 pub use statement::*;
 pub use transformer::*;
 pub use visitor::*;

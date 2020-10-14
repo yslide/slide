@@ -6,9 +6,55 @@ import os
 import sys
 import subprocess
 import threading
+from types import SimpleNamespace
 
 
 UI_PORT = "8000"
+DEFAULTS = SimpleNamespace(
+    filter=None,
+    sys=False,
+    jobs=8,
+    bless=False,
+    fail_todo=False,
+    open=False,
+)
+
+
+def ensure(args, _unknown):
+    def run_wrapped(fn):
+        rc = fn()
+        if rc != 0:
+            sys.exit(rc)
+
+    assurances = [
+        lambda: build_project(DEFAULTS, []),
+        lambda: build_fuzzer(DEFAULTS, []),
+        lambda: test(DEFAULTS, []),
+        lambda: lf(DEFAULTS, []),
+        lambda: doc(DEFAULTS, []),
+    ]
+    for assurence in assurances:
+        run_wrapped(assurence)
+
+    print("""
+     x - x
+     +----|
+    /
+ 0 /  OK!
+|-+
+""")
+
+
+def build_project(args, _unknown):
+    process = subprocess.run(["cargo", "build", "--verbose", "--workspace"])
+    return process.returncode
+
+
+def build_fuzzer(args, _unknown):
+    os.chdir('slide/fuzz')
+    rc = build_project(args, _unknown)
+    os.chdir('../../')
+    return rc
 
 
 def test(args, runner_args):
@@ -19,7 +65,7 @@ def test(args, runner_args):
         cargo_args.append("system_tests")
     cargo_args.append("-j")
     cargo_args.append(str(args.jobs))
-    for runner_arg in unknown:
+    for runner_arg in runner_args:
         cargo_args.append(runner_arg)
     cargo_args.append("--")
     if args.filter:
@@ -31,7 +77,7 @@ def test(args, runner_args):
         env["FAIL_TODO"] = "1"
 
     process = subprocess.run(cargo_args, env=env)
-    sys.exit(process.returncode)
+    return process.returncode
 
 
 def www(args, _unknown):
@@ -54,17 +100,25 @@ def bench(args, _unknown):
     cargo_args.append("benchmark-internals")
 
     process = subprocess.run(cargo_args)
-    sys.exit(process.returncode)
+    return process.returncode
 
 
 def lf(args, _unknown):
     process = subprocess.run(["./scripts/check", "lf"])
-    sys.exit(process.returncode)
+    return process.returncode
 
 
 def squash(args, _unknown):
     process = subprocess.run(["./scripts/squashed", "--rebase"])
-    sys.exit(process.returncode)
+    return process.returncode
+
+
+def doc(args, _unknown):
+    doc_args = ["./scripts/doc"]
+    if args.open:
+        doc_args.append("--open")
+    process = subprocess.run(doc_args)
+    return process.returncode
 
 
 parser = argparse.ArgumentParser(
@@ -73,6 +127,21 @@ parser = argparse.ArgumentParser(
     formatter_class=RawTextHelpFormatter
 )
 sub_parsers = parser.add_subparsers(help="ladder subcommands")
+
+ensure_parser = sub_parsers.add_parser(
+    "ensure",
+    help="Ensure valid and correct project state",
+    formatter_class=RawTextHelpFormatter,
+    description="""
+Like "ladder test", but runs all assurances of the project's validity and
+correctness besides just unit and integration tests, including validation of
+documentation and correction of optional features.
+
+"ladder ensure" is exactly what is run by a CI to ensure correctness of patches
+to the project. If "ladder ensure" passes locally, it _should_ pass on a CI.
+"""
+)
+ensure_parser.set_defaults(handler=ensure)
 
 test_parser = sub_parsers.add_parser(
     "test",
@@ -98,31 +167,32 @@ Examples:
 test_parser.add_argument(
     "filter",
     nargs="?",
+    default=DEFAULTS.filter,
     help="""Optional test filter. If not specified, all tests are run."""
 )
 test_parser.add_argument(
     "--sys",
     action="store_true",
-    default=False,
+    default=DEFAULTS.sys,
     help="""Only run system tests."""
 )
 test_parser.add_argument(
     "-j", "--jobs",
     type=int,
-    default=8,
+    default=DEFAULTS.jobs,
     help="""The number of concurrent jobs (threads) that should be used to run the tests."""
 )
 test_parser.add_argument(
     "--bless",
     action="store_true",
-    default=False,
+    default=DEFAULTS.bless,
     help="""Accept the output of tests as new baselines.
 This only affects system tests."""
 )
 test_parser.add_argument(
     "--fail-todo",
     action="store_true",
-    default=False,
+    default=DEFAULTS.bless,
     help="""Fail on tests with a @TODO annotation.
 This only affects system tests."""
 )
@@ -165,9 +235,21 @@ lf_parser.set_defaults(handler=lf)
 
 squash_parser = sub_parsers.add_parser(
     "squash",
-    help="Squash commits ahead of master on this branch into one"
+    help="Squash commits ahead of master on this branch into one."
 )
 squash_parser.set_defaults(handler=squash)
+
+doc_parser = sub_parsers.add_parser(
+    "doc",
+    help="Build and validate project documentation."
+)
+doc_parser.add_argument(
+    "--open",
+    action="store_true",
+    default=DEFAULTS.open,
+    help="""Open documentation in a browser."""
+)
+doc_parser.set_defaults(handler=doc)
 
 argv = sys.argv[1:]
 if not argv:

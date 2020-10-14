@@ -13,6 +13,7 @@ use crate::{LintConfig, ParseErrors, PartialEvaluatorErrors, ScanErrors};
 use std::collections::HashMap;
 
 /// The kind of a slide diagnostic.
+#[derive(PartialEq)]
 pub enum DiagnosticKind {
     /// An error diagnostic. Generally, this diagnostic should be emitted for unrecoverable errors.
     /// In other cases, a warning or a note may be more applicable.

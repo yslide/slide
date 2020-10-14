@@ -15,8 +15,8 @@ macro_rules! parse_stmt {
 macro_rules! parse_expr {
     ($expr:expr) => {{
         use crate::grammar::*;
-        match crate::parse_stmt!($expr).into_iter().next().unwrap() {
-            Stmt::Expr(expr) => expr,
+        match crate::parse_stmt!($expr).into_iter().next().unwrap().kind {
+            StmtKind::Expr(expr) => expr,
             _ => unreachable!(),
         }
     }};
@@ -27,8 +27,8 @@ macro_rules! parse_expr {
 macro_rules! parse_asgn {
     ($asgn:expr) => {{
         use crate::grammar::*;
-        match crate::parse_stmt!($asgn).into_iter().next().unwrap() {
-            Stmt::Assignment(asgn) => asgn,
+        match crate::parse_stmt!($asgn).into_iter().next().unwrap().kind {
+            StmtKind::Assignment(asgn) => asgn,
             _ => unreachable!(),
         }
     }};

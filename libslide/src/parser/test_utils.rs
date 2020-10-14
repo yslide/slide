@@ -45,9 +45,9 @@ macro_rules! __check_parsed {
         if input == expected_out {
             // We can automate verification of spans only if the input is in the same emit form as
             // the output.
-            let inner_expr = match parsed.into_iter().next().unwrap() {
-                Stmt::Expr(inner) => inner,
-                Stmt::Assignment(Assignment { rhs, .. }) => rhs,
+            let inner_expr = match parsed.into_iter().next().unwrap().kind {
+                StmtKind::Expr(inner) => inner,
+                StmtKind::Assignment(Assignment { rhs, .. }) => rhs,
             };
             verify_expr_spans(&inner_expr, &input);
         }

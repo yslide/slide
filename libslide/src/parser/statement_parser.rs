@@ -27,8 +27,17 @@ impl<'a> ExpressionParser<'a> {
     }
 
     fn parse_stmt(&mut self) -> Stmt {
+        #[allow(clippy::naive_bytecount)] // naiveness is fine, we're not counting a lot of bytes
+        let vw = self
+            .peek_content()
+            .as_bytes()
+            .iter()
+            .filter(|&&c| c == b'\n')
+            .count()
+            .saturating_sub(1); // don' count the newline always present between statements
+
         let mut next_2 = self.input().peek_map_n(2, |tok| (tok.ty.clone(), tok.span));
-        match (next_2.pop_front(), next_2.pop_front()) {
+        let kind = match (next_2.pop_front(), next_2.pop_front()) {
             (
                 Some((TokenType::Variable(name), _)),
                 Some((asgn_ty @ TokenType::Equal, asgn_span)),
@@ -47,7 +56,7 @@ impl<'a> ExpressionParser<'a> {
                 };
                 let rhs = self.expr();
                 let span = (lo..rhs.span.hi).into();
-                Stmt::Assignment(Assignment {
+                StmtKind::Assignment(Assignment {
                     var: intern_str!(name),
                     asgn_op,
                     rhs,
@@ -55,13 +64,19 @@ impl<'a> ExpressionParser<'a> {
                 })
             }
 
-            _ => Stmt::Expr(self.expr()),
-        }
+            _ => StmtKind::Expr(self.expr()),
+        };
+        Stmt::new(kind, vw)
     }
 
     fn parse_pattern(&mut self, name: String, span: Span) -> RcExpr {
         self.push_diag(IllegalPattern!(span, name));
         rc_expr!(Expr::Var(intern_str!(name)), span)
+    }
+
+    /// Returns the full content of the current (peeked) token.
+    fn peek_content(&mut self) -> &str {
+        self.peek().full_span.clone().over(self.program)
     }
 }
 
@@ -116,11 +131,7 @@ impl<'a> Parser<StmtList> for ExpressionParser<'a> {
 
     /// Do we have another statement (on a newline)?
     fn has_stmt_break(&mut self) -> bool {
-        self.peek()
-            .full_span
-            .clone()
-            .over(self.program)
-            .contains('\n')
+        self.peek_content().contains('\n')
     }
 }
 

@@ -78,6 +78,22 @@
       crossorigin="anonymous"
     ></script>
     <script src="https://cdn.jsdelivr.net/npm/ansi_up@4.0.4/ansi_up.min.js"></script>
+
+    <script>
+      MathJax = {
+        tex: {
+          inlineMath: [["$", "$"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.1.2/es5/tex-chtml.min.js"
+      integrity="sha512-OEN4O//oR+jeez1OLySjg7HPftdoSaKHiWukJdbFJOfi2b7W0r0ppziSgVRVNaG37qS1f9SmttcutYgoJ6rwNQ=="
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body>
     <div class="d-flex flex-column flex-row flex-items-center">
@@ -180,14 +196,7 @@
         <button type="submit" class="btn btn-md btn-primary" v-on:click="runSlide">slide!</button>
 
         <h2>Output</h2>
-        <div class="ml-3 mr-3">
-          <img
-            v-bind:src="latexEmitImgUrl"
-            alt="Latex emit"
-            v-show="showLatexEmitImg"
-            class="mb-2"
-          />
-        </div>
+        <div class="ml-3 mr-3 mb-2" v-show="showLatexEmit" :key="output">{{kutput}}</div>
         <pre id="slide-output"><component :is="outputComponent" /></pre>
         <a v-bind:href="bugReportUrl" v-if="ranOnce">Report a bug</a>
       </article>
@@ -252,8 +261,7 @@
           explain,
           bugReportUrl: BASE_ISSUE_URL,
           ranOnce: false,
-          latexEmitImgUrl: "",
-          showLatexEmitImg: false,
+          showLatexEmit: false,
         },
         computed: {
           commitUrl() {
@@ -289,6 +297,9 @@
         },
         updated() {
           this.updateUrl();
+          if (this.showLatexEmit) {
+            MathJax.typeset();
+          }
         },
         methods: {
           updateUrl() {
@@ -336,10 +347,10 @@
                 /(error|warning)\[([LSPV]\d+)\]/g,
                 '$1[<a href="#slide-output" v-on:click="explain(\'$2\')">$2</a>]'
               );
+            this.showLatexEmit = code === 0 && this.emitFormat === "latex";
             this.ranOnce = true;
             this.updateUrl();
             this.updateBugReportUrl(slideOpts);
-            this.updateLatexEmitImg(code);
           },
 
           updateBugReportUrl(slideOpts) {
@@ -386,16 +397,6 @@ on commit ${this.commit}.
             const queryParams = new URLSearchParams();
             queryParams.set("body", body);
             this.bugReportUrl = `${BASE_ISSUE_URL}?${queryParams}`;
-          },
-
-          updateLatexEmitImg(code) {
-            this.showLatexEmitImg = code === 0 && this.emitFormat === "latex";
-            if (this.showLatexEmitImg) {
-              // slice(1, -1) to strip inline math mode: $<expr>$
-              const math = this.output.startsWith("$") ? this.output.slice(1, -1) : this.output;
-              const latex = encodeURIComponent(math);
-              this.latexEmitImgUrl = `https://latex.codecogs.com/svg.latex?${latex}`;
-            }
           },
         },
       });

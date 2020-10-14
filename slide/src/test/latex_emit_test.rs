@@ -1,5 +1,12 @@
 use super::*;
 
+use lazy_static::lazy_static;
+use reqwest::blocking::Client;
+
+lazy_static! {
+    pub static ref CLIENT: Client = Client::new();
+}
+
 #[derive(Clone)]
 pub struct LaTeXEmitTest {
     /// Annotation name -> Annotation message
@@ -28,12 +35,10 @@ impl LaTeXEmitTest {
             math_mode_inner
         );
 
-        // TODO: pool connections
-        let mb_img_bytes = reqwest::blocking::get(
-            reqwest::Url::parse(&latex_img_url)
-                .unwrap_or_else(|_| panic!("LaTeX image url is invalid: {}", latex_img_url)),
-        )
-        .and_then(|resp| resp.bytes());
+        let mb_img_bytes = CLIENT
+            .get(&latex_img_url)
+            .send()
+            .and_then(|resp| resp.bytes());
         let img_bytes = match mb_img_bytes {
             Ok(bytes) => bytes,
             Err(err) => {

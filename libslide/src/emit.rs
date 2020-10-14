@@ -188,9 +188,9 @@ impl Emit for StmtList {
         let lines: Vec<_> = latex.lines().collect();
         if lines.len() > 1 {
             format!(
-                r#"\begin{{align*}}
+                r#"\begin{{gathered}}
 {}
-\end{{align*}}"#,
+\end{{gathered}}"#,
                 lines.join("\\\\\n")
             )
         } else {

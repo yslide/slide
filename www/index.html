@@ -196,7 +196,7 @@
         <button type="submit" class="btn btn-md btn-primary" v-on:click="runSlide">slide!</button>
 
         <h2>Output</h2>
-        <div class="ml-3 mr-3 mb-2" v-show="showLatexEmit" :key="output">{{kutput}}</div>
+        <div class="ml-3 mr-3 mb-2" v-show="showLatexEmit" :key="output">{{output}}</div>
         <pre id="slide-output"><component :is="outputComponent" /></pre>
         <a v-bind:href="bugReportUrl" v-if="ranOnce">Report a bug</a>
       </article>

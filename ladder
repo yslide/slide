@@ -4,6 +4,7 @@ import argparse
 from argparse import RawTextHelpFormatter
 import os
 import sys
+import signal
 import subprocess
 import threading
 from types import SimpleNamespace
@@ -19,6 +20,16 @@ DEFAULTS = SimpleNamespace(
     no_latex=False,
     open=False,
 )
+
+
+def slide(msg, **kwargs):
+    print(f"""
+     x - x
+     +----|
+    /
+ 0 /  {msg}
+|-+
+""", **kwargs)
 
 
 def ensure(args, _unknown):
@@ -37,13 +48,7 @@ def ensure(args, _unknown):
     for assurence in assurances:
         run_wrapped(assurence)
 
-    print("""
-     x - x
-     +----|
-    /
- 0 /  OK!
-|-+
-""")
+    slide("OK!")
 
 
 def build_project(args, _unknown):
@@ -260,6 +265,18 @@ doc_parser.add_argument(
     help="""Open documentation in a browser."""
 )
 doc_parser.set_defaults(handler=doc)
+
+# ~~~ Signals
+
+
+def on_sigint(sig, frame):
+    slide('Goodbye ):', file=sys.stderr)
+    sys.exit(1)
+
+
+signal.signal(signal.SIGINT, on_sigint)
+
+# ~~~ Main
 
 argv = sys.argv[1:]
 if not argv:

@@ -5,16 +5,19 @@ use crate::Span;
 
 /// Describes a [statement list](super::StmtList) visitor.
 pub trait StmtVisitor<'a> {
+    /// Visits a statement list.
     fn visit(&mut self, stmt_list: &'a StmtList) {
         for stmt in stmt_list.iter() {
             self.visit_stmt(stmt);
         }
     }
 
+    /// Visits a statement.
     fn visit_stmt(&mut self, stmt: &'a Stmt) {
         self.visit_stmt_kind(&stmt.kind)
     }
 
+    /// Visits a specific statement kind.
     fn visit_stmt_kind(&mut self, stmt_kind: &'a StmtKind) {
         match stmt_kind {
             StmtKind::Expr(expr) => self.visit_expr(expr),
@@ -22,18 +25,21 @@ pub trait StmtVisitor<'a> {
         }
     }
 
+    /// Visits an assignment.
     fn visit_asgn(&mut self, asgn: &'a Assignment) {
-        self.visit_var(&asgn.var);
+        self.visit_expr(&asgn.lhs);
         self.visit_asgn_op(&asgn.asgn_op);
         self.visit_expr(&asgn.rhs);
     }
 
+    /// Visits an assignment operator.
     fn visit_asgn_op(&mut self, _asgn_op: &'a AssignmentOp) {}
 
+    /// Visits an expression.
     fn visit_expr(&mut self, expr: &'a RcExpr) {
         match expr.as_ref() {
-            Expr::Const(k) => self.visit_const(k),
-            Expr::Var(v) => self.visit_var(v),
+            Expr::Const(k) => self.visit_const(k, expr.span),
+            Expr::Var(v) => self.visit_var(v, expr.span),
             Expr::BinaryExpr(b) => self.visit_binary(b),
             Expr::UnaryExpr(u) => self.visit_unary(u, expr.span),
             Expr::Parend(p) => self.visit_parend(p, expr.span),
@@ -41,29 +47,37 @@ pub trait StmtVisitor<'a> {
         }
     }
 
-    fn visit_const(&mut self, _konst: &'a f64) {}
+    /// Visits a constant.
+    fn visit_const(&mut self, _konst: &'a f64, _span: Span) {}
 
-    fn visit_var(&mut self, _var: &'a InternedStr) {}
+    /// Visits a variable.
+    fn visit_var(&mut self, _var: &'a InternedStr, _span: Span) {}
 
+    /// Visits a binary operator.
     fn visit_binary_op(&mut self, _op: BinaryOperator) {}
 
+    /// Visits a binary expression.
     fn visit_binary(&mut self, expr: &'a BinaryExpr<RcExpr>) {
         self.visit_expr(&expr.lhs);
         self.visit_binary_op(expr.op);
         self.visit_expr(&expr.rhs);
     }
 
+    /// Visits a unary operator.
     fn visit_unary_op(&mut self, _op: UnaryOperator) {}
 
+    /// Visits a unary expression.
     fn visit_unary(&mut self, expr: &'a UnaryExpr<RcExpr>, _span: Span) {
         self.visit_unary_op(expr.op);
         self.visit_expr(&expr.rhs);
     }
 
+    /// Visits a parenthesized expression.
     fn visit_parend(&mut self, expr: &'a RcExpr, _span: Span) {
         self.visit_expr(expr);
     }
 
+    /// Visits a bracketed expression.
     fn visit_bracketed(&mut self, expr: &'a RcExpr, _span: Span) {
         self.visit_expr(expr);
     }

@@ -3,4 +3,6 @@
 members = [
     "libslide",
     "slide",
+    "slide/fuzz",
+    "editor/language_server",
 ]

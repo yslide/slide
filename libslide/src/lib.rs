@@ -202,8 +202,10 @@
 
 #[macro_use]
 mod grammar;
+pub use grammar::collectors;
 pub(crate) use grammar::InternedStr;
-pub use grammar::{ExprPat, Grammar, Stmt, StmtKind, StmtList};
+pub use grammar::StmtVisitor;
+pub use grammar::{Assignment, Expr, ExprPat, Grammar, RcExpr, Stmt, StmtKind, StmtList};
 
 mod common;
 pub use common::*;
@@ -213,12 +215,14 @@ pub mod diagnostics;
 pub mod scanner;
 pub use scanner::scan;
 pub(crate) use scanner::ScanErrors;
+pub use scanner::ScanResult;
 pub use scanner::Token;
 
 mod parser;
 pub use parser::parse_expression_pattern;
-pub use parser::parse_statement;
+pub use parser::parse_statements;
 pub(crate) use parser::ParseErrors;
+pub use parser::ParseResult;
 
 mod linter;
 pub use linter::lint_expr_pat;
@@ -226,7 +230,9 @@ pub use linter::lint_stmt;
 pub(crate) use linter::LintConfig;
 
 mod partial_evaluator;
+pub use partial_evaluator::build_rules;
 pub use partial_evaluator::evaluate;
+pub use partial_evaluator::evaluate_expr;
 pub use partial_evaluator::EvaluationResult;
 pub(crate) use partial_evaluator::PartialEvaluatorErrors;
 

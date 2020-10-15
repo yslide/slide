@@ -111,6 +111,14 @@ impl Stmt {
     pub fn vw(&self) -> usize {
         self.vw
     }
+
+    /// Gets the span of the statement.
+    pub fn span(&self) -> &Span {
+        match &self.kind {
+            StmtKind::Expr(e) => &e.span,
+            StmtKind::Assignment(a) => &a.span,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -130,11 +138,17 @@ impl AssignmentOp {
     }
 }
 
+/// An assignment.
 #[derive(Clone, Debug)]
 pub struct Assignment {
-    pub var: InternedStr,
+    /// Left hand side of the assignment.
+    pub lhs: RcExpr,
+    /// The assignment operator.
     pub asgn_op: AssignmentOp,
+    /// Right hand side of the assignment.
     pub rhs: RcExpr,
+
+    /// Span of the entire assignment.
     pub span: Span,
 }
 
@@ -146,22 +160,27 @@ impl Assignment {
     }
 }
 
+/// An expression.
 #[derive(Clone, PartialEq, Debug)]
 pub enum Expr {
+    /// A constant.
     Const(f64),
+    /// A variable.
     Var(InternedStr),
+    /// A binary expression.
     BinaryExpr(BinaryExpr<RcExpr>),
+    /// A unary expression.
     UnaryExpr(UnaryExpr<RcExpr>),
-    /// An expression wrapped in parentheses
+    /// An expression wrapped in parentheses.
     Parend(RcExpr),
-    /// An expression wrapped in brackets
+    /// An expression wrapped in brackets.
     Bracketed(RcExpr),
 }
 
 impl Grammar for Expr {}
 
 impl Expr {
-    pub fn complexity(&self) -> u8 {
+    pub(crate) fn complexity(&self) -> u8 {
         1 + match self {
             Self::Const(_) => 0,
             Self::Var(_) => 0,
@@ -175,6 +194,14 @@ impl Expr {
     pub fn get_const(&self) -> Option<f64> {
         match self {
             Self::Const(c) => Some(*c),
+            _ => None,
+        }
+    }
+
+    /// Gets the variable value stored in this expression, if any.
+    pub fn get_var(&self) -> Option<InternedStr> {
+        match self {
+            Self::Var(v) => Some(*v),
             _ => None,
         }
     }

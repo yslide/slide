@@ -11,10 +11,9 @@ mod diagnostics;
 use diagnostics::{emit_slide_diagnostics, sanitize_source_for_diagnostics};
 
 use libslide::diagnostics::{Diagnostic, DiagnosticKind};
-use libslide::scanner::ScanResult;
 use libslide::{
-    evaluate, lint_expr_pat, lint_stmt, parse_expression_pattern, parse_statement, scan, Emit,
-    EmitConfig, EmitFormat, EvaluationResult, ProgramContext, Token,
+    evaluate, lint_expr_pat, lint_stmt, parse_expression_pattern, parse_statements, scan, Emit,
+    EmitConfig, EmitFormat, EvaluationResult, ParseResult, ProgramContext, ScanResult, Token,
 };
 
 #[cfg(feature = "wasm")]
@@ -300,7 +299,10 @@ impl<'a> ProgramEvaluator<'a> {
 
     /// Handles evaluation of a regular slide program (statements, expressions).
     fn eval_slide_program(mut self) -> SlideResult {
-        let (parse_tree, diagnostics) = parse_statement(self.tokens, &self.result.org_program);
+        let ParseResult {
+            program,
+            diagnostics,
+        } = parse_statements(self.tokens, &self.result.org_program);
 
         self.result.err(&diagnostics);
         if !diagnostics.is_empty() {
@@ -310,18 +312,18 @@ impl<'a> ProgramEvaluator<'a> {
         let program_context = ProgramContext::default().lint(self.lint);
         if self.lint {
             self.result
-                .err(&lint_stmt(&parse_tree, self.result.org_program));
+                .err(&lint_stmt(&program, self.result.org_program));
         }
 
         if self.parse_only {
-            self.result.emit(&parse_tree);
+            self.result.emit(&program);
 
             self.result.ok()
         } else {
             let EvaluationResult {
                 simplified,
                 diagnostics,
-            } = evaluate(parse_tree, &program_context).unwrap();
+            } = evaluate(program, &program_context).unwrap();
             let fatal = diagnostics.iter().any(|d| d.kind == DiagnosticKind::Error);
 
             self.result.err(&diagnostics);
@@ -339,7 +341,10 @@ impl<'a> ProgramEvaluator<'a> {
 
     /// Handles evaluation of a slide expression pattern.
     fn eval_expr_pat(mut self) -> SlideResult {
-        let (parse_tree, diagnostics) = parse_expression_pattern(self.tokens);
+        let ParseResult {
+            program,
+            diagnostics,
+        } = parse_expression_pattern(self.tokens);
         self.result.err(&diagnostics);
         if !diagnostics.is_empty() {
             return self.result.failed();
@@ -347,11 +352,11 @@ impl<'a> ProgramEvaluator<'a> {
 
         if self.lint {
             self.result
-                .err(&lint_expr_pat(&parse_tree, self.result.org_program));
+                .err(&lint_expr_pat(&program, self.result.org_program));
         }
 
         if self.parse_only {
-            self.result.emit(&parse_tree);
+            self.result.emit(&program);
         } else {
             panic!("Expression patterns can only be parsed.");
         }

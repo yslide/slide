@@ -40,7 +40,6 @@ def ensure(args, _unknown):
 
     assurances = [
         lambda: build_project(DEFAULTS, []),
-        lambda: build_fuzzer(DEFAULTS, []),
         lambda: test(DEFAULTS, []),
         lambda: lf(DEFAULTS, []),
         lambda: doc(DEFAULTS, []),
@@ -54,13 +53,6 @@ def ensure(args, _unknown):
 def build_project(args, _unknown):
     process = subprocess.run(["cargo", "build", "--verbose", "--workspace"])
     return process.returncode
-
-
-def build_fuzzer(args, _unknown):
-    os.chdir('slide/fuzz')
-    rc = build_project(args, _unknown)
-    os.chdir('../../')
-    return rc
 
 
 def test(args, runner_args):

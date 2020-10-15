@@ -66,7 +66,7 @@ impl PatternMap {
         let mut split = split
             .map(|toks| scan(toks).tokens)
             .map(parse_expression_pattern)
-            .map(|(expr, _)| expr);
+            .map(|res| res.program);
 
         // Unofficially, rustc's expression evaluation order is L2R, but officially it is undefined.
         let from = split.next().unwrap();

@@ -1,5 +1,10 @@
 # slide editor tools
 
+## language server
+
+[`slide_ls`](./language_server) is an LSP implementation for slide. It has support for diagnostics
+and hover information, but is not yet ready for general use.
+
 ## vim
 
 [`slide.vim`](./slide.vim) contains a simple mapping that will replace a visual selection with the

@@ -42,6 +42,11 @@ impl Span {
             .unwrap_or_else(|| content.len());
         &content[lo..hi]
     }
+
+    /// Returns `true` iff the span contains `pos`.
+    pub fn contains(&self, pos: usize) -> bool {
+        self.lo <= pos && self.hi > pos
+    }
 }
 
 impl PartialOrd for Span {

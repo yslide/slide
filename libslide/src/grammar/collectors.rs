@@ -1,9 +1,9 @@
 //! Module `collectors` provides utilities for collecting items in a slide AST.
 
-use crate::grammar::{ExprPatVisitor, RcExpr, RcExprPat, StmtVisitor};
+use crate::grammar::*;
 use crate::{InternedStr, Span};
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Collects unique variable names in an expression.
 pub fn collect_var_names(expr: &RcExpr) -> HashSet<InternedStr> {
@@ -16,8 +16,26 @@ struct VarNameCollector {
     vars: HashSet<InternedStr>,
 }
 impl<'a> StmtVisitor<'a> for VarNameCollector {
-    fn visit_var(&mut self, var: &'a InternedStr) {
+    fn visit_var(&mut self, var: &'a InternedStr, _span: Span) {
         self.vars.insert(*var);
+    }
+}
+
+/// Collects variable assignments in a program.
+pub fn collect_var_asgns(program: &StmtList) -> HashMap<InternedStr, Vec<&Assignment>> {
+    let mut collector = VarAsgnsCollector::default();
+    collector.visit(program);
+    collector.defs
+}
+#[derive(Default)]
+struct VarAsgnsCollector<'a> {
+    defs: HashMap<InternedStr, Vec<&'a Assignment>>,
+}
+impl<'a> StmtVisitor<'a> for VarAsgnsCollector<'a> {
+    fn visit_asgn(&mut self, asgn: &'a Assignment) {
+        if let Some(var) = asgn.lhs.get_var() {
+            self.defs.entry(var).or_default().push(asgn);
+        }
     }
 }
 
@@ -60,7 +78,7 @@ mod test {
 
     #[test]
     fn collect_pat_names() {
-        let parsed = parse_expression_pattern(scan("$a + _b * (#c - [$d]) / $a").tokens).0;
+        let parsed = parse_expression_pattern(scan("$a + _b * (#c - [$d]) / $a").tokens).program;
         let pats = super::collect_pat_names(&parsed);
 
         let mut pats: Vec<_> = pats.into_iter().collect();

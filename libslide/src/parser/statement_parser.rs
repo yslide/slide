@@ -1,4 +1,4 @@
-use super::{errors::*, Parser};
+use super::{errors::*, ParseResult, Parser};
 use crate::common::Span;
 use crate::diagnostics::{Diagnostic, DiagnosticRecord};
 use crate::grammar::*;
@@ -6,9 +6,14 @@ use crate::scanner::types::{Token, TokenType};
 use crate::utils::{PeekIter, StringUtils};
 
 /// Parses a tokenized slide program, emitting the result and any diagnostics.
-pub fn parse(input: Vec<Token>, program: &str) -> (StmtList, Vec<Diagnostic>) {
+pub fn parse(input: Vec<Token>, program: &str) -> ParseResult<StmtList> {
     let mut parser = ExpressionParser::new(input, program);
-    (parser.parse(), parser.diagnostics)
+    let program = parser.parse();
+    let diagnostics = parser.diagnostics;
+    ParseResult {
+        program,
+        diagnostics,
+    }
 }
 
 pub struct ExpressionParser<'a> {
@@ -39,11 +44,11 @@ impl<'a> ExpressionParser<'a> {
         let mut next_2 = self.input().peek_map_n(2, |tok| (tok.ty.clone(), tok.span));
         let kind = match (next_2.pop_front(), next_2.pop_front()) {
             (
-                Some((TokenType::Variable(name), _)),
+                Some((TokenType::Variable(name), name_span)),
                 Some((asgn_ty @ TokenType::Equal, asgn_span)),
             )
             | (
-                Some((TokenType::Variable(name), _)),
+                Some((TokenType::Variable(name), name_span)),
                 Some((asgn_ty @ TokenType::AssignDefine, asgn_span)),
             ) => {
                 let Span { lo, .. } = self.input().next().unwrap().span;
@@ -57,7 +62,8 @@ impl<'a> ExpressionParser<'a> {
                 let rhs = self.expr();
                 let span = (lo..rhs.span.hi).into();
                 StmtKind::Assignment(Assignment {
-                    var: intern_str!(name),
+                    // TODO: handle more than variables on the LHS
+                    lhs: rc_expr!(Expr::Var(intern_str!(name)), name_span),
                     asgn_op,
                     rhs,
                     span,

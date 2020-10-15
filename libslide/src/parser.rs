@@ -13,7 +13,7 @@ mod expression_pattern_parser;
 mod statement_parser;
 
 pub use expression_pattern_parser::parse as parse_expression_pattern;
-pub use statement_parser::parse as parse_statement;
+pub use statement_parser::parse as parse_statements;
 
 use crate::common::Span;
 use crate::diagnostics::{Diagnostic, DiagnosticRecord};
@@ -22,6 +22,14 @@ use crate::scanner::types::{Token, TokenType as TT};
 use crate::utils::PeekIter;
 
 use core::convert::TryFrom;
+
+/// Describes the result of parsing a slide program.
+pub struct ParseResult<T> {
+    /// The slide program.
+    pub program: T,
+    /// Parsing diagnostics encountered while scanning the program.
+    pub diagnostics: Vec<Diagnostic>,
+}
 
 macro_rules! binary_expr_parser {
     ($self:ident $($name:ident: lhs=$lhs_term:ident, rhs=$rhs_term:ident, op=[$($matching_op:tt)+])*) => {

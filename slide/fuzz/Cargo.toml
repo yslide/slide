@@ -17,12 +17,8 @@ path = ".."
 [dependencies.libslide]
 path = "../../libslide"
 
-# Prevent this from interfering with workspaces
-[workspace]
-members = ["."]
-
 [[bin]]
-name = "slide"
+name = "slide_fuzzer"
 path = "fuzz_targets/slide.rs"
 test = false
 doc = false

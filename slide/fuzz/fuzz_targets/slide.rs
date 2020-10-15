@@ -11,8 +11,7 @@ fuzz_target!(|program: String| {
     cmd.arg("--");
     cmd.arg(&program);
 
-    match cmd.output().ok().and_then(|out| out.status.code()) {
-        Some(2) => panic!("Failed!"),
-        _ => {}
+    if let Some(2) = cmd.output().ok().and_then(|out| out.status.code()) {
+        panic!("Failed!");
     }
 });

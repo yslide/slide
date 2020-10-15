@@ -55,7 +55,7 @@ pub fn emit_slide_diagnostics(
         let snippet = Snippet {
             title: Some(Annotation {
                 label: Some(&diagnostic.title),
-                id: diagnostic.code,
+                id: Some(diagnostic.code),
                 annotation_type: main_annotation_type,
             }),
             footer,

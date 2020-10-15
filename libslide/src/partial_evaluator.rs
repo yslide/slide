@@ -51,8 +51,8 @@ pub fn evaluate(
 
 /// Evaluates an expression to as simplified a form as possible.
 /// The evaluation may be partial, as some values (like variables) may be unknown.
-/// The returned expression is [normalized](crate::utils::normalize).
-fn evaluate_expr(expr: RcExpr, rules: &[Rule], ctxt: &ProgramContext) -> RcExpr {
+/// The returned expression is normalized.
+pub fn evaluate_expr(expr: RcExpr, rules: &[Rule], ctxt: &ProgramContext) -> RcExpr {
     let mut simplified_expr = expr;
     // Try simplifying the expression with a rule set until the same expression is seen again,
     // meaning we can't simplify any further or are stuck in a cycle.
@@ -72,7 +72,7 @@ fn evaluate_expr(expr: RcExpr, rules: &[Rule], ctxt: &ProgramContext) -> RcExpr 
 }
 
 /// Given an evaluator context, builds a set of evaluator rules to be used in partial evaluation.
-fn build_rules(ctxt: &ProgramContext) -> Result<Vec<Rule>, BuildRuleErrors> {
+pub fn build_rules(ctxt: &ProgramContext) -> Result<Vec<Rule>, BuildRuleErrors> {
     let mut rule_set = RuleSet::default();
     for rule in &ctxt.rule_denylist {
         rule_set.remove(rule)

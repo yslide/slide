@@ -211,9 +211,7 @@ impl Emit for StmtKind {
     fn emit_s_expression(&self, config: EmitConfig) -> String {
         match self {
             Self::Expr(expr) => expr.emit_s_expression(config),
-            Self::Assignment(Assignment { var, rhs, .. }) => {
-                format!("(= {} {})", var, rhs.emit_s_expression(config))
-            }
+            Self::Assignment(asgn) => asgn.emit_s_expression(config),
         }
     }
 
@@ -264,7 +262,7 @@ impl Emit for Assignment {
     fn emit_pretty(&self, config: EmitConfig) -> String {
         format!(
             "{} {} {}",
-            self.var,
+            self.lhs.emit_pretty(config),
             self.asgn_op.emit_pretty(config),
             self.rhs.emit_pretty(config)
         )
@@ -274,7 +272,7 @@ impl Emit for Assignment {
         format!(
             "({} {} {})",
             self.asgn_op.emit_s_expression(config),
-            self.var,
+            self.lhs.emit_s_expression(config),
             self.rhs.emit_s_expression(config)
         )
     }
@@ -282,7 +280,7 @@ impl Emit for Assignment {
     fn emit_latex(&self, config: EmitConfig) -> String {
         format!(
             "{} {} {}",
-            self.var,
+            self.lhs.emit_latex(config),
             self.asgn_op.emit_latex(config),
             self.rhs.emit_latex(config)
         )

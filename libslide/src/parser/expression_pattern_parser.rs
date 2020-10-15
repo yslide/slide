@@ -1,4 +1,4 @@
-use super::{errors::*, Parser};
+use super::{errors::*, ParseResult, Parser};
 use crate::common::Span;
 use crate::diagnostics::{Diagnostic, DiagnosticRecord};
 use crate::grammar::*;
@@ -6,9 +6,14 @@ use crate::scanner::types::Token;
 use crate::utils::PeekIter;
 
 /// Parses a tokenized slide expression pattern, emitting the result and any diagnostics.
-pub fn parse(input: Vec<Token>) -> (RcExprPat, Vec<Diagnostic>) {
+pub fn parse(input: Vec<Token>) -> ParseResult<RcExprPat> {
     let mut parser = ExpressionPatternParser::new(input);
-    (parser.parse(), parser.diagnostics)
+    let program = parser.parse();
+    let diagnostics = parser.diagnostics;
+    ParseResult {
+        program,
+        diagnostics,
+    }
 }
 
 pub struct ExpressionPatternParser {

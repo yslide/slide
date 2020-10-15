@@ -40,7 +40,7 @@ struct EagerVariableExpander<'a> {
 impl<'a> ExpressionTransformer<'a> for EagerVariableExpander<'a> {
     fn transform_var(&self, var: &'a InternedStr, span: Span) -> RcExpr {
         let asgn = self.expand_def.unwrap();
-        if var == &asgn.var {
+        if asgn.lhs.get_var().as_ref() == Some(var) {
             asgn.rhs.clone()
         } else {
             rc_expr!(Expr::Var(*var), span)
@@ -82,7 +82,7 @@ impl<'a> VariableExpander<'a> for EagerVariableExpander<'a> {
 /// For example, `"a + a".expand("a = 1").expand("a = 10")` would expand to `"10 + 10"`.
 struct LazyVariableExpander<'a> {
     expr: RcExpr,
-    expand_defs: HashMap<&'a InternedStr, &'a RcExpr>,
+    expand_defs: HashMap<InternedStr, &'a RcExpr>,
 }
 
 impl<'a> ExpressionTransformer<'a> for LazyVariableExpander<'a> {
@@ -103,7 +103,9 @@ impl<'a> VariableExpander<'a> for LazyVariableExpander<'a> {
     }
 
     fn expand(mut self, asgn: &'a Assignment) -> Self {
-        self.expand_defs.insert(&asgn.var, &asgn.rhs);
+        if let Some(var) = asgn.lhs.get_var() {
+            self.expand_defs.insert(var, &asgn.rhs);
+        }
         self
     }
 

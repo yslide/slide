@@ -11,8 +11,7 @@ use core::cmp::Ordering;
 use lasso::{Rodeo, Spur};
 use lazy_static::lazy_static;
 use std::ops::Deref;
-use std::rc::Rc;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 lazy_static! {
     /// Arena of interned strings.
@@ -95,30 +94,30 @@ where
     fn span(&self) -> Span;
 }
 
-macro_rules! make_interner {
-    ($($intern_macro:ident, $ty:ty, $interned_struct:ident, $interner:ident)*) => {$(
-        /// An interned version of an expression.
+macro_rules! make_counted {
+    ($($counted_macro:ident, $ty:ty, $counted_struct:ident, $counter:ident)*) => {$(
+        /// An reference-counted version of an expression.
         ///
-        /// NB: interned expressions are equivalent if they point to the same underlying expression,
-        /// even though two interned expressions may have different [span](crate::Span)s.
+        /// NB: counted expressions are equivalent if they point to the same underlying expression,
+        /// even though two counted expressions may have different [span](crate::Span)s.
         #[derive(Debug, Clone)]
-        pub struct $interned_struct {
+        pub struct $counted_struct {
             /// The underlying expression.
-            expr: Rc<$ty>,
+            expr: Arc<$ty>,
             /// The original span of this expression from an input source code.
-            /// Even though the expression is interned, this span is distinct and serves as a
-            /// backwards-mapping to where the expression originally came from.
-            pub(crate) span: Span,
+            /// Even though the expression may be shared, this span is distinct and serves
+            /// as a backwards-mapping to where the expression originally came from.
+            pub span: Span,
         }
 
-        impl $interned_struct {
+        impl $counted_struct {
             /// Creates a new reference-counted expression at a span.
             pub(crate) fn new<Sp>(expr: $ty, span: Sp) -> Self
             where
                 Sp: Into<Span>
             {
                 Self {
-                    expr: Rc::new(expr),
+                    expr: Arc::new(expr),
                     span: span.into(),
                 }
             }
@@ -126,29 +125,29 @@ macro_rules! make_interner {
 
         /// Interns an expression.
         #[macro_export]
-        macro_rules! $intern_macro {
+        macro_rules! $counted_macro {
             ($expr: expr, $span: expr) => {
-                $interned_struct::new($expr, $span)
+                $counted_struct::new($expr, $span)
             }
         }
 
-        impl Grammar for $interned_struct {}
+        impl Grammar for $counted_struct {}
 
-        impl core::hash::Hash for $interned_struct {
+        impl core::hash::Hash for $counted_struct {
             fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
                 self.expr.hash(state);
             }
         }
 
-        impl PartialEq for $interned_struct {
+        impl PartialEq for $counted_struct {
             fn eq(&self, other: &Self) -> bool {
                 self.expr.eq(&other.expr)
             }
         }
 
-        impl Eq for $interned_struct {}
+        impl Eq for $counted_struct {}
 
-        impl Emit for $interned_struct {
+        impl Emit for $counted_struct {
             fn emit_pretty(&self, config: EmitConfig) -> String {
                 self.as_ref().emit_pretty(config)
             }
@@ -162,19 +161,19 @@ macro_rules! make_interner {
             }
         }
 
-        impl core::fmt::Display for $interned_struct {
+        impl core::fmt::Display for $counted_struct {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 write!(f, "{}", self.emit_pretty(EmitConfig::default()))
             }
         }
 
-        impl AsRef<$ty> for $interned_struct {
+        impl AsRef<$ty> for $counted_struct {
             fn as_ref(&self) -> &$ty {
                 self.deref()
             }
         }
 
-        impl Deref for $interned_struct {
+        impl Deref for $counted_struct {
             type Target = <Self as RcExpression>::Inner;
 
             fn deref(&self) -> &Self::Target {
@@ -182,13 +181,13 @@ macro_rules! make_interner {
             }
         }
 
-        impl PartialOrd for $interned_struct {
+        impl PartialOrd for $counted_struct {
             fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
                 Some(self.cmp(other))
             }
         }
 
-        impl Ord for $interned_struct {
+        impl Ord for $counted_struct {
             fn cmp(&self, other: &Self) -> Ordering {
                 self.as_ref().cmp(&other.as_ref())
             }
@@ -196,7 +195,7 @@ macro_rules! make_interner {
     )*};
 }
 
-make_interner! {
+make_counted! {
     rc_expr, Expr, RcExpr, EXPR_RODEO
     rc_expr_pat, ExprPat, RcExprPat, EXPR_PAT_RODEO
 }

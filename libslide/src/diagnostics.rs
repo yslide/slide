@@ -45,7 +45,7 @@ pub struct Diagnostic {
     /// The diagnostic kind.
     pub kind: DiagnosticKind,
     /// The diagnostic code.
-    pub code: Option<&'static str>,
+    pub code: &'static str,
     /// Source location for which the diagnostic is applicable.
     pub span: Span,
     /// A summarizing title for the diagnostic.
@@ -81,7 +81,7 @@ macro_rules! span_diag {
         where
             S: Into<Span>,
             M: Into<String>,
-            C: Into<Option<&'static str>>,
+            C: Into<&'static str>,
             N: Into<Option<String>>,
         {
             Diagnostic {

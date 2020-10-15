@@ -281,8 +281,7 @@ mod tests {
     use crate::{parse_expr, parse_expression_pattern, scan};
 
     fn parse_rule(prog: &str) -> RcExprPat {
-        let (expr, _) = parse_expression_pattern(scan(prog).tokens);
-        expr
+        parse_expression_pattern(scan(prog).tokens).program
     }
 
     mod replacements {

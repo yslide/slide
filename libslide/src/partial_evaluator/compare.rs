@@ -1,7 +1,8 @@
 //! Module `compare` compares expressions for equality.
 
 use crate::evaluator_rules::Rule;
-use crate::grammar::{BinaryExpr, Expr, RcExpr, StmtVisitor};
+use crate::grammar::collectors::collect_var_names;
+use crate::grammar::{BinaryExpr, Expr, RcExpr};
 use crate::partial_evaluator::evaluate_expr;
 use crate::{InternedStr, ProgramContext};
 
@@ -36,21 +37,6 @@ pub fn cmp_eq(
         Some(_) => EqRelation::NeverEquivalent,
 
         // Difference is variable-dependent; equality is variable-dependent.
-        None => {
-            let mut collector = VarNameCollector::default();
-            collector.visit_expr(&diff);
-            EqRelation::DependsOn(collector.vars)
-        }
-    }
-}
-
-#[derive(Default)]
-struct VarNameCollector {
-    vars: HashSet<InternedStr>,
-}
-
-impl<'a> StmtVisitor<'a> for VarNameCollector {
-    fn visit_var(&mut self, var: &'a InternedStr) {
-        self.vars.insert(*var);
+        None => EqRelation::DependsOn(collect_var_names(&diff)),
     }
 }

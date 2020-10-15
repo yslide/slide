@@ -2,6 +2,7 @@
 
 #[macro_use]
 mod mem;
+pub mod collectors;
 mod expression_pattern;
 mod statement;
 mod transformer;

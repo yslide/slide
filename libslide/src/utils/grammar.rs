@@ -1,7 +1,6 @@
 use crate::grammar::*;
-use crate::Span;
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::VecDeque;
 
 pub fn get_symmetric_expressions(expr: RcExpr) -> Vec<RcExpr> {
     match expr.as_ref() {
@@ -207,31 +206,6 @@ where
     }
 }
 
-/// Returns all unique pattern names in a pattern expression.
-pub fn unique_pats(expr: &RcExprPat) -> HashSet<&str> {
-    let mut collector = PatCollector::default();
-    collector.visit(expr);
-    collector.pats
-}
-
-// TODO: Put collectors like these in a "collectors" module.
-#[derive(Default)]
-struct PatCollector<'a> {
-    pats: HashSet<&'a str>,
-}
-
-impl<'a> ExprPatVisitor<'a> for PatCollector<'a> {
-    fn visit_var_pat(&mut self, var_pat: &'a str, _span: Span) {
-        self.pats.insert(var_pat);
-    }
-    fn visit_const_pat(&mut self, const_pat: &'a str, _span: Span) {
-        self.pats.insert(const_pat);
-    }
-    fn visit_any_pat(&mut self, any_pat: &'a str, _span: Span) {
-        self.pats.insert(any_pat);
-    }
-}
-
 pub fn normalize(expr: RcExpr) -> RcExpr {
     match expr.as_ref() {
         Expr::BinaryExpr(BinaryExpr { op, lhs, rhs }) => {
@@ -270,7 +244,7 @@ pub fn normalize(expr: RcExpr) -> RcExpr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{parse_expr, parse_expression_pattern, scan};
+    use crate::parse_expr;
 
     #[test]
     fn get_symmetric_expressions_add() {
@@ -399,16 +373,5 @@ mod tests {
             }
             _ => unreachable!(),
         }
-    }
-
-    #[test]
-    fn unique_pats() {
-        let parsed = parse_expression_pattern(scan("$a + _b * (#c - [$d]) / $a").tokens).0;
-        let pats = super::unique_pats(&parsed);
-
-        let mut pats: Vec<_> = pats.into_iter().collect();
-        pats.sort_by(|a, b| a.as_bytes()[1].cmp(&b.as_bytes()[1]));
-
-        assert_eq!(pats, vec!["$a", "_b", "#c", "$d"]);
     }
 }

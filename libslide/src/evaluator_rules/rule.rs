@@ -1,6 +1,7 @@
 use super::pattern_match::{MatchRule, PatternMatch};
+use crate::grammar::collectors::collect_pat_names;
 use crate::grammar::*;
-use crate::utils::{get_symmetric_expressions, hash, indent, unique_pats};
+use crate::utils::{get_symmetric_expressions, hash, indent};
 use crate::{parse_expression_pattern, scan};
 
 use core::fmt;
@@ -97,8 +98,8 @@ impl PatternMap {
 
     /// Checks a `PatternMap` is resolvable, returning an error if it is not.
     pub fn validate(&self) -> Result<(), UnresolvedMapping> {
-        let unresolved_pats: Vec<_> = unique_pats(&self.to)
-            .difference(&unique_pats(&self.from))
+        let unresolved_pats: Vec<_> = collect_pat_names(&self.to)
+            .difference(&collect_pat_names(&self.from))
             .map(|&p| p.to_string())
             .collect();
 

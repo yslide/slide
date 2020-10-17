@@ -47,7 +47,7 @@ jobs:
         run: |
           cargo install cargo-fuzz
           cd slide
-          EC="$(cargo fuzz run slide -- fuzz/corpus/ fuzz/seed -runs=500000 &> out.slide || echo $?)"
+          EC="$(cargo fuzz run slide_fuzzer -- fuzz/corpus/ fuzz/seed -runs=500000 &> out.slide || echo $?)"
           FUZZ_OUTPUT="$(cat out.slide | tail -30)"
           RE_CRASH_FILE="(fuzz/artifacts/slide/crash-[0-9a-zA-Z]+)"
           if [[ "$FUZZ_OUTPUT" =~ $RE_CRASH_FILE ]]; then

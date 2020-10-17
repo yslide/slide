@@ -1,6 +1,10 @@
 target/
 Cargo.lock
 
+# fuzzer
+corpus/
+artifacts/
+
 # latex
 assets/*.aux*
 assets/*.dpth

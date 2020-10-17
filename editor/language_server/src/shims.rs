@@ -1,4 +1,4 @@
-//! Module `diagnostics` converts slide diagnostics to LSP types.
+//! Module `shims` converts between slide and LSP types.
 
 use libslide::diagnostics as s;
 use libslide::Span;

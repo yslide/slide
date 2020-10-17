@@ -204,8 +204,10 @@
 mod grammar;
 pub use grammar::collectors;
 pub use grammar::visit;
-pub(crate) use grammar::InternedStr;
-pub use grammar::{Assignment, Expr, ExprPat, Grammar, RcExpr, Stmt, StmtKind, StmtList};
+pub use grammar::{
+    Assignment, BinaryExpr, Expr, ExprPat, Grammar, InternedStr, RcExpr, RcExpression, Stmt,
+    StmtKind, StmtList, UnaryExpr,
+};
 
 mod common;
 pub use common::*;

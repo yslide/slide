@@ -65,16 +65,21 @@ impl TryFrom<&Token> for BinaryOperator {
     }
 }
 
+/// A binary expression.
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
 pub struct BinaryExpr<E: RcExpression> {
+    /// The binary operator.
     pub op: BinaryOperator,
+    /// The left hand side of the binary operator.
     pub lhs: E,
+    /// The right hand side of the binary operator.
     pub rhs: E,
 }
 
 macro_rules! mkop {
     ($($op_name:ident: $binop:path)*) => {
     $(
+        /// Creates a binary expression with the given operator.
         pub fn $op_name<T, U>(lhs: T, rhs: U) -> Self
         where
             T: Into<E>,
@@ -145,9 +150,12 @@ impl TryFrom<&Token> for UnaryOperator {
     }
 }
 
+/// A unary expression.
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
 pub struct UnaryExpr<E: RcExpression> {
+    /// The unary operator.
     pub op: UnaryOperator,
+    /// The expression the unary operator applies to.
     pub rhs: E,
 }
 
@@ -155,6 +163,7 @@ impl<E> UnaryExpr<E>
 where
     E: RcExpression,
 {
+    /// Creates a negation of an expression.
     pub fn negate<T>(expr: T) -> Self
     where
         T: Into<E>,

@@ -15,6 +15,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Deref;
 
+mod ast;
 mod services;
 mod shims;
 use shims::convert_diagnostics;
@@ -22,10 +23,9 @@ use shims::convert_diagnostics;
 #[cfg(test)]
 mod tests;
 
-// TODO(https://github.com/rust-lang/rust/issues/78003): used by pseudo-public providers.
-#[allow(private_in_public)]
-struct ProgramInfo {
+pub(crate) struct ProgramInfo {
     source: String,
+    uri: Url,
     original: StmtList,
     #[allow(unused)]
     simplified: StmtList,
@@ -37,8 +37,9 @@ type DocumentRegistry = HashMap<Url, ProgramInfo>;
 pub struct SlideLS {
     client: Client,
     document_registry: Mutex<RefCell<DocumentRegistry>>,
-    // This is always correctly set after `initialize`.
+    // These are always correctly set after `initialize`.
     context: Mutex<RefCell<ProgramContext>>,
+    client_caps: Mutex<RefCell<ClientCapabilities>>,
 }
 
 impl SlideLS {
@@ -48,6 +49,7 @@ impl SlideLS {
             client,
             document_registry: Default::default(),
             context: Default::default(),
+            client_caps: Default::default(),
         }
     }
 
@@ -60,11 +62,17 @@ impl SlideLS {
                 ..TextDocumentSyncOptions::default()
             },
         ));
+        let definition_provider = Some(true);
         let hover_provider = Some(HoverProviderCapability::Simple(true));
+        let references_provider = Some(true);
+        let document_highlight_provider = Some(true);
 
         ServerCapabilities {
+            definition_provider,
             text_document_sync,
             hover_provider,
+            references_provider,
+            document_highlight_provider,
             ..ServerCapabilities::default()
         }
     }
@@ -115,6 +123,7 @@ impl SlideLS {
             doc.clone(),
             ProgramInfo {
                 source: text,
+                uri: doc,
                 original: program,
                 simplified,
             },
@@ -136,13 +145,18 @@ impl SlideLS {
     fn context(&self) -> MappedMutexGuard<ProgramContext> {
         MutexGuard::map(self.context.lock(), |pc| pc.get_mut())
     }
+
+    fn client_caps(&self) -> MappedMutexGuard<ClientCapabilities> {
+        MutexGuard::map(self.client_caps.lock(), |pc| pc.get_mut())
+    }
 }
 
 #[tower_lsp::async_trait]
 impl LanguageServer for SlideLS {
-    async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
+    async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
         let context = ProgramContext::default().lint(true);
         self.context.lock().replace(context);
+        self.client_caps.lock().replace(params.capabilities);
 
         Ok(InitializeResult {
             capabilities: SlideLS::capabilities(),
@@ -181,6 +195,27 @@ impl LanguageServer for SlideLS {
         self.close(&uri);
     }
 
+    async fn goto_definition(
+        &self,
+        params: GotoDefinitionParams,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        let TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier { uri },
+            position,
+        } = params.text_document_position_params;
+        let program_info = self.get_program_info(&uri);
+        let supports_link = self
+            .client_caps()
+            .text_document
+            .as_ref()
+            .and_then(|td| td.definition)
+            .and_then(|def| def.link_support)
+            .unwrap_or(false);
+
+        let definitions = services::get_definitions(position, program_info.deref(), supports_link);
+        Ok(definitions)
+    }
+
     async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
         let TextDocumentPositionParams {
             text_document: TextDocumentIdentifier { uri },
@@ -189,8 +224,41 @@ impl LanguageServer for SlideLS {
         let program_info = self.get_program_info(&uri);
         let context = self.context();
 
-        let hover = services::get_hover_info(position, program_info, context.deref());
+        let hover = services::get_hover_info(position, program_info.deref(), context.deref());
         Ok(hover)
+    }
+
+    async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
+        let ReferenceParams {
+            text_document_position:
+                TextDocumentPositionParams {
+                    text_document: TextDocumentIdentifier { uri },
+                    position,
+                },
+            context: ReferenceContext {
+                include_declaration,
+            },
+            ..
+        } = params;
+        let program_info = self.get_program_info(&uri);
+
+        let references =
+            services::get_references(position, include_declaration, program_info.deref());
+        Ok(references)
+    }
+
+    async fn document_highlight(
+        &self,
+        params: DocumentHighlightParams,
+    ) -> Result<Option<Vec<DocumentHighlight>>> {
+        let TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier { uri },
+            position,
+        } = params.text_document_position_params;
+        let program_info = self.get_program_info(&uri);
+
+        let highlights = services::get_semantic_highlights(position, program_info.deref());
+        Ok(highlights)
     }
 }
 

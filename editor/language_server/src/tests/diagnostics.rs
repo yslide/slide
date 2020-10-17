@@ -1,4 +1,5 @@
 use super::mocks::*;
+use super::utils::range_of;
 
 use pretty_assertions::assert_eq;
 use tower_lsp::lsp_types::*;
@@ -35,7 +36,7 @@ macro_rules! diagnostics {
 
 #[tokio::test]
 async fn empty_diagnostics() {
-    let mut service = MockService::new().await;
+    let mut service = MockService::default().await;
 
     let file = Url::parse("file:///test").unwrap();
     let text = r#"
@@ -53,7 +54,7 @@ async fn empty_diagnostics() {
 
 #[tokio::test]
 async fn open_and_change_with_diagnostics() {
-    let mut service = MockService::new().await;
+    let mut service = MockService::default().await;
 
     let file = Url::parse("file:///test").unwrap();
     let text = r#"

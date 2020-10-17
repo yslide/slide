@@ -13,8 +13,12 @@ pub struct MockService {
 }
 
 impl MockService {
+    pub async fn default() -> Self {
+        Self::new(false).await
+    }
+
     /// Creates a new slide language service and initializes it.
-    pub async fn new() -> Self {
+    pub async fn new(link_support: bool) -> Self {
         let (service, msg_stream) = LspService::new(crate::SlideLS::new);
         let service = Spawn::new(service);
         let mut service = Self {
@@ -26,7 +30,10 @@ impl MockService {
 
         // Initialize
         service
-            .send_recv(initialize::request(), Some(initialize::response()))
+            .send_recv(
+                initialize::request(link_support),
+                Some(initialize::response()),
+            )
             .await;
         // Mark initialized
         service.send_recv(initialized::notification(), None).await;
@@ -93,13 +100,57 @@ impl MockService {
         self.get_diagnostics().await
     }
 
-    pub async fn hover(&mut self, uri: &Url, position: Position) -> Hover {
+    pub async fn definition(
+        &mut self,
+        uri: &Url,
+        position: Position,
+    ) -> Option<GotoDefinitionResponse> {
+        self.assert_ready();
+        let hover_resp = self
+            .send(text_document::definition::request(uri, position))
+            .await
+            .unwrap();
+        serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
+    }
+
+    pub async fn hover(&mut self, uri: &Url, position: Position) -> Option<Hover> {
         self.assert_ready();
         let hover_resp = self
             .send(text_document::hover::request(uri, position))
             .await
             .unwrap();
-        serde_json::from_value(hover_resp.get("result").unwrap().clone()).unwrap()
+        serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
+    }
+
+    pub async fn references(
+        &mut self,
+        uri: &Url,
+        position: Position,
+        include_declaration: bool,
+    ) -> Option<Vec<Location>> {
+        self.assert_ready();
+        let hover_resp = self
+            .send(text_document::references::request(
+                uri,
+                position,
+                include_declaration,
+            ))
+            .await
+            .unwrap();
+        serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
+    }
+
+    pub async fn highlight(
+        &mut self,
+        uri: &Url,
+        position: Position,
+    ) -> Option<Vec<DocumentHighlight>> {
+        self.assert_ready();
+        let hover_resp = self
+            .send(text_document::highlight::request(uri, position))
+            .await
+            .unwrap();
+        serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
     }
 }
 
@@ -117,12 +168,18 @@ pub mod exit {
 pub mod initialize {
     use serde_json::{json, Value};
 
-    pub fn request() -> Value {
+    pub fn request(link_support: bool) -> Value {
         json!({
             "jsonrpc": "2.0",
             "method": "initialize",
             "params": {
-                "capabilities": {},
+                "capabilities": {
+                    "textDocument": {
+                        "definition": {
+                            "linkSupport": link_support,
+                        },
+                    },
+                },
             },
             "id": 1,
         })
@@ -222,6 +279,26 @@ pub mod text_document {
         }
     }
 
+    pub mod definition {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url, position: Position) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/definition",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
+                    "position": position,
+                },
+                "id": 1,
+            })
+        }
+    }
+
     pub mod hover {
         use serde_json::{json, Value};
         use tower_lsp::lsp_types::*;
@@ -240,14 +317,47 @@ pub mod text_document {
             })
         }
     }
-}
 
-pub fn range_of(subtext: &str, text: &str) -> Range {
-    let span_start = text
-        .match_indices(subtext)
-        .next()
-        .expect("Subtext not found.")
-        .0;
-    let span = (span_start, span_start + subtext.chars().count());
-    crate::shims::to_range(&span.into(), text)
+    pub mod references {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url, position: Position, include_declaration: bool) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/references",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
+                    "position": position,
+                    "context": {
+                        "includeDeclaration": include_declaration,
+                    },
+                },
+                "id": 1,
+            })
+        }
+    }
+
+    pub mod highlight {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url, position: Position) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/documentHighlight",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
+                    "position": position,
+                },
+                "id": 1,
+            })
+        }
+    }
 }

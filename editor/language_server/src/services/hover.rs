@@ -1,8 +1,8 @@
+use crate::ast;
 use crate::shims::{to_offset, to_range};
 use crate::ProgramInfo;
 
 use collectors::collect_var_asgns;
-use libslide::visit::StmtVisitor;
 use libslide::*;
 
 use std::collections::HashSet;
@@ -13,16 +13,13 @@ use tower_lsp::lsp_types::*;
 ///   - if the variable is defined, its simplified definition(s) are returned.
 ///   - if the variable is not defined, an "unknown" marker is returned.
 /// - Otherwise, a simplified version of the hovered expression is returned.
-pub fn get_hover_info(
+pub(crate) fn get_hover_info(
     position: Position,
-    program_info: impl std::ops::Deref<Target = ProgramInfo>,
+    program_info: &ProgramInfo,
     context: &ProgramContext,
 ) -> Option<Hover> {
     let position = to_offset(&position, &program_info.source);
-    let tightest_expr = match get_tightest_expr(position, &program_info.original) {
-        Some(expr) => expr,
-        None => return None,
-    };
+    let tightest_expr = ast::get_tightest_expr(position, &program_info.original)?;
     let range = Some(to_range(&tightest_expr.span, &program_info.source));
 
     // Now the fun part: actually figure out the hover result.
@@ -71,32 +68,4 @@ fn fmt_hover_info(simplified_vals: String) -> String {
         .map(|l| format!("= {}", l))
         .collect::<Vec<_>>()
         .join("\n")
-}
-
-fn get_tightest_expr(pos: usize, program: &StmtList) -> Option<&RcExpr> {
-    let mut finder = ExprFinder {
-        tightest: None,
-        pos,
-    };
-    finder.visit_stmt_list(program);
-    finder.tightest
-}
-
-struct ExprFinder<'a> {
-    tightest: Option<&'a RcExpr>,
-    pos: usize,
-}
-impl<'a> StmtVisitor<'a> for ExprFinder<'a> {
-    fn visit_stmt(&mut self, stmt: &'a Stmt) {
-        if stmt.span().contains(self.pos) {
-            visit::descend_stmt(self, stmt);
-        }
-    }
-
-    fn visit_expr(&mut self, expr: &'a RcExpr) {
-        if expr.span.contains(self.pos) {
-            self.tightest = Some(expr);
-            visit::descend_expr(self, expr);
-        }
-    }
 }

@@ -6,12 +6,11 @@ pub mod collectors;
 mod expression_pattern;
 mod statement;
 mod transformer;
-mod visitor;
+pub mod visit;
 pub use expression_pattern::*;
 pub use mem::*;
 pub use statement::*;
 pub use transformer::*;
-pub use visitor::*;
 
 use crate::emit::Emit;
 use crate::scanner::types::{Token, TokenType};

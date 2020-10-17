@@ -203,8 +203,8 @@
 #[macro_use]
 mod grammar;
 pub use grammar::collectors;
+pub use grammar::visit;
 pub(crate) use grammar::InternedStr;
-pub use grammar::StmtVisitor;
 pub use grammar::{Assignment, Expr, ExprPat, Grammar, RcExpr, Stmt, StmtKind, StmtList};
 
 mod common;

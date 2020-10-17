@@ -21,6 +21,7 @@ use crate::linter::LintRule;
 
 use crate::diagnostics::Diagnostic;
 use crate::grammar::*;
+use visit::StmtVisitor;
 
 pub struct HomogenousAssignmentLinter<'a> {
     source: &'a str,
@@ -70,7 +71,7 @@ impl<'a> StmtVisitor<'a> for HomogenousAssignmentLinter<'a> {
 impl<'a> LintRule<'a, StmtList> for HomogenousAssignmentLinter<'a> {
     fn lint(stmt_list: &StmtList, source: &'a str) -> Vec<Diagnostic> {
         let mut linter = Self::new(&source);
-        linter.visit(stmt_list);
+        linter.visit_stmt_list(stmt_list);
         linter.diagnostics
     }
 }

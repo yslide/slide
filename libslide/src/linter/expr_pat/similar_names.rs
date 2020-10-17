@@ -18,6 +18,7 @@ explain_lint! {
 
 use crate::common::Span;
 use crate::diagnostics::Diagnostic;
+use crate::grammar::visit::ExprPatVisitor;
 use crate::grammar::*;
 use crate::linter::LintRule;
 
@@ -138,7 +139,7 @@ impl<'a> SimilarNamesLinter<'a> {
     }
 }
 
-impl<'a> ExprPatVisitor<'a> for SimilarNamesLinter<'a> {
+impl<'a> visit::ExprPatVisitor<'a> for SimilarNamesLinter<'a> {
     fn visit_var_pat(&mut self, var_pat: &'a str, span: Span) {
         let name = &var_pat[1..];
         self.names.entry(name).or_default().var_pat.push(span);
@@ -158,7 +159,7 @@ impl<'a> ExprPatVisitor<'a> for SimilarNamesLinter<'a> {
 impl<'a> LintRule<'a, RcExprPat> for SimilarNamesLinter<'a> {
     fn lint(expr_pat: &RcExprPat, _source: &'a str) -> Vec<Diagnostic> {
         let mut linter = Self::default();
-        linter.visit(expr_pat);
+        linter.visit_expr_pat(expr_pat);
         linter.check_names()
     }
 }

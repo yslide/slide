@@ -1,5 +1,6 @@
 //! Module `collectors` provides utilities for collecting items in a slide AST.
 
+use crate::grammar::visit::*;
 use crate::grammar::*;
 use crate::{InternedStr, Span};
 
@@ -24,7 +25,7 @@ impl<'a> StmtVisitor<'a> for VarNameCollector {
 /// Collects variable assignments in a program.
 pub fn collect_var_asgns(program: &StmtList) -> HashMap<InternedStr, Vec<&Assignment>> {
     let mut collector = VarAsgnsCollector::default();
-    collector.visit(program);
+    collector.visit_stmt_list(program);
     collector.defs
 }
 #[derive(Default)]
@@ -42,7 +43,7 @@ impl<'a> StmtVisitor<'a> for VarAsgnsCollector<'a> {
 /// Collects unique pattern names in an pattern expression.
 pub fn collect_pat_names(expr: &RcExprPat) -> HashSet<&str> {
     let mut collector = PatternCollector::default();
-    collector.visit(expr);
+    collector.visit_expr_pat(expr);
     collector.pats
 }
 #[derive(Default)]

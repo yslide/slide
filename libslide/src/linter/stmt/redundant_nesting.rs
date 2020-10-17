@@ -19,6 +19,7 @@ use crate::linter::LintRule;
 
 use crate::common::Span;
 use crate::diagnostics::Diagnostic;
+use crate::grammar::visit::StmtVisitor;
 use crate::grammar::*;
 
 pub struct RedundantNestingLinter<'a> {
@@ -58,11 +59,11 @@ impl<'a> RedundantNestingLinter<'a> {
             )
         }
 
-        self.visit_expr(expr);
+        visit::descend_expr(self, expr);
     }
 }
 
-impl<'a> StmtVisitor<'a> for RedundantNestingLinter<'a> {
+impl<'a> visit::StmtVisitor<'a> for RedundantNestingLinter<'a> {
     fn visit_parend(&mut self, expr: &'a RcExpr, span: Span) {
         self.visit_nesting(expr, span);
     }
@@ -75,7 +76,7 @@ impl<'a> StmtVisitor<'a> for RedundantNestingLinter<'a> {
 impl<'a> LintRule<'a, StmtList> for RedundantNestingLinter<'a> {
     fn lint(stmt_list: &StmtList, source: &'a str) -> Vec<Diagnostic> {
         let mut linter = Self::new(&source);
-        linter.visit(stmt_list);
+        linter.visit_stmt_list(stmt_list);
         linter.diagnostics
     }
 }

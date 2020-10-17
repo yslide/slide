@@ -19,6 +19,7 @@ use crate::linter::LintRule;
 
 use crate::common::Span;
 use crate::diagnostics::Diagnostic;
+use crate::grammar::visit::StmtVisitor;
 use crate::grammar::*;
 
 pub struct UnarySeriesLinter<'a> {
@@ -74,7 +75,7 @@ impl<'a> StmtVisitor<'a> for UnarySeriesLinter<'a> {
 impl<'a> LintRule<'a, StmtList> for UnarySeriesLinter<'a> {
     fn lint(stmt_list: &StmtList, source: &'a str) -> Vec<Diagnostic> {
         let mut linter = Self::new(&source);
-        linter.visit(stmt_list);
+        linter.visit_stmt_list(stmt_list);
         linter.diagnostics
     }
 }

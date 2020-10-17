@@ -2,6 +2,7 @@ use crate::shims::{to_offset, to_range};
 use crate::ProgramInfo;
 
 use collectors::collect_var_asgns;
+use libslide::visit::StmtVisitor;
 use libslide::*;
 
 use std::collections::HashSet;
@@ -77,7 +78,7 @@ fn get_tightest_expr(pos: usize, program: &StmtList) -> Option<&RcExpr> {
         tightest: None,
         pos,
     };
-    finder.visit(program);
+    finder.visit_stmt_list(program);
     finder.tightest
 }
 
@@ -86,18 +87,16 @@ struct ExprFinder<'a> {
     pos: usize,
 }
 impl<'a> StmtVisitor<'a> for ExprFinder<'a> {
+    fn visit_stmt(&mut self, stmt: &'a Stmt) {
+        if stmt.span().contains(self.pos) {
+            visit::descend_stmt(self, stmt);
+        }
+    }
+
     fn visit_expr(&mut self, expr: &'a RcExpr) {
-        // TODO: skip entire statements outside of position, and do not have to clone visitor impl.
         if expr.span.contains(self.pos) {
             self.tightest = Some(expr);
-            match expr.as_ref() {
-                Expr::Const(k) => self.visit_const(k, expr.span),
-                Expr::Var(v) => self.visit_var(v, expr.span),
-                Expr::BinaryExpr(b) => self.visit_binary(b),
-                Expr::UnaryExpr(u) => self.visit_unary(u, expr.span),
-                Expr::Parend(p) => self.visit_parend(p, expr.span),
-                Expr::Bracketed(b) => self.visit_bracketed(b, expr.span),
-            }
+            visit::descend_expr(self, expr);
         }
     }
 }

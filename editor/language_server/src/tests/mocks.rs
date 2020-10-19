@@ -100,6 +100,19 @@ impl MockService {
         self.get_diagnostics().await
     }
 
+    pub async fn completion(
+        &mut self,
+        uri: &Url,
+        position: Position,
+    ) -> Option<CompletionResponse> {
+        self.assert_ready();
+        let hover_resp = self
+            .send(text_document::definition::request(uri, position))
+            .await
+            .unwrap();
+        serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
+    }
+
     pub async fn definition(
         &mut self,
         uri: &Url,
@@ -275,6 +288,26 @@ pub mod text_document {
                         "text": text.as_ref(),
                     },
                 },
+            })
+        }
+    }
+
+    pub mod completion {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url, position: Position) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/completion",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
+                    "position": position,
+                },
+                "id": 1,
             })
         }
     }

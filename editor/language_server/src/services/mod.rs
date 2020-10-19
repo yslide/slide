@@ -1,5 +1,10 @@
 //! Provides langauge services for a slide language server.
 
+/// Provides completion services for a slide langauge server.
+/// See [`get_completions`](completions::get_completions) for more information.
+mod completions;
+pub(crate) use completions::get_completions;
+
 /// Provides definitions services for a slide langauge server.
 /// See [`get_definitions`](definitions::get_definitions) for more information.
 mod definitions;

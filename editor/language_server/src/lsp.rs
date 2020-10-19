@@ -62,12 +62,18 @@ impl SlideLS {
                 ..TextDocumentSyncOptions::default()
             },
         ));
+        let completion_provider = Some(CompletionOptions{
+            resolve_provider: Some(false),
+            trigger_characters: Some(vec!["=", "(", "[", "+", "-", "*", "/", "%", "^"].into_iter().map(String::from).collect()),
+            ..CompletionOptions::default()
+        });
         let definition_provider = Some(true);
         let hover_provider = Some(HoverProviderCapability::Simple(true));
         let references_provider = Some(true);
         let document_highlight_provider = Some(true);
 
         ServerCapabilities {
+            completion_provider,
             definition_provider,
             text_document_sync,
             hover_provider,
@@ -193,6 +199,20 @@ impl LanguageServer for SlideLS {
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
         let TextDocumentIdentifier { uri } = params.text_document;
         self.close(&uri);
+    }
+
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        let TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier { uri },
+            position,
+        } = params.text_document_position;
+        self.client
+            .log_message(MessageType::Info, format!("Got completion request"))
+            .await;
+        let program_info = self.get_program_info(&uri);
+
+        let completions = services::get_completions(position, program_info.deref());
+        Ok(completions)
     }
 
     async fn goto_definition(

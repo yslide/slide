@@ -1,19 +1,19 @@
 //! libslide is the core of slide, implementing the end-to-end processing of a slide program.
 //!
-//! slide is described as a "static expression optimizer", which can be thought of as rougly equivalent
-//! to an "expression simplifier". Both of these terms are ambiguous ideas reasonable people can
+//! slide is an expression rewrite system, which can be thought of as rougly equivalent
+//! to a "static expression simplifier". Both of these terms are ambiguous ideas reasonable people can
 //! disagree on. For example, depending on the evaluation context, either `x ^ 2` or `x * x` may be
-//! "optimized" form of the same expression.
+//! "simplified" forms of the same expression.
 //!
 //! slide uses reasonable (operation-reducing) simplification rules to achieve this goal. Recognizing the
-//! ambiguities described above, slide also hopes to make optimization customizable on the side of the
+//! ambiguities described above, slide also hopes to make simplification customizable on the side of the
 //! user.
 //!
 //! This isn't the only design goal of slide; others include
 //!
-//! - Simplification as a platform, where optimization rules are configurable plugins.
+//! - Simplification as a platform, where rewrite rules are configurable.
 //! - Strong support for environments slide is most used in (e.g. LaTeX and ad-hoc interactive queries).
-//! - Easy integration with text editors and language servers.
+//! - Easy integration with text editors via language servers.
 //! - Evaluation of mathematical statements even in ambiguous contexts.
 //!
 //! slide is still far from being complete. Contributions of any kind are warmly welcomed, as they help
@@ -40,8 +40,8 @@
 //!
 //! ## Evaluator
 //!
-//! The `partial_evaluator` module loops the application of simplification rules on an expression until
-//! a rule no longer reduces an expression.
+//! Slide's evaluation engine loops the application of rewrite rules (henceforward referred to as
+//! simplification rules) on a program until no rule leads to further reduction.
 //!
 //! ### Kinds of simplification rules
 //!
@@ -75,8 +75,11 @@
 //! Because of these limitations in string rules, slide also supports function rules. These are
 //! functions of the form
 //!
-//! ```ignore
+//! ```
+//! # use libslide::Expr;
+//! # type _A =
 //! fn(expr: Expr) -> Option<Expr>
+//! # ;
 //! ```
 //!
 //! Function rules are much more powerful because they have access to an entire expression tree and can
@@ -149,8 +152,11 @@
 //!
 //! Function rules are functions with the signature
 //!
-//! ```ignore
+//! ```
+//! # use libslide::Expr;
+//! # type _A =
 //! fn(expr: Expr) -> Option<Expr>
+//! # ;
 //! ```
 //!
 //! Function rules are given an expression and can perform arbitrary evaluation to try to simplify the

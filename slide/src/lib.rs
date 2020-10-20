@@ -2,7 +2,7 @@
 
 #![deny(warnings)]
 #![deny(missing_docs)]
-#![doc(html_logo_url = "https://raw.githubusercontent.com/yslide/slide/master/assets/logo.png")]
+#![doc(html_logo_url = "https://raw.githubusercontent.com/yslide/slide/base/assets/logo.png")]
 
 #[cfg(test)]
 mod test;

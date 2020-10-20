@@ -242,7 +242,7 @@ lf_parser.set_defaults(handler=lf)
 
 squash_parser = sub_parsers.add_parser(
     "squash",
-    help="Squash commits ahead of master on this branch into one."
+    help="Squash commits ahead of base on this branch into one."
 )
 squash_parser.set_defaults(handler=squash)
 

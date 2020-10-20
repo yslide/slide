@@ -8,10 +8,10 @@
 # Dependencies:
 #       cargo-bump
 #
-# NB: Do not run this directly on master; instead, run it on a separate branch and create a PR.
+# NB: Do not run this directly on base; instead, run it on a separate branch and create a PR.
 #     Then tagged the rebased commit after the PR is closed.
 
-if [ "$(git rev-parse --abbrev-ref HEAD)" = "master" ]; then
+if [ "$(git rev-parse --abbrev-ref HEAD)" = "base" ]; then
   echo "Please run a separate branch."
   exit 1
 fi

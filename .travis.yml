@@ -39,7 +39,7 @@ jobs:
       script:
         - git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
         - git fetch origin
-        - scripts/squashed
+        - BRANCH=base scripts/squashed
 
     - name: "Linux release"
       if: tag IS present

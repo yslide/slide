@@ -47,6 +47,18 @@ impl InternedStr {
     }
 }
 
+impl PartialOrd for InternedStr {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for InternedStr {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.to_string().cmp(&other.to_string())
+    }
+}
+
 impl std::fmt::Display for InternedStr {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.get())

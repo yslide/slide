@@ -106,11 +106,11 @@ impl MockService {
         position: Position,
     ) -> Option<CompletionResponse> {
         self.assert_ready();
-        let hover_resp = self
-            .send(text_document::definition::request(uri, position))
+        let completion_resp = self
+            .send(text_document::completion::request(uri, position))
             .await
             .unwrap();
-        serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
+        serde_json::from_value(completion_resp.get("result").unwrap().clone()).ok()
     }
 
     pub async fn definition(

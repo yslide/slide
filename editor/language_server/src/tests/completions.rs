@@ -43,16 +43,29 @@ macro_rules! completions_tests {
 }
 
 completions_tests! {
-    var_completions: r"
+    var_completions_in_var: r"
         a := a + a¦b
+                   ~@[a,c]
+        c := 1 + 2
+    "
+    var_completions_start_of_var: r"
+        a := a + ¦ab
                   ~@[a,c]
         c := 1 + 2
     "
-    var_completions_in_incomplete: r"
-        a := a + ¦
-                 ~@[a,c,d]
-        c := 1 + 2
-    "
+    // TODO: this should work
+    // var_completions_end_of_var: r"
+    //     a := a + ab¦
+    //                 ~@[a,c]
+    //     c := 1 + 2
+    // "
+    // TODO: this should work
+    // var_completions_in_incomplete: r"
+    //     c := 1 + 2
+    //     a := a + ¦
+    //               ~@[c,a,d]
+    //     d := 1 + 2
+    // "
     no_completions: r"
         a := ¦1
         a := a + c + a

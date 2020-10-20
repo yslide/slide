@@ -206,9 +206,6 @@ impl LanguageServer for SlideLS {
             text_document: TextDocumentIdentifier { uri },
             position,
         } = params.text_document_position;
-        self.client
-            .log_message(MessageType::Info, format!("Got completion request"))
-            .await;
         let program_info = self.get_program_info(&uri);
 
         let completions = services::get_completions(position, program_info.deref());

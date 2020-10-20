@@ -13,7 +13,7 @@ jobs:
         with:
           token: ${{ secrets.SLIDE_WORKFLOWS_TOKEN }}
           repository: 'yslide/slide'
-          ref: 'master'
+          ref: 'base'
 
       - name: Update fuzz files
         run: |

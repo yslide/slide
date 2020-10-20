@@ -57,7 +57,7 @@ script: ./ladder ensure
 
 after_success:
   - |
-    if [ "$TRAVIS_BRANCH" == "master" ]; then
+    if [ "$TRAVIS_BRANCH" == "base" ]; then
       if [ "$CHANNEL" == "stable" ]; then
         export DEPLOY_UI=1
         scripts/build_www
@@ -94,21 +94,21 @@ deploy:
   # Documentation:public
   - <<: *docs_deploy_defaults
     repo: yslide/docs
-    target_branch: master
+    target_branch: base
     local_dir: docs-public/doc
     on:
       condition: $DEPLOY_DOCS = 1
   # Documentation:internal
   - <<: *docs_deploy_defaults
     repo: yslide/internals
-    target_branch: master
+    target_branch: base
     local_dir: docs-internal/doc
     on:
       condition: $DEPLOY_DOCS = 1
   # Web UI
   - <<: *docs_deploy_defaults
     repo: yslide/yslide.github.io
-    target_branch: master
+    target_branch: base
     local_dir: www/
     on:
       condition: $DEPLOY_UI = 1

@@ -8,7 +8,7 @@ cache:
 
 before_cache:
   - rm -rf /home/travis/.cargo/registry
-    
+
 before_install:
   - nvm install 12  # needed for scripts/_scripts/markdown/validate-link-refs.js
 
@@ -35,11 +35,13 @@ jobs:
 
     - name: "Squashed commits"
       if: type = pull_request
-      env: BRANCH="origin/$TRAVIS_PULL_REQUEST_BRANCH"
+      env:
+        - BASE="base"
+        - BRANCH="origin/$TRAVIS_PULL_REQUEST_BRANCH"
       script:
         - git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
         - git fetch origin
-        - BRANCH=base scripts/squashed
+        - scripts/squashed
 
     - name: "Linux release"
       if: tag IS present

@@ -8,16 +8,24 @@
 [![Crates.io](https://img.shields.io/crates/v/slide)](https://crates.io/crates/slide)
 [![Github help-wanted](https://img.shields.io/github/issues/yslide/slide/help%20wanted)](https://github.com/yslide/slide/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
 
-slide is an static expression optimizer. Given an expression like
+slide is an expression rewrite system and validator. Given an expression like
 
 ```
 x(x + 2 * 3) / (x + 6)
 ```
 
-slide should be able emit the lowered expression `x`.
+slide should be able emit the simplified expression `x`.
 
-One of slide's design goals is compilation as a platform, where optimizations are configurable
-plugins.
+slide's design goals include
+
+- Simplification as a platform, where rewrite rules are user-configurable.
+    For example, you should be able to give to (or remove from!) slide a rule like `x^2 dx -> 2x`,
+    and slide will incorporate the rule in reducing an expression.
+    This can be thought of analogously to tunable optimizations in a compiler.
+- Support for interactive user interfaces, including text editor features for
+    documents like Tex in text editors. More information on this is described
+    [below](#editor-support).
+- Validation of statement correctness.
 
 ## Usage
 
@@ -35,8 +43,9 @@ slide --help
 
 ### Editor Support
 
-slide supports integration with some text editors, providing seamless analysis and simplification of
-mathematical expressions in documents. For more information, see the [editor](./editor) directory.
+slide has a language server and supports additional integration with some text editors,
+providing analysis and simplification of mathematical expressions in documents.
+For more information, see the [editor](./editor) directory.
 
 ## Contributing
 

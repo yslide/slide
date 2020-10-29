@@ -24,13 +24,9 @@ jobs:
       if: type != pull_request
       rust: stable
       env: CHANNEL="stable"
-    - name: "Beta"
-      if: type != pull_request
-      rust: beta
-      env: CHANNEL="beta"
     - name: "Nightly"
       if: type != pull_request
-      rust: nightly
+      rust: nightly-2020-10-25
       env: CHANNEL="nightly"
 
     - name: "Squashed commits"

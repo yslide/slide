@@ -53,7 +53,9 @@ jobs:
           if [[ "$FUZZ_OUTPUT" =~ $RE_CRASH_FILE ]]; then
             FILE="${BASH_REMATCH[1]}"
             DL_CASE="$(curl --upload-file "$FILE" https://transfer.sh/hello.txt)"
-            FUZZ_OUTPUT_FILE="$(curl --upload-file "out.slide" https://transfer.sh/fuzz-output.txt)"
+            export FUZZ_OUTPUT_FILE="$(curl --upload-file "out.slide" https://transfer.sh/fuzz-output.txt)"
+          else
+            echo "Failed to find output file"
           fi
           JSON="$(jq -cn \
                 --arg ec "$EC" \

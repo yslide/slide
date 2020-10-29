@@ -11,7 +11,13 @@ fuzz_target!(|program: String| {
     cmd.arg("--");
     cmd.arg(&program);
 
-    if let Some(2) = cmd.output().ok().and_then(|out| out.status.code()) {
-        panic!("Failed!");
+    if let Some(out) = cmd.output().ok() {
+        if out.status.code() == Some(2) {
+            panic!(
+                "Failed: {}\n{}",
+                String::from_utf8(out.stdout).unwrap(),
+                String::from_utf8(out.stderr).unwrap()
+            );
+        }
     }
 });

@@ -49,13 +49,13 @@ jobs:
           cd slide
           EC="$(cargo fuzz run slide_fuzzer -- fuzz/corpus/ fuzz/seed -runs=500000 &> out.slide || echo $?)"
           FUZZ_OUTPUT="$(cat out.slide | tail -30)"
-          RE_CRASH_FILE="(fuzz/artifacts/slide/crash-[0-9a-zA-Z]+)"
+          RE_CRASH_FILE="(fuzz/artifacts/slide_fuzzer/[-0-9a-zA-Z]+)"
           if [[ "$FUZZ_OUTPUT" =~ $RE_CRASH_FILE ]]; then
             FILE="${BASH_REMATCH[1]}"
             DL_CASE="$(curl --upload-file "$FILE" https://transfer.sh/hello.txt)"
             export FUZZ_OUTPUT_FILE="$(curl --upload-file "out.slide" https://transfer.sh/fuzz-output.txt)"
           else
-            echo "Failed to find output file"
+            echo "Failed to find output file!"
           fi
           JSON="$(jq -cn \
                 --arg ec "$EC" \

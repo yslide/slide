@@ -13,7 +13,7 @@ This error is fired on a token either because
 
   - The token is invalid in the language of common mathematical notation, and/or
   - The token is not yet supported by slide in representing expressions. In this case, we
-    would appreciate a bug report at https://github.com/yslide/slide/issues/new.
+    would appreciate a bug report at <https://github.com/yslide/slide/issues/new>.
 
 ---
 

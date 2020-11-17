@@ -21,4 +21,3 @@ path = "../../libslide"
 name = "slide_fuzzer"
 path = "fuzz_targets/slide.rs"
 test = false
-doc = false

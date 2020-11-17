@@ -14,7 +14,7 @@ pub fn range_of(subtext: &str, text: &str) -> Range {
 
 pub struct DecorationResult {
     pub decorations: Vec<(Range, Option<String>)>,
-    pub cursor: Position,
+    pub cursor: Option<Position>,
     pub text: String,
 }
 
@@ -109,7 +109,7 @@ pub fn process_decorations(text: &str) -> DecorationResult {
 
     DecorationResult {
         decorations,
-        cursor: cursor.expect("Did not find a cursor."),
+        cursor,
         text: cleaned_lines.join("\n"),
     }
 }
@@ -141,7 +141,7 @@ mod test {
         } = super::process_decorations(text);
 
         assert_eq!(text, processed_text);
-        assert_eq!(cursor, Position::new(2, 16));
+        assert_eq!(cursor, Some(Position::new(2, 16)));
         assert_eq!(
             decorations,
             vec![

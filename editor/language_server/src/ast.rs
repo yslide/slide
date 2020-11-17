@@ -3,6 +3,7 @@
 use libslide::visit::StmtVisitor;
 use libslide::*;
 
+/// Returns the most immediate expression at a file position, if any is present.
 pub fn get_tightest_expr(pos: usize, program: &StmtList) -> Option<&RcExpr> {
     let mut finder = ExprFinder {
         tightest: None,

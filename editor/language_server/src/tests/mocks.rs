@@ -152,6 +152,20 @@ impl MockService {
             .unwrap();
         serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
     }
+
+    pub async fn code_action(
+        &mut self,
+        uri: &Url,
+        range: Range,
+        existing_diagnostics: Vec<Diagnostic>,
+    ) -> Option<Vec<CodeActionOrCommand>> {
+        self.assert_ready();
+        let action_resp = self
+            .send(text_document::code_action::request(uri, range, existing_diagnostics))
+            .await
+            .unwrap();
+        serde_json::from_value(action_resp.get("result").unwrap().clone()).ok()
+    }
 }
 
 pub mod exit {
@@ -355,6 +369,29 @@ pub mod text_document {
                         "uri": uri,
                     },
                     "position": position,
+                },
+                "id": 1,
+            })
+        }
+    }
+
+    pub mod code_action {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url, range: Range, existing_diagnostics: Vec<Diagnostic>) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/codeAction",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
+                    "range": range,
+                    "context": {
+                        "diagnostics": existing_diagnostics,
+                    }
                 },
                 "id": 1,
             })

@@ -19,3 +19,8 @@ pub(crate) use references::get_references;
 /// See [`get_semantic_highlights`](highlight::get_semantic_highlights) for more information.
 mod highlight;
 pub(crate) use highlight::get_semantic_highlights;
+
+/// Provides code actions for a slide program.
+/// See [`actions`](actions) for more information.
+mod actions;
+pub(crate) use actions::get_action_commands;

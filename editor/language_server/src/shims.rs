@@ -60,6 +60,14 @@ pub fn to_range(span: &Span, source: &str) -> Range {
     Range::new(to_position(span.lo, source), to_position(span.hi, source))
 }
 
+pub fn to_span(range: &Range, source: &str) -> Span {
+    (
+        to_offset(&range.start, source),
+        to_offset(&range.end, source),
+    )
+        .into()
+}
+
 // https://docs.rs/wast/25.0.2/src/wast/ast/token.rs.html#24-36
 // TODO: batch this or provide a offset mapping.
 pub fn to_position(offset: usize, source: &str) -> Position {

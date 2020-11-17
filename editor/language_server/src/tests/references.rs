@@ -20,7 +20,7 @@ macro_rules! references_tests {
                 .collect::<Vec<_>>();
             let expected_ranges = if expected_ranges.is_empty() { None } else { Some(expected_ranges) };
 
-            let references = service.references(&file, cursor, $include_declaration).await;
+            let references = service.references(&file, cursor.expect("Cursor not present!"), $include_declaration).await;
 
             assert_eq!(references, expected_ranges);
 

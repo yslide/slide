@@ -66,6 +66,7 @@ impl SlideLS {
         let hover_provider = Some(HoverProviderCapability::Simple(true));
         let references_provider = Some(true);
         let document_highlight_provider = Some(true);
+        let code_action_provider = Some(CodeActionProviderCapability::Simple(true));
 
         ServerCapabilities {
             definition_provider,
@@ -73,6 +74,7 @@ impl SlideLS {
             hover_provider,
             references_provider,
             document_highlight_provider,
+            code_action_provider,
             ..ServerCapabilities::default()
         }
     }
@@ -259,6 +261,22 @@ impl LanguageServer for SlideLS {
 
         let highlights = services::get_semantic_highlights(position, program_info.deref());
         Ok(highlights)
+    }
+
+    async fn code_action(&self, params: CodeActionParams) -> Result<Option<CodeActionResponse>> {
+        let CodeActionParams {
+            text_document: TextDocumentIdentifier {uri},
+            range,
+            context: CodeActionContext{
+                diagnostics,
+                ..
+            },
+            ..
+        } = params;
+        let program_info = self.get_program_info(&uri);
+
+        let actions = services::get_action_commands(range, program_info.deref(), &diagnostics);
+        Ok(actions)
     }
 }
 

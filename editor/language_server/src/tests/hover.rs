@@ -14,7 +14,7 @@ macro_rules! hover_tests {
             let DecorationResult { decorations, cursor, text } = process_decorations($text);
             service.did_open(&file, &text).await;
 
-            let hover_info = match service.hover(&file, cursor).await {
+            let hover_info = match service.hover(&file, cursor.expect("Cursor not present!")).await {
                 Some(hover) => hover,
                 None => {
                     assert!(decorations.is_empty(), "Expected no hover contents!");

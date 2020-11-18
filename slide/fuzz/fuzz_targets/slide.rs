@@ -3,7 +3,6 @@ use libfuzzer_sys::fuzz_target;
 
 use std::process::Command;
 
-/// Fuzzes the slide CLI.
 fuzz_target!(|program: String| {
     let mut cmd = Command::new("cargo");
     cmd.arg("run");

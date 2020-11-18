@@ -1,5 +1,8 @@
 "a:bin": slide/**/*
 "a:lib": libslide/**/*
+"a:ls":  editor/language_server/**/*
+"a:www": www/**/*
 
 "t:github": .github/**/*
 "t:tools": scripts/*
+"t:tools": ladder

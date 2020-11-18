@@ -18,7 +18,7 @@ explain_lint! {
 use crate::linter::LintRule;
 
 use crate::common::Span;
-use crate::diagnostics::Diagnostic;
+use crate::diagnostics::{Autofix, Diagnostic, Edit};
 use crate::grammar::visit::StmtVisitor;
 use crate::grammar::*;
 
@@ -50,10 +50,10 @@ impl<'a> RedundantNestingLinter<'a> {
             let inner_expr = expr.span.over(self.source);
 
             self.diagnostics.push(
-                Diagnostic::span_warn(span, "Redundant nesting", Self::CODE, None).with_help(
-                    format!(
-                        r#"consider reducing this expression to "{}{}{}""#,
-                        opener, inner_expr, closer
+                Diagnostic::span_warn(span, "Redundant nesting", Self::CODE, None).with_autofix(
+                    Autofix::for_sure(
+                        "reduce this nesting",
+                        Edit::Replace(format!("{}{}{}", opener, inner_expr, closer)),
                     ),
                 ),
             )

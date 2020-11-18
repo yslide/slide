@@ -19,7 +19,7 @@ explain_lint! {
 
 use crate::linter::LintRule;
 
-use crate::diagnostics::Diagnostic;
+use crate::diagnostics::{Autofix, Diagnostic, Edit};
 use crate::grammar::*;
 use visit::StmtVisitor;
 
@@ -46,20 +46,25 @@ impl<'a> StmtVisitor<'a> for HomogenousAssignmentLinter<'a> {
         match (self.asgn_op, asgn_op) {
             (Some(AssignmentOp::Equal(expected)), AssignmentOp::AssignDefine(actual))
             | (Some(AssignmentOp::AssignDefine(expected)), AssignmentOp::Equal(actual)) => {
+                let expected_str = expected.over(self.source);
                 self.diagnostics.push(
                     Diagnostic::span_warn(
                         *actual,
                         "Mixed use of assignment operators",
                         Self::CODE,
-                        format!(r#"expected "{}" here"#, expected.over(self.source)),
+                        format!(r#"expected "{}" here"#, expected_str),
                     )
                     .with_spanned_note(
                         expected,
                         format!(
                             r#"first use of "{}" as an assignment operator here"#,
-                            expected.over(self.source),
+                            expected_str,
                         ),
-                    ),
+                    )
+                    .with_autofix(Autofix::for_sure(
+                        "replace this operator",
+                        Edit::Replace(expected_str.to_owned()),
+                    )),
                 )
             }
             (None, actual) => self.asgn_op = Some(*actual),

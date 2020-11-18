@@ -46,6 +46,8 @@ define_errors! {
     ///what this means.
     S0001: InvalidToken {
         ($span:expr, $did_you_mean:expr) => {{
+            use crate::diagnostics::*;
+
             let mut diag = Diagnostic::span_err(
                 $span,
                 "Invalid token",
@@ -53,8 +55,8 @@ define_errors! {
                 None,
             )
             .with_note("token must be mathematically significant");
-            if let Some((did_you_mean, span)) = $did_you_mean {
-                diag = diag.with_spanned_help(span, format!(r#"did you mean "{}"?"#, did_you_mean));
+            if let Some((did_you_mean, _)) = $did_you_mean {
+                diag = diag.with_autofix(Autofix::maybe("did you mean", Edit::Replace(did_you_mean.to_string())))
             }
             diag
         }}

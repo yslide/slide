@@ -10,6 +10,7 @@ error[P0006]: Unmatched closing delimiter ")"
   |
 1 | ڝԗ+ c) 
   |      ^ has no matching opener "("
+  |      - help: consider deleting this token
   |
 ~~~stderr
 

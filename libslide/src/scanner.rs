@@ -10,7 +10,7 @@ use types::TokenType as TT;
 pub use types::*;
 
 use crate::common::Span;
-use crate::diagnostics::{Diagnostic, DiagnosticRecord};
+use crate::diagnostics::Diagnostic;
 use strtod::strtod;
 
 /// Describes the result of tokenizing a slide program.

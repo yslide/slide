@@ -17,7 +17,7 @@ explain_lint! {
 }
 
 use crate::common::Span;
-use crate::diagnostics::Diagnostic;
+use crate::diagnostics::{Autofix, Diagnostic, Edit};
 use crate::grammar::visit::ExprPatVisitor;
 use crate::grammar::*;
 use crate::linter::LintRule;
@@ -38,6 +38,16 @@ impl std::fmt::Display for NameKind {
             NameKind::Const => "const",
             NameKind::Any => "any",
         })
+    }
+}
+
+impl NameKind {
+    fn prefix(&self) -> &'static str {
+        match self {
+            NameKind::Var => "$",
+            NameKind::Const => "#",
+            NameKind::Any => "_",
+        }
     }
 }
 
@@ -78,6 +88,18 @@ impl NameCollection {
     }
 }
 
+fn pick_fresh_name(kind: &NameKind, name: &str, names: &BTreeMap<&str, NameCollection>) -> String {
+    fn recur(name: &str, names: &BTreeMap<&str, NameCollection>) -> String {
+        if !names.contains_key(name) {
+            return name.to_owned();
+        }
+        let last = name.chars().next_back().unwrap();
+        let name = format!("{}{}", name, last);
+        recur(&name, names)
+    }
+    format!("{}{}", kind.prefix(), recur(name, names))
+}
+
 #[derive(Default)]
 pub struct SimilarNamesLinter<'a> {
     names: BTreeMap<&'a str, NameCollection>,
@@ -86,7 +108,7 @@ pub struct SimilarNamesLinter<'a> {
 impl<'a> SimilarNamesLinter<'a> {
     fn check_names(self) -> Vec<Diagnostic> {
         self.names
-            .into_iter()
+            .iter()
             .filter_map(|(name, collection)| {
                 if !collection.has_conflicts() {
                     return None;
@@ -127,7 +149,11 @@ impl<'a> SimilarNamesLinter<'a> {
                     } else {
                         format!("\"{}\" is used by {} patterns as well", name, other_kinds)
                     },
-                );
+                )
+                .with_autofix(Autofix::maybe(
+                    "consider picking a new name, maybe",
+                    Edit::Replace(pick_fresh_name(&first_kind, name, &self.names)),
+                ));
 
                 for (kind, span) in other_spans.iter() {
                     diag = diag.with_spanned_note(*span, format!("{} pattern here", kind))

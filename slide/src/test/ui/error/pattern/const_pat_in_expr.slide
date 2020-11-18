@@ -10,8 +10,8 @@ error[P0004]: Patterns cannot be used in an expression
   |
 1 | 1 + #const 
   |     ^^^^^^ unexpected pattern
+  |     ------ help: use a variable: `const`
   |
-  = help: consider using "const" as a variable
 ~~~stderr
 
 ~~~exitcode

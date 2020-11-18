@@ -71,7 +71,6 @@ async fn open_and_change_with_diagnostics() {
             text,
             "/", [Error P0002] "Expected an expression, found / \\ expected an expression";; vec![],
             "++5", [Warning L0002] "Trivially reducible unary operator chain";; related_info! { text,
-                file@"++5", "consider reducing this expression to \"5\""
             }
         }
     );
@@ -90,7 +89,6 @@ async fn open_and_change_with_diagnostics() {
         diagnostics! {
             text,
             "++5", [Warning L0002] "Trivially reducible unary operator chain";; related_info! { text,
-                file@"++5", "consider reducing this expression to \"5\""
             }
         }
     );

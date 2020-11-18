@@ -14,8 +14,8 @@ error[P0005]: Variables cannot be used in an expression pattern
   |
 1 | 1 + var 
   |     ^^^ unexpected variable
+  |     --- help: use a var pattern: `$var`
   |
-  = help: consider using "$var", "#var", or "_var" as a pattern
 ~~~stderr
 
 ~~~exitcode

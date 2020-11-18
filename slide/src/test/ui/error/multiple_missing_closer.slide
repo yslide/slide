@@ -16,21 +16,24 @@ error[P0003]: Mismatched closing delimiter `end of file`
   |
 1 | 1 + 2 + ( [ ( 
   |              ^ expected closing `)`
-  |             - help: opening `(` here
+  |              - help: change the delimiter: `)`
+  |             - note: opening `(` here
   |
 
 error[P0003]: Mismatched closing delimiter `end of file`
   |
 1 | 1 + 2 + ( [ ( 
   |              ^ expected closing `]`
-  |           - help: opening `[` here
+  |              - help: change the delimiter: `]`
+  |           - note: opening `[` here
   |
 
 error[P0003]: Mismatched closing delimiter `end of file`
   |
 1 | 1 + 2 + ( [ ( 
   |              ^ expected closing `)`
-  |         - help: opening `(` here
+  |              - help: change the delimiter: `)`
+  |         - note: opening `(` here
   |
 ~~~stderr
 

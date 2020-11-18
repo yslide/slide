@@ -25,6 +25,7 @@ warning[L0004]: Mixed use of assignment operators
   |   -- note: first use of ":=" as an assignment operator here
 2 | b = 2
   |   - expected ":=" here
+  |   - help: replace this operator: `:=`
   |
 
 warning[L0004]: Mixed use of assignment operators
@@ -34,6 +35,7 @@ warning[L0004]: Mixed use of assignment operators
 2 | b = 2
 3 | c = 3
   |   - expected ":=" here
+  |   - help: replace this operator: `:=`
   |
 
 warning[L0004]: Mixed use of assignment operators
@@ -43,6 +45,7 @@ warning[L0004]: Mixed use of assignment operators
 ...
 5 | e = 5 
   |   - expected ":=" here
+  |   - help: replace this operator: `:=`
   |
 ~~~stderr
 

@@ -55,14 +55,17 @@ define_errors! {
     ///3 + 4 - in the future, parsed as two expression statements
     ///```
     P0001: ExtraTokens {
-        ($span:expr) => {
+        ($span:expr) => {{
+            use crate::diagnostics::*;
+
             Diagnostic::span_err(
                 $span,
                 "Unexpected extra tokens",
                 ExtraTokens::CODE,
                 "not connected to a primary statement".to_string(),
             )
-        }
+            .with_autofix(Autofix::maybe("consider deleting these tokens", Edit::Delete))
+        }}
     }
 
     ///This error fires on token sequences that are expected to parse as an expression, but do not.
@@ -117,15 +120,18 @@ define_errors! {
     ///       ^- expected closing `]`
     ///```
     P0003: MismatchedClosingDelimiter {
-        (expected $expected:expr, at $cur_span:expr, due to $opener:expr, at $open_span:expr; found $found:expr) => {
+        (expected $expected:expr, at $cur_span:expr, due to $opener:expr, at $open_span:expr; found $found:expr) => {{
+            use crate::diagnostics::*;
+
             Diagnostic::span_err(
                 $cur_span,
                 format!("Mismatched closing delimiter `{}`", $found),
                 MismatchedClosingDelimiter::CODE,
                 format!("expected closing `{}`", $expected),
             )
-            .with_spanned_help($open_span, format!("opening `{}` here", $opener))
-        }
+            .with_spanned_note($open_span, format!("opening `{}` here", $opener))
+            .with_autofix(Autofix::for_sure("change the delimiter", Edit::Replace($expected.to_string())))
+        }}
     }
 
     ///Patterns are illegal in a "regular" slide program; i.e. a program including a standard
@@ -139,18 +145,17 @@ define_errors! {
     ///have "eaten groceries" does not provide concrete information about what you have eaten
     ///without first defining what the groceries are.
     P0004: IllegalPattern {
-        ($span:expr, $pat_name:expr) => {
+        ($span:expr, $pat_name:expr) => {{
+            use crate::diagnostics::*;
+
             Diagnostic::span_err(
                 $span,
                 "Patterns cannot be used in an expression",
                 IllegalPattern::CODE,
                 "unexpected pattern".to_string(),
             )
-            .with_help(format!(
-                r#"consider using "{cut_name}" as a variable"#,
-                cut_name = $pat_name.substring(1, $pat_name.len() - 1)
-            ))
-        }
+            .with_autofix(Autofix::for_sure("use a variable", Edit::Replace($pat_name.substring(1, $pat_name.len() - 1))))
+        }}
     }
 
     ///Variables are illegal in a slide expression pattern.
@@ -169,18 +174,17 @@ define_errors! {
     ///different variable names, so variable patterns permit abstraction and common representation
     ///over the names.
     P0005: IllegalVariable {
-        ($span:expr, $var_name:expr) => {
+        ($span:expr, $var_name:expr) => {{
+            use crate::diagnostics::*;
+
             Diagnostic::span_err(
                 $span,
                 "Variables cannot be used in an expression pattern",
                 IllegalVariable::CODE,
                 Some("unexpected variable".into()),
             )
-            .with_help(format!(
-                r##"consider using "${name}", "#{name}", or "_{name}" as a pattern"##,
-                name = $var_name,
-            ))
-        }
+            .with_autofix(Autofix::for_sure("use a var pattern", Edit::Replace(format!("${}", $var_name))))
+        }}
     }
 
     ///All closing delimiters with opening pairs must have that opening delimiter as a complement in
@@ -204,13 +208,16 @@ define_errors! {
     /// ^ unmatched closing delimiter
     ///```
     P0006: UnmatchedClosingDelimiter {
-        ($span:expr, $found:expr) => {
+        ($span:expr, $found:expr) => {{
+            use crate::diagnostics::*;
+
             Diagnostic::span_err(
                 $span,
                 format!(r#"Unmatched closing delimiter "{}""#, $found),
                 UnmatchedClosingDelimiter::CODE,
                 format!(r#"has no matching opener "{}""#, $found.matcher()),
             )
-        }
+            .with_autofix(Autofix::maybe("consider deleting this token", Edit::Delete))
+        }}
     }
 }

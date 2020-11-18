@@ -1,6 +1,6 @@
 use super::{errors::*, ParseResult, Parser};
 use crate::common::Span;
-use crate::diagnostics::{Diagnostic, DiagnosticRecord};
+use crate::diagnostics::Diagnostic;
 use crate::grammar::*;
 use crate::scanner::types::Token;
 use crate::utils::PeekIter;

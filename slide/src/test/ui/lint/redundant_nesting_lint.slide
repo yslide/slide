@@ -14,23 +14,20 @@
 warning[L0001]: Redundant nesting
   |
 1 | ( ((1   +    [[  [2    /     ([([4])])]]]  ))) 
-  | ----------------------------------------------
+  | ---------------------------------------------- help: reduce this nesting: `(1   +    [[  [2    /     ([([4])])]]])`
   |
-  = help: consider reducing this expression to "(1   +    [[  [2    /     ([([4])])]]])"
 
 warning[L0001]: Redundant nesting
   |
 1 | ( ((1   +    [[  [2    /     ([([4])])]]]  ))) 
-  |              ----------------------------
+  |              ---------------------------- help: reduce this nesting: `[2    /     ([([4])])]`
   |
-  = help: consider reducing this expression to "[2    /     ([([4])])]"
 
 warning[L0001]: Redundant nesting
   |
 1 | ( ((1   +    [[  [2    /     ([([4])])]]]  ))) 
-  |                              ---------
+  |                              --------- help: reduce this nesting: `(4)`
   |
-  = help: consider reducing this expression to "(4)"
 ~~~stderr
 
 ~~~exitcode

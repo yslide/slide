@@ -40,6 +40,57 @@ pub struct AssociatedDiagnostic {
     pub msg: String,
 }
 
+/// Describes the confidence that should be taken in whether an [`Autofix`](Autofix) should be
+/// applied.
+pub enum AutofixConfidence {
+    /// This fix is for sure what the user meant, and for sure will resolve a
+    /// [`Diagnostic`](Diagnostic).
+    ForSure,
+    /// This fix is maybe what the user meant, and might not resolve a [`Diagnostic`](Diagnostic).
+    Maybe,
+}
+
+/// A text edit to be made over some range.
+pub enum Edit {
+    /// Replace the range with a string.
+    Replace(String),
+    /// Delete the range.
+    Delete,
+}
+
+/// An autofix for a [`Diagnostic`](Diagnostic), over its range.
+pub struct Autofix {
+    /// Confidence of the fix.
+    pub confidence: AutofixConfidence,
+    /// A message describing the autofix.
+    /// The message should be treated as "prefix" relevative to the fix itself if formatted in a
+    /// string referencing the fix.
+    /// For example, one may wish to display the autofix as "<msg>: <fix>".
+    pub msg: String,
+    /// The fix itself.
+    pub fix: Edit,
+}
+
+impl Autofix {
+    /// Creates an autofix of confidence [`ForSure`](AutofixConfidence::ForSure)
+    pub(crate) fn for_sure<S: Into<String>>(msg: S, fix: Edit) -> Self {
+        Self {
+            confidence: AutofixConfidence::ForSure,
+            msg: msg.into(),
+            fix,
+        }
+    }
+
+    /// Creates an autofix of confidence [`Maybe`](AutofixConfidence::Maybe)
+    pub(crate) fn maybe<S: Into<String>>(msg: S, fix: Edit) -> Self {
+        Self {
+            confidence: AutofixConfidence::Maybe,
+            msg: msg.into(),
+            fix,
+        }
+    }
+}
+
 /// A diagnostic for slide source code.
 pub struct Diagnostic {
     /// The diagnostic kind.
@@ -58,6 +109,9 @@ pub struct Diagnostic {
     /// Any additional diagnostics associated with this one, not explicitly covering any span.
     /// Implicitly, these diagnostics cover the span of the primary one.
     pub unspanned_associated_diagnostics: Vec<AssociatedDiagnostic>,
+    /// An potential autofixes, which if replaced on the span over which this diagnostic is for,
+    /// would resolve the diagnostic.
+    pub autofix: Option<Autofix>,
 }
 
 /// Describes a code and detailed explanation for a diagnostic.
@@ -90,8 +144,10 @@ macro_rules! span_diag {
                 title: title.into(),
                 code: code.into(),
                 msg: msg.into(),
+                // Assume: most diagnostics will have <= 2 related diagnostics.
                 associated_diagnostics: Vec::with_capacity(2),
                 unspanned_associated_diagnostics: Vec::with_capacity(2),
+                autofix: None,
             }
         }
     )*}
@@ -144,8 +200,6 @@ impl Diagnostic {
     with_diag! {
         /// Adds a note to the diagnostic.
         with_note as Note
-        /// Adds a help message to the diagnostic.
-        with_help as Help
     }
 
     with_spanned_diag! {
@@ -157,6 +211,14 @@ impl Diagnostic {
         with_spanned_help as Help
         /// Adds a note to the diagnostic, possibly at a different span.
         with_spanned_note as Note
+    }
+
+    /// Adds an [autofix](Autofix) to the diagnostic.
+    pub fn with_autofix(self, autofix: Autofix) -> Self {
+        Self {
+            autofix: Some(autofix),
+            ..self
+        }
     }
 }
 

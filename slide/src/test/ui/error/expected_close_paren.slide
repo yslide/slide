@@ -10,7 +10,8 @@ error[P0003]: Mismatched closing delimiter ``]``
   |
 1 | 1 + (2 * 3] - 5 
   |           ^ expected closing `)`
-  |     - help: opening `(` here
+  |           - help: change the delimiter: `)`
+  |     - note: opening `(` here
   |
 ~~~stderr
 

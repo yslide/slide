@@ -14,30 +14,26 @@
 warning[L0002]: Trivially reducible unary operator chain
   |
 1 | ++++(+-+-+-[1 / --2 * (---3)]) 
-  | ------------------------------
+  | ------------------------------ help: reduce this expression: `(+-+-+-[1 / --2 * (---3)])`
   |
-  = help: consider reducing this expression to "(+-+-+-[1 / --2 * (---3)])"
 
 warning[L0002]: Trivially reducible unary operator chain
   |
 1 | ++++(+-+-+-[1 / --2 * (---3)]) 
-  |      ------------------------
+  |      ------------------------ help: reduce this expression: `-[1 / --2 * (---3)]`
   |
-  = help: consider reducing this expression to "-[1 / --2 * (---3)]"
 
 warning[L0002]: Trivially reducible unary operator chain
   |
 1 | ++++(+-+-+-[1 / --2 * (---3)]) 
-  |                 ---
+  |                 --- help: reduce this expression: `2`
   |
-  = help: consider reducing this expression to "2"
 
 warning[L0002]: Trivially reducible unary operator chain
   |
 1 | ++++(+-+-+-[1 / --2 * (---3)]) 
-  |                        ----
+  |                        ---- help: reduce this expression: `-3`
   |
-  = help: consider reducing this expression to "-3"
 ~~~stderr
 
 ~~~exitcode

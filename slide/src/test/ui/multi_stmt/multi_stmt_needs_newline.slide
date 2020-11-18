@@ -10,6 +10,7 @@ error[P0001]: Unexpected extra tokens
   |
 1 | 1 + 2 / 3 * 6 10 * 5 ^ 2 
   |               ^^^^^^^^^^ not connected to a primary statement
+  |               ---------- help: consider deleting these tokens
   |               -- help: if you meant to specify another statement, add a newline before this token
   |
 ~~~stderr

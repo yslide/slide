@@ -22,6 +22,7 @@ warning[L0003]: Similar name "a" used by multiple patterns
   |
 1 | _a + #a + _a + $a + #b +
   | -- "a" is used by var and const patterns as well
+  | -- help: consider picking a new name, maybe: `_aa`
   |      -- note: const pattern here
   |                -- note: var pattern here
 2 | #a + _b + $b + #b + $b +
@@ -32,6 +33,7 @@ warning[L0003]: Similar name "b" used by multiple patterns
   |
 1 | _a + #a + _a + $a + #b +
   |                     -- "b" is used by var and any patterns as well
+  |                     -- help: consider picking a new name, maybe: `#bb`
 2 | #a + _b + $b + #b + $b +
   |      -- note: any pattern here
   |           -- note: var pattern here
@@ -43,6 +45,7 @@ warning[L0003]: Similar name "c" used by multiple patterns
 ...
 3 | $c + _c + #c + $c + _a +
   | -- "c" is used by const and any patterns as well
+  | -- help: consider picking a new name, maybe: `$cc`
   |      -- note: any pattern here
   |           -- note: const pattern here
   |
@@ -52,6 +55,7 @@ warning[L0003]: Similar name "d" used by multiple patterns
 ...
 4 | _d + #d + #d +
   | -- "d" is used by const patterns as well
+  | -- help: consider picking a new name, maybe: `_dd`
   |      -- note: const pattern here
   |           -- note: const pattern here
   |
@@ -61,6 +65,7 @@ warning[L0003]: Similar name "e" used by multiple patterns
 ...
 5 | $e + _e +
   | -- "e" is used by an any pattern as well
+  | -- help: consider picking a new name, maybe: `$ee`
   |      -- note: any pattern here
   |
 
@@ -69,6 +74,7 @@ warning[L0003]: Similar name "f" used by multiple patterns
 ...
 6 | #f + $f +
   | -- "f" is used by a var pattern as well
+  | -- help: consider picking a new name, maybe: `#ff`
   |      -- note: var pattern here
   |
 
@@ -77,6 +83,7 @@ warning[L0003]: Similar name "gosh" used by multiple patterns
 ...
 7 | _gosh + #gosh 
   | ----- "gosh" is used by a const pattern as well
+  | ----- help: consider picking a new name, maybe: `_goshh`
   |         ----- note: const pattern here
   |
 ~~~stderr

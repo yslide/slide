@@ -18,7 +18,7 @@ explain_lint! {
 use crate::linter::LintRule;
 
 use crate::common::Span;
-use crate::diagnostics::Diagnostic;
+use crate::diagnostics::{Autofix, Diagnostic, Edit};
 use crate::grammar::visit::StmtVisitor;
 use crate::grammar::*;
 
@@ -61,9 +61,9 @@ impl<'a> StmtVisitor<'a> for UnarySeriesLinter<'a> {
                     Self::CODE,
                     None,
                 )
-                .with_help(format!(
-                    r#"consider reducing this expression to "{}""#,
-                    reduced_expr
+                .with_autofix(Autofix::for_sure(
+                    "reduce this expression",
+                    Edit::Replace(reduced_expr),
                 )),
             )
         }

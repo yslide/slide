@@ -14,11 +14,13 @@ _a + $b -#c + 1 2
 ~~~stderr
 error[P0001]: Unexpected extra tokens
   |
-1 |   _a + $b -#c + 1 2
-  |  _________________^
-2 | | 3 4 5 6 / 7 ^ 8
-3 | |   9 
-  | |____^ not connected to a primary statement
+1 |    _a + $b -#c + 1 2
+  |   _________________^
+  |   _________________-
+2 | || 3 4 5 6 / 7 ^ 8
+3 |  |   9 
+  | ||____^ not connected to a primary statement
+  |  |____- help: consider deleting these tokens
   |
 ~~~stderr
 

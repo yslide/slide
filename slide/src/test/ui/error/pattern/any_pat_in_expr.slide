@@ -10,8 +10,8 @@ error[P0004]: Patterns cannot be used in an expression
   |
 1 | 1 + _any 
   |     ^^^^ unexpected pattern
+  |     ---- help: use a variable: `any`
   |
-  = help: consider using "any" as a variable
 ~~~stderr
 
 ~~~exitcode

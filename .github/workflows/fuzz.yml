@@ -52,8 +52,8 @@ jobs:
           RE_CRASH_FILE="(fuzz/artifacts/slide_fuzzer/[-0-9a-zA-Z]+)"
           if [[ "$FUZZ_OUTPUT" =~ $RE_CRASH_FILE ]]; then
             FILE="${BASH_REMATCH[1]}"
-            DL_CASE="$(curl --upload-file "$FILE" https://transfer.sh/hello.txt)"
-            export FUZZ_OUTPUT_FILE="$(curl --upload-file "out.slide" https://transfer.sh/fuzz-output.txt)"
+            export DL_CASE="$(curl --upload-file "$FILE" https://free.keep.sh)"
+            export FUZZ_OUTPUT_FILE="$(curl --upload-file "out.slide" https://free.keep.sh)"
           else
             echo "Failed to find output file!"
           fi

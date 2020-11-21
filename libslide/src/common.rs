@@ -96,6 +96,7 @@ impl From<Span> for (usize, usize) {
 }
 
 /// A context for evaluating a slide program.
+#[derive(Debug, PartialEq)]
 pub struct ProgramContext {
     /// Rules that should not be included in the evaluation of an expression.
     pub(crate) rule_denylist: Vec<RuleName>,

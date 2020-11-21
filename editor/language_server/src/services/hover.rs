@@ -1,6 +1,6 @@
 use crate::ast;
 use crate::shims::{to_offset, to_range};
-use crate::ProgramInfo;
+use crate::Program;
 
 use collectors::collect_var_asgns;
 use libslide::*;
@@ -15,15 +15,18 @@ use tower_lsp::lsp_types::*;
 /// - Otherwise, a simplified version of the hovered expression is returned.
 pub(crate) fn get_hover_info(
     position: Position,
-    program_info: &ProgramInfo,
+    program: &Program,
     context: &ProgramContext,
 ) -> Option<Hover> {
-    let position = to_offset(&position, &program_info.source);
-    let tightest_expr = ast::get_tightest_expr(position, &program_info.original)?;
-    let range = Some(to_range(&tightest_expr.span, &program_info.source));
+    let position = to_offset(&position, &program.source);
+
+    let program_ast = program.original_ast();
+    let tightest_expr = ast::get_tightest_expr(position, &program_ast)?;
+    let range = Some(to_range(&tightest_expr.span, &program.source));
 
     // Now the fun part: actually figure out the hover result.
-    let var_asgns = collect_var_asgns(&program_info.simplified);
+    let simplified_ast = program.simplified_ast();
+    let var_asgns = collect_var_asgns(&simplified_ast);
     let simplified = if let Some(var) = tightest_expr.get_var() {
         // A variable - get its definitions from its assignments.
         match var_asgns.get(&var) {

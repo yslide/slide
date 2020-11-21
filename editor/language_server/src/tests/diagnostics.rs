@@ -38,7 +38,7 @@ macro_rules! diagnostics {
 async fn empty_diagnostics() {
     let mut service = MockService::default().await;
 
-    let file = Url::parse("file:///test").unwrap();
+    let file = default_file();
     let text = r#"
     a := 1 + 2
     b := a + 5
@@ -56,7 +56,7 @@ async fn empty_diagnostics() {
 async fn open_and_change_with_diagnostics() {
     let mut service = MockService::default().await;
 
-    let file = Url::parse("file:///test").unwrap();
+    let file = default_file();
     let text = r#"
     a := 1 + 2
     c := 5 + ++5 + /

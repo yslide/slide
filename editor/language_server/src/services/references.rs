@@ -1,6 +1,6 @@
 use crate::ast;
 use crate::shims::{to_offset, to_range};
-use crate::ProgramInfo;
+use crate::Program;
 
 use libslide::*;
 use tower_lsp::lsp_types::*;
@@ -14,15 +14,16 @@ use visit::StmtVisitor;
 pub(crate) fn get_references(
     position: Position,
     include_declaration: bool,
-    program_info: &ProgramInfo,
+    program: &Program,
 ) -> Option<Vec<Location>> {
-    let ProgramInfo { uri, source, .. } = program_info;
-    let references = get_kinded_references(position, program_info)?;
+    let uri = program.document_uri.as_ref();
+    let source = program.source.as_ref();
+    let references = get_kinded_references(position, program)?;
     let references = references
         .into_iter()
         .filter_map(|rk| match rk {
             ReferenceKind::Definition(_) if !include_declaration => None,
-            _ => Some(Location::new(uri.clone(), to_range(rk.span(), source))),
+            _ => Some(Location::new((*uri).clone(), to_range(rk.span(), &source))),
         })
         .collect();
 
@@ -50,11 +51,11 @@ impl ReferenceKind {
 
 pub(crate) fn get_kinded_references(
     position: Position,
-    program_info: &ProgramInfo,
+    program: &Program,
 ) -> Option<Vec<ReferenceKind>> {
-    let program = &program_info.original;
-    let position = to_offset(&position, &program_info.source);
-    let tightest_expr = ast::get_tightest_expr(position, &program)?;
+    let program_ast = &program.original_ast();
+    let position = to_offset(&position, &program.source);
+    let tightest_expr = ast::get_tightest_expr(position, program_ast)?;
     let seeking = tightest_expr.get_var()?;
 
     let mut reference_finder = ReferenceFinder {
@@ -62,7 +63,7 @@ pub(crate) fn get_kinded_references(
         is_declaration: false,
         refs: vec![],
     };
-    reference_finder.visit_stmt_list(&program);
+    reference_finder.visit_stmt_list(program_ast);
 
     Some(reference_finder.refs)
 }

@@ -7,22 +7,26 @@ use tower_lsp::lsp_types::*;
 use tower_lsp::{LspService, MessageStream};
 use tower_test::mock::Spawn;
 
+pub fn default_file() -> Url {
+    Url::parse("file:///fi.slide").unwrap()
+}
+
+pub fn default_initialization_options() -> Value {
+    serde_json::json!({
+        "document_parsers": {
+            "slide": r"((?:.|\n)*)",
+        },
+    })
+}
+
 pub struct MockService {
     service: Spawn<LspService>,
     msg_stream: MessageStream,
 }
 
 impl MockService {
-    pub fn default_initialization_options() -> Value {
-        serde_json::json!({
-            "document_parsers": {
-                "slide": "(.*)",
-            },
-        })
-    }
-
     pub async fn default() -> Self {
-        Self::new(false, Self::default_initialization_options()).await
+        Self::new(false, default_initialization_options()).await
     }
 
     /// Creates a new slide language service and initializes it.

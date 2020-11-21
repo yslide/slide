@@ -4,5 +4,6 @@
 "a:www": www/**/*
 
 "t:github": .github/**/*
-"t:tools": scripts/*
-"t:tools": ladder
+"t:tools":
+  - scripts/*
+  - ladder

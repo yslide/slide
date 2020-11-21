@@ -29,16 +29,6 @@ jobs:
       rust: nightly-2020-11-17
       env: CHANNEL="nightly"
 
-    - name: "Squashed commits"
-      if: type = pull_request
-      env:
-        - BASE="base"
-        - BRANCH="origin/$TRAVIS_PULL_REQUEST_BRANCH"
-      script:
-        - git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-        - git fetch origin
-        - scripts/squashed
-
     - name: "Linux release"
       if: tag IS present
       rust: stable

@@ -1,2 +1,0 @@
-#!/bin/bash
-REPO="https://github.com/ayazhafiz/slide" scripts/_scripts/git/squashed "$@"

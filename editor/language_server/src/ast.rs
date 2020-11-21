@@ -3,6 +3,8 @@
 use libslide::visit::StmtVisitor;
 use libslide::*;
 
+pub(crate) type AST = StmtList;
+
 pub fn get_tightest_expr(pos: usize, program: &StmtList) -> Option<&RcExpr> {
     let mut finder = ExprFinder {
         tightest: None,

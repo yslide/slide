@@ -13,12 +13,20 @@ pub struct MockService {
 }
 
 impl MockService {
+    pub fn default_initialization_options() -> Value {
+        serde_json::json!({
+            "document_parsers": {
+                "slide": "(.*)",
+            },
+        })
+    }
+
     pub async fn default() -> Self {
-        Self::new(false).await
+        Self::new(false, Self::default_initialization_options()).await
     }
 
     /// Creates a new slide language service and initializes it.
-    pub async fn new(link_support: bool) -> Self {
+    pub async fn new(link_support: bool, initialization_options: Value) -> Self {
         let (service, msg_stream) = LspService::new(crate::SlideLS::new);
         let service = Spawn::new(service);
         let mut service = Self {
@@ -31,7 +39,7 @@ impl MockService {
         // Initialize
         service
             .send_recv(
-                initialize::request(link_support),
+                initialize::request(link_support, initialization_options),
                 Some(initialize::response()),
             )
             .await;
@@ -168,7 +176,7 @@ pub mod exit {
 pub mod initialize {
     use serde_json::{json, Value};
 
-    pub fn request(link_support: bool) -> Value {
+    pub fn request(link_support: bool, initialization_options: Value) -> Value {
         json!({
             "jsonrpc": "2.0",
             "method": "initialize",
@@ -180,6 +188,7 @@ pub mod initialize {
                         },
                     },
                 },
+                "initializationOptions": initialization_options,
             },
             "id": 1,
         })

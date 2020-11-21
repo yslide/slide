@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import abc
 import argparse
 from argparse import RawTextHelpFormatter
 import os
@@ -32,93 +33,181 @@ def slide(msg, **kwargs):
 """, **kwargs)
 
 
-def ensure(args, _unknown):
-    def run_wrapped(fn):
-        rc = fn()
-        if rc != 0:
-            sys.exit(rc)
-
-    assurances = [
-        lambda: build_project(DEFAULTS, []),
-        lambda: test(DEFAULTS, []),
-        lambda: lf(DEFAULTS, []),
-        lambda: doc(DEFAULTS, []),
-    ]
-    for assurence in assurances:
-        run_wrapped(assurence)
-
-    slide("OK!")
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
 
-def build_project(args, _unknown):
-    process = subprocess.run(["cargo", "build", "--verbose", "--workspace"])
-    return process.returncode
+class Cmd(abc.ABC):
+    @abc.abstractstaticmethod
+    def name():
+        raise NotImplementedError()
+
+    @abc.abstractstaticmethod
+    def ladder_cmd():
+        raise NotImplementedError()
+
+    @abc.abstractstaticmethod
+    def execute(args, extra_args):
+        raise NotImplementedError()
 
 
-def test(args, runner_args):
-    cargo_args = ["cargo", "test"]
-    env = os.environ.copy()
-    if args.sys:
-        cargo_args.append("--test")
-        cargo_args.append("system_tests")
-    cargo_args.append("-j")
-    cargo_args.append(str(args.jobs))
-    for runner_arg in runner_args:
-        cargo_args.append(runner_arg)
-    cargo_args.append("--")
-    if args.filter:
-        cargo_args.append(args.filter)
+class Ensure(Cmd):
+    @staticmethod
+    def name():
+        return "ensure"
 
-    if args.bless:
-        env["BLESS"] = "1"
-    if args.fail_todo:
-        env["FAIL_TODO"] = "1"
-    if args.no_latex:
-        env["NO_LATEX"] = "1"
+    @staticmethod
+    def ladder_cmd():
+        return "ladder ensure"
 
-    process = subprocess.run(cargo_args, env=env)
-    return process.returncode
+    @staticmethod
+    def execute(args, extra_args):
+        def run_wrapped(cmd):
+            rc = cmd.execute(DEFAULTS, [])
+            if rc != 0:
+                slide("Oh no!")
+                eprint(f"\n{cmd.name()} went wrong.")
+                eprint("To re-run just this assurance, "
+                       f"use `{cmd.ladder_cmd()}`")
+                sys.exit(rc)
 
+        assurances = [
+            BuildWorkspace,
+            Test,
+            LintFormat,
+            Doc,
+        ]
+        for assurance in assurances:
+            run_wrapped(assurance)
 
-def www(args, _unknown):
-    os.chdir('www')
-    threading.Thread(
-        target=lambda: subprocess.run(["python3", "-m", "http.server"]),
-        daemon=True).start()
-    os.chdir('../')
-    print(f"Serving slide on http://localhost:{UI_PORT}...")
-
-    subprocess.run(["./scripts/build_wasm", "--watch"])
+        slide("OK!")
 
 
-def bench(args, _unknown):
-    os.chdir("libslide")
-    cargo_args = ["cargo", "bench"]
-    if args.filter:
-        cargo_args.append(args.filter)
-    cargo_args.append("--features")
-    cargo_args.append("benchmark-internals")
+class BuildWorkspace(Cmd):
+    @staticmethod
+    def name():
+        return "build workspace"
 
-    process = subprocess.run(cargo_args)
-    return process.returncode
+    @staticmethod
+    def ladder_cmd():
+        return "cargo build --verbose --workspace"
 
-
-def lf(args, _unknown):
-    process = subprocess.run(["./scripts/check", "lf"])
-    return process.returncode
-
-
-def squash(args, _unknown):
-    process = subprocess.run(["./scripts/squashed", "--rebase"])
-    return process.returncode
+    @staticmethod
+    def execute(args, extra_args):
+        process = subprocess.run([
+            "cargo", "build", "--verbose", "--workspace"])
+        return process.returncode
 
 
-def doc(args, _unknown):
-    doc_args = ["./scripts/doc"]
-    if args.open:
-        doc_args.append("--open")
-    process = subprocess.run(doc_args)
-    return process.returncode
+class Test(Cmd):
+    @staticmethod
+    def name():
+        return "test workspace"
+
+    @staticmethod
+    def ladder_cmd():
+        return "ladder test"
+
+    @staticmethod
+    def execute(args, runner_args):
+        cargo_args = ["cargo", "test"]
+        env = os.environ.copy()
+        if args.sys:
+            cargo_args.append("--test")
+            cargo_args.append("system_tests")
+        cargo_args.append("-j")
+        cargo_args.append(str(args.jobs))
+        for runner_arg in runner_args:
+            cargo_args.append(runner_arg)
+        cargo_args.append("--")
+        if args.filter:
+            cargo_args.append(args.filter)
+
+        if args.bless:
+            env["BLESS"] = "1"
+        if args.fail_todo:
+            env["FAIL_TODO"] = "1"
+        if args.no_latex:
+            env["NO_LATEX"] = "1"
+
+        process = subprocess.run(cargo_args, env=env)
+        return process.returncode
+
+
+class Www(Cmd):
+    @staticmethod
+    def name():
+        return "www"
+
+    @staticmethod
+    def ladder_cmd():
+        return "ladder www"
+
+    @staticmethod
+    def execute(args, extra_args):
+        os.chdir('www')
+        threading.Thread(
+            target=lambda: subprocess.run(["python3", "-m", "http.server"]),
+            daemon=True).start()
+        os.chdir('../')
+        print(f"Serving slide on http://localhost:{UI_PORT}...")
+
+        subprocess.run(["./scripts/build_wasm", "--watch"])
+
+
+class Bench(Cmd):
+    @staticmethod
+    def name():
+        return "benchmarks"
+
+    @staticmethod
+    def ladder_cmd():
+        return "ladder bench"
+
+    @staticmethod
+    def execute(args, extra_args):
+        os.chdir("libslide")
+        cargo_args = ["cargo", "bench"]
+        if args.filter:
+            cargo_args.append(args.filter)
+        cargo_args.append("--features")
+        cargo_args.append("benchmark-internals")
+
+        process = subprocess.run(cargo_args)
+        return process.returncode
+
+
+class LintFormat(Cmd):
+    @staticmethod
+    def name():
+        return "lint/format"
+
+    @staticmethod
+    def ladder_cmd():
+        return "ladder lf"
+
+    @staticmethod
+    def execute(args, extra_args):
+        process = subprocess.run(["./scripts/check", "lf"])
+        return process.returncode
+
+
+class Doc(Cmd):
+    @staticmethod
+    def name():
+        return "documentation"
+
+    @staticmethod
+    def ladder_cmd():
+        return "ladder doc"
+
+    @staticmethod
+    def execute(args, extra_args):
+        doc_args = ["./scripts/doc"]
+        if args.open:
+            doc_args.append("--open")
+        process = subprocess.run(doc_args)
+        return process.returncode
 
 
 parser = argparse.ArgumentParser(
@@ -141,7 +230,7 @@ documentation and correction of optional features.
 to the project. If "ladder ensure" passes locally, it _should_ pass on a CI.
 """
 )
-ensure_parser.set_defaults(handler=ensure)
+ensure_parser.set_defaults(handler=Ensure.execute)
 
 test_parser = sub_parsers.add_parser(
     "test",
@@ -203,7 +292,7 @@ test_parser.add_argument(
     help="""Do not run LaTeX emit tests. This may speed up local execution.
 This only affects system tests."""
 )
-test_parser.set_defaults(handler=test)
+test_parser.set_defaults(handler=Test.execute)
 
 www_parser = sub_parsers.add_parser(
     "www",
@@ -217,7 +306,7 @@ This is useful for development; changes to slide are watched for recompilation,
 and changes to the UI can be instantly refreshed.
 """
 )
-www_parser.set_defaults(handler=www)
+www_parser.set_defaults(handler=Www.execute)
 
 bench_parser = sub_parsers.add_parser(
     "bench",
@@ -235,16 +324,10 @@ bench_parser.add_argument(
     nargs="?",
     help="Optional benchmark filter. If not specified, all benchmarks are run."
 )
-bench_parser.set_defaults(handler=bench)
+bench_parser.set_defaults(handler=Bench.execute)
 
 lf_parser = sub_parsers.add_parser("lf", help="Run lint and format checks")
-lf_parser.set_defaults(handler=lf)
-
-squash_parser = sub_parsers.add_parser(
-    "squash",
-    help="Squash commits ahead of base on this branch into one."
-)
-squash_parser.set_defaults(handler=squash)
+lf_parser.set_defaults(handler=LintFormat.execute)
 
 doc_parser = sub_parsers.add_parser(
     "doc",
@@ -256,7 +339,7 @@ doc_parser.add_argument(
     default=DEFAULTS.open,
     help="""Open documentation in a browser."""
 )
-doc_parser.set_defaults(handler=doc)
+doc_parser.set_defaults(handler=Doc.execute)
 
 # ~~~ Signals
 

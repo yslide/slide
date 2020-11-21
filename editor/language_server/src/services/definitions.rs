@@ -1,6 +1,6 @@
 use crate::ast;
 use crate::shims::{to_offset, to_range};
-use crate::ProgramInfo;
+use crate::Program;
 
 use libslide::collectors::collect_var_asgns;
 
@@ -9,15 +9,12 @@ use tower_lsp::lsp_types::*;
 /// Returns all definitions of a variable in a program.
 pub(crate) fn get_definitions(
     position: Position,
-    program_info: &ProgramInfo,
+    program: &Program,
     supports_link: bool,
 ) -> Option<GotoDefinitionResponse> {
-    let &ProgramInfo {
-        uri,
-        original: program,
-        source,
-        ..
-    } = &program_info;
+    let uri = program.document_uri.as_ref();
+    let source = &program.source;
+    let program = program.original_ast();
     let position = to_offset(&position, &source);
     let tightest_expr = ast::get_tightest_expr(position, &program)?;
     let var = tightest_expr.get_var()?;

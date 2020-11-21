@@ -1,6 +1,6 @@
 use crate::services::references as refs;
 use crate::shims::to_range;
-use crate::ProgramInfo;
+use crate::Program;
 
 use tower_lsp::lsp_types::*;
 
@@ -9,12 +9,12 @@ use tower_lsp::lsp_types::*;
 /// Otherwise, nothing is returned.
 pub(crate) fn get_semantic_highlights(
     position: Position,
-    program_info: &ProgramInfo,
+    program: &Program,
 ) -> Option<Vec<DocumentHighlight>> {
-    let ProgramInfo { source, .. } = program_info;
+    let source = &program.source;
     // The nice thing is that the references service already does most of the work to get
     // references, so we can just piggyback off that and translate types accordingly.
-    let references = refs::get_kinded_references(position, program_info)?;
+    let references = refs::get_kinded_references(position, program)?;
     let references = references
         .into_iter()
         .map(|rk| DocumentHighlight {

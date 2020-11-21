@@ -18,11 +18,15 @@ use std::ops::Deref;
 mod ast;
 mod document;
 mod init;
+mod program;
+mod ptr;
 mod services;
 mod shims;
 
-use document::{ChangeKind, DocumentRegistry, ProgramInfo};
+use document::{ChangeKind, DocumentRegistry};
 use init::InitializationOptions;
+use program::Program;
+use ptr::p;
 
 #[cfg(test)]
 mod tests;
@@ -70,15 +74,18 @@ impl SlideLS {
     }
 
     async fn change(&self, fi: Url, text: String, version: Option<i64>) {
-        let diags = self
-            .registry_mut()
-            .change(ChangeKind::FileModified(fi.clone(), text));
-        self.client.publish_diagnostics(fi, diags, version).await;
+        self.registry_mut()
+            .apply_change(ChangeKind::FileModified(fi.clone(), text));
+
+        let document_diagnostics = self.registry().document(&fi).map(|d| d.all_diagnostics());
+        if let Some(diags) = document_diagnostics {
+            self.client.publish_diagnostics(fi, diags, version).await;
+        }
     }
 
     fn close(&self, fi: &Url) {
         self.registry_mut()
-            .change(ChangeKind::FileRemoved(fi.clone()));
+            .apply_change(ChangeKind::FileRemoved(fi.clone()));
     }
 
     fn client_caps(&self) -> MappedRwLockReadGuard<ClientCapabilities> {
@@ -93,8 +100,8 @@ impl SlideLS {
         RwLockReadGuard::map(self.document_registry.read(), |r| r.as_ref().unwrap())
     }
 
-    fn get_program_info(&self, doc: &Url) -> MappedRwLockReadGuard<ProgramInfo> {
-        MappedRwLockReadGuard::map(self.registry(), |r| r.program(doc).unwrap())
+    fn get_program(&self, doc: &Url, position: usize) -> MappedRwLockReadGuard<Program> {
+        MappedRwLockReadGuard::map(self.registry(), |r| r.program(doc, position).unwrap())
     }
 
     fn context(&self) -> MappedRwLockReadGuard<ProgramContext> {
@@ -115,7 +122,7 @@ impl LanguageServer for SlideLS {
 
         // TODO: make this a user option
         let context = ProgramContext::default().lint(true);
-        let document_registry = DocumentRegistry::new(document_parsers, context);
+        let document_registry = DocumentRegistry::new(document_parsers, p(context));
 
         // Update fresh instance options
         *self.document_registry.write() = Some(document_registry);
@@ -166,7 +173,8 @@ impl LanguageServer for SlideLS {
             text_document: TextDocumentIdentifier { uri },
             position,
         } = params.text_document_position_params;
-        let program_info = self.get_program_info(&uri);
+        // TODO: use actual position
+        let program_info = self.get_program(&uri, 0);
         let supports_link = self
             .client_caps()
             .text_document
@@ -184,7 +192,8 @@ impl LanguageServer for SlideLS {
             text_document: TextDocumentIdentifier { uri },
             position,
         } = params.text_document_position_params;
-        let program_info = self.get_program_info(&uri);
+        // TODO: use actual position
+        let program_info = self.get_program(&uri, 0);
         let context = self.context();
 
         let hover = services::get_hover_info(position, program_info.deref(), context.deref());
@@ -203,7 +212,8 @@ impl LanguageServer for SlideLS {
             },
             ..
         } = params;
-        let program_info = self.get_program_info(&uri);
+        // TODO: use actual position
+        let program_info = self.get_program(&uri, 0);
 
         let references =
             services::get_references(position, include_declaration, program_info.deref());
@@ -218,7 +228,8 @@ impl LanguageServer for SlideLS {
             text_document: TextDocumentIdentifier { uri },
             position,
         } = params.text_document_position_params;
-        let program_info = self.get_program_info(&uri);
+        // TODO: use actual position
+        let program_info = self.get_program(&uri, 0);
 
         let highlights = services::get_semantic_highlights(position, program_info.deref());
         Ok(highlights)

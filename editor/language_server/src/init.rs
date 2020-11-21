@@ -2,7 +2,6 @@
 
 use crate::document::{DocumentParser, DocumentParserMap};
 
-use regex::RegexBuilder;
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -50,29 +49,14 @@ impl InitializationOptions {
             document_parsers
                 .unwrap_or_default()
                 .into_iter()
-                .filter_map(|(name, parser)| {
-                    let mut re = RegexBuilder::new(parser.as_ref());
-                    let re = re.multi_line(true);
-                    match re.build() {
-                        Ok(re) => {
-                            let parser = DocumentParser::from(re);
-                            match parser.validate() {
-                                Ok(_) => Some((name, parser)),
-                                Err(why) => {
-                                    diags.push(InitializationDiagnostic::InvalidParserRegex(
-                                        name, why,
-                                    ));
-                                    None
-                                }
-                            }
-                        }
-                        Err(why) => {
-                            diags.push(InitializationDiagnostic::InvalidParserRegex(
-                                name,
-                                why.to_string(),
-                            ));
-                            None
-                        }
+                .filter_map(|(name, parser)| match DocumentParser::build(&parser) {
+                    Ok(parser) => Some((name, parser)),
+                    Err(why) => {
+                        diags.push(InitializationDiagnostic::InvalidParserRegex(
+                            name,
+                            why.to_string(),
+                        ));
+                        None
                     }
                 })
                 .collect()
@@ -95,7 +79,7 @@ impl std::fmt::Display for InitializationDiagnostic {
 
 #[cfg(test)]
 mod test {
-    use super::{InitializationDiagnostic, InitializationOptions};
+    use super::{DocumentParser, InitializationDiagnostic, InitializationOptions};
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
@@ -103,7 +87,7 @@ mod test {
         InitializationOptions {
             document_parsers: document_parsers
                 .into_iter()
-                .map(|(fi, re)| (fi.to_owned(), regex::Regex::new(re).unwrap().into()))
+                .map(|(fi, re)| (fi.to_owned(), DocumentParser::build(re).unwrap()))
                 .collect(),
         }
     }

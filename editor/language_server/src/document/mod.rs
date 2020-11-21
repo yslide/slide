@@ -7,10 +7,11 @@
 //! Programs are extracted from a document using a [`DocumentParser`](self::DocumentParser).
 
 use crate::ptr::{p, P};
+use crate::shims::to_offset;
 use crate::Program;
 
 use std::collections::{BTreeMap, HashMap};
-use tower_lsp::lsp_types::{Diagnostic, Url};
+use tower_lsp::lsp_types::{Diagnostic, Position, Url};
 
 mod document_parser;
 
@@ -22,15 +23,15 @@ pub(crate) struct Document {
     _uri: P<Url>,
     // TODO: give programs a source mapping of lsp positions to offsets or something so we
     // don't have to keep the entire document text.
-    _source: String,
+    source: String,
     pub programs: Vec<Program>,
 }
 
 impl Document {
-    pub fn new(uri: P<Url>, source: String, programs: Vec<Program>) -> Self {
+    fn new(uri: P<Url>, source: String, programs: Vec<Program>) -> Self {
         Self {
             _uri: uri,
-            _source: source,
+            source,
             programs,
         }
     }
@@ -42,6 +43,11 @@ impl Document {
             .map(|p| p.diagnostics().clone())
             .flatten()
             .collect()
+    }
+
+    fn program_at(&self, _offset: usize) -> Option<&Program> {
+        // TODO: algorithm for getting actual program
+        self.programs.first()
     }
 }
 
@@ -79,13 +85,20 @@ impl DocumentRegistry {
         self.registry.get(uri)
     }
 
-    pub fn program(&self, uri: &Url, _position: usize) -> Option<&Program> {
-        // TODO: algorithm for getting actual program
-        self.registry.get(uri).and_then(|d| d.programs.first())
-    }
+    /// Does some work with a program at the specified `uri` and `position`.
+    pub fn with_program_at<T>(
+        &self,
+        uri: &Url,
+        position: Position,
+        cb: impl FnOnce(&Program, usize) -> Option<T>,
+    ) -> Option<T> {
+        let document = self.document(uri)?;
+        let absolute_offset = to_offset(&position, &document.source);
+        let program = document.program_at(absolute_offset)?;
+        let offset_in_program = absolute_offset - program.start;
 
-    pub fn context(&self) -> &libslide::ProgramContext {
-        &self.context
+        // TODO: marshall back to absolute location
+        cb(program, offset_in_program)
     }
 
     fn file_modified(&mut self, uri: Url, source: String) {
@@ -105,7 +118,7 @@ impl DocumentRegistry {
 }
 
 #[cfg(test)]
-mod test {
+mod document_registry_tests {
     use super::{DocumentParser, DocumentParserMap, DocumentRegistry};
     use crate::ptr::p;
     use tower_lsp::lsp_types::Url;
@@ -206,20 +219,6 @@ mod test {
             assert_eq!(registry.registry.len(), 2);
             assert_eq!(first_program(&registry, &fi_slide), "1 + 10");
             assert_eq!(first_program(&registry, &fi_math), "3 + 4");
-        }
-    }
-
-    mod program {
-        use super::super::ChangeKind;
-        use super::{url, SM_registry};
-
-        #[test]
-        fn get_program() {
-            let mut registy = SM_registry();
-            let fi_slide = url("file:///fi.slide");
-
-            registy.apply_change(ChangeKind::FileModified(fi_slide.clone(), "1 + 2".into()));
-            assert_eq!(registy.program(&fi_slide, 0).unwrap().source, "1 + 2");
         }
     }
 }

@@ -8,7 +8,7 @@ macro_rules! definitions_tests {
     ($($name:ident, $link_support:expr, $text:expr)*) => {$(
         #[tokio::test]
         async fn $name() {
-            let mut service = MockService::new($link_support).await;
+            let mut service = MockService::new($link_support, MockService::default_initialization_options()).await;
             let file = Url::parse("file:///test").unwrap();
 
             let DecorationResult { decorations, cursor, text } = process_decorations($text);

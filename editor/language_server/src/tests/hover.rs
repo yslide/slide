@@ -9,7 +9,7 @@ macro_rules! hover_tests {
         #[tokio::test]
         async fn $name() {
             let mut service = MockService::default().await;
-            let file = Url::parse("file:///test").unwrap();
+            let file = Url::parse("file:///test.slide").unwrap();
 
             let DecorationResult { decorations, cursor, text } = process_decorations($text);
             service.did_open(&file, &text).await;

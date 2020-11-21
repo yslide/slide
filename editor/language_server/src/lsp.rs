@@ -6,40 +6,33 @@
 
 use libslide::*;
 
-use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
+use parking_lot::{
+    MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
+};
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 
-use std::cell::RefCell;
-use std::collections::HashMap;
 use std::ops::Deref;
 
 mod ast;
+mod document;
+mod init;
 mod services;
 mod shims;
-use shims::convert_diagnostics;
+
+use document::{ChangeKind, DocumentRegistry, ProgramInfo};
+use init::InitializationOptions;
 
 #[cfg(test)]
 mod tests;
 
-pub(crate) struct ProgramInfo {
-    source: String,
-    uri: Url,
-    original: StmtList,
-    #[allow(unused)]
-    simplified: StmtList,
-}
-
-type DocumentRegistry = HashMap<Url, ProgramInfo>;
-
 /// A slide language server.
 pub struct SlideLS {
     client: Client,
-    document_registry: Mutex<RefCell<DocumentRegistry>>,
     // These are always correctly set after `initialize`.
-    context: Mutex<RefCell<ProgramContext>>,
-    client_caps: Mutex<RefCell<ClientCapabilities>>,
+    document_registry: RwLock<Option<DocumentRegistry>>,
+    client_caps: RwLock<Option<ClientCapabilities>>,
 }
 
 impl SlideLS {
@@ -47,9 +40,8 @@ impl SlideLS {
     pub fn new(client: Client) -> Self {
         Self {
             client,
-            document_registry: Default::default(),
-            context: Default::default(),
-            client_caps: Default::default(),
+            document_registry: RwLock::new(None),
+            client_caps: RwLock::new(None),
         }
     }
 
@@ -77,86 +69,57 @@ impl SlideLS {
         }
     }
 
-    async fn change(&self, doc: Url, text: String, version: Option<i64>) {
-        // On document change, we do the following:
-        //   1. Reparse the program source code
-        //   2. Evaluate the program
-        //      - There is a tradeoff between evaluating everything at once on change and lazily
-        //        evaluating on queries. For now, we need to do it in this step because some
-        //        diagnostics (i.e. validation) cannot be done without performing evaluation
-        //        anyway.
-        //        A future flow could be to use a "query" model, whereby we incrementally parse,
-        //        evaluate, and publish diagnostics localized to a single statement.
-        //        But we are far away from that being important.
-        //   3. Since we're already here, publish any diagnostics we discovered.
-        //
-        // We cache both the original program AST and evaluated AST so we can answer later queries
-        // for original/optimized statements without re-evaluation.
-
-        // 1. Parse
-        let ScanResult {
-            tokens,
-            diagnostics: scan_diags,
-        } = scan(&*text);
-        let ParseResult {
-            program,
-            diagnostics: parse_diags,
-        } = parse_statements(tokens, &text);
-        let lint_diags = lint_stmt(&program, &text);
-        // 2. Eval
-        let EvaluationResult {
-            simplified,
-            diagnostics: eval_diags,
-        } = evaluate(program.clone(), &self.context().deref()).expect("Evaluation failed.");
-
-        // 3. Publish diagnostics
-        let diags = [scan_diags, parse_diags, lint_diags, eval_diags]
-            .iter()
-            .flat_map(|diags| convert_diagnostics(diags, "slide", &doc, &text))
-            .collect();
-        self.client
-            .publish_diagnostics(doc.clone(), diags, version)
-            .await;
-
-        // Final: save results
-        self.doc_registry().get_mut().insert(
-            doc.clone(),
-            ProgramInfo {
-                source: text,
-                uri: doc,
-                original: program,
-                simplified,
-            },
-        );
+    async fn change(&self, fi: Url, text: String, version: Option<i64>) {
+        let diags = self
+            .registry_mut()
+            .change(ChangeKind::FileModified(fi.clone(), text));
+        self.client.publish_diagnostics(fi, diags, version).await;
     }
 
-    fn close(&self, doc: &Url) {
-        self.doc_registry().get_mut().remove(doc);
+    fn close(&self, fi: &Url) {
+        self.registry_mut()
+            .change(ChangeKind::FileRemoved(fi.clone()));
     }
 
-    fn doc_registry(&self) -> MutexGuard<RefCell<DocumentRegistry>> {
-        self.document_registry.lock()
+    fn client_caps(&self) -> MappedRwLockReadGuard<ClientCapabilities> {
+        RwLockReadGuard::map(self.client_caps.read(), |c| c.as_ref().unwrap())
     }
 
-    fn get_program_info(&self, doc: &Url) -> MappedMutexGuard<ProgramInfo> {
-        MutexGuard::map(self.doc_registry(), |dr| dr.get_mut().get_mut(doc).unwrap())
+    fn registry_mut(&self) -> MappedRwLockWriteGuard<DocumentRegistry> {
+        RwLockWriteGuard::map(self.document_registry.write(), |r| r.as_mut().unwrap())
     }
 
-    fn context(&self) -> MappedMutexGuard<ProgramContext> {
-        MutexGuard::map(self.context.lock(), |pc| pc.get_mut())
+    fn registry(&self) -> MappedRwLockReadGuard<DocumentRegistry> {
+        RwLockReadGuard::map(self.document_registry.read(), |r| r.as_ref().unwrap())
     }
 
-    fn client_caps(&self) -> MappedMutexGuard<ClientCapabilities> {
-        MutexGuard::map(self.client_caps.lock(), |pc| pc.get_mut())
+    fn get_program_info(&self, doc: &Url) -> MappedRwLockReadGuard<ProgramInfo> {
+        MappedRwLockReadGuard::map(self.registry(), |r| r.program(doc).unwrap())
+    }
+
+    fn context(&self) -> MappedRwLockReadGuard<ProgramContext> {
+        MappedRwLockReadGuard::map(self.registry(), |r| r.context())
     }
 }
 
 #[tower_lsp::async_trait]
 impl LanguageServer for SlideLS {
     async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
+        let (InitializationOptions { document_parsers }, diags) =
+            InitializationOptions::from_json(params.initialization_options);
+        for diag in diags {
+            self.client
+                .log_message(MessageType::Error, diag.to_string())
+                .await;
+        }
+
+        // TODO: make this a user option
         let context = ProgramContext::default().lint(true);
-        self.context.lock().replace(context);
-        self.client_caps.lock().replace(params.capabilities);
+        let document_registry = DocumentRegistry::new(document_parsers, context);
+
+        // Update fresh instance options
+        *self.document_registry.write() = Some(document_registry);
+        *self.client_caps.write() = Some(params.capabilities);
 
         Ok(InitializeResult {
             capabilities: SlideLS::capabilities(),

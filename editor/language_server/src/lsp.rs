@@ -13,14 +13,11 @@ use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 
-use std::ops::Deref;
-
 mod ast;
 mod document;
 mod init;
 mod program;
 mod ptr;
-mod services;
 mod shims;
 
 use document::{ChangeKind, DocumentRegistry};
@@ -99,14 +96,6 @@ impl SlideLS {
     fn registry(&self) -> MappedRwLockReadGuard<DocumentRegistry> {
         RwLockReadGuard::map(self.document_registry.read(), |r| r.as_ref().unwrap())
     }
-
-    fn get_program(&self, doc: &Url, position: usize) -> MappedRwLockReadGuard<Program> {
-        MappedRwLockReadGuard::map(self.registry(), |r| r.program(doc, position).unwrap())
-    }
-
-    fn context(&self) -> MappedRwLockReadGuard<ProgramContext> {
-        MappedRwLockReadGuard::map(self.registry(), |r| r.context())
-    }
 }
 
 #[tower_lsp::async_trait]
@@ -173,8 +162,6 @@ impl LanguageServer for SlideLS {
             text_document: TextDocumentIdentifier { uri },
             position,
         } = params.text_document_position_params;
-        // TODO: use actual position
-        let program_info = self.get_program(&uri, 0);
         let supports_link = self
             .client_caps()
             .text_document
@@ -183,7 +170,12 @@ impl LanguageServer for SlideLS {
             .and_then(|def| def.link_support)
             .unwrap_or(false);
 
-        let definitions = services::get_definitions(position, program_info.deref(), supports_link);
+        let definitions = self
+            .registry()
+            .with_program_at(&uri, position, |program, offset| {
+                program.get_definitions(offset, supports_link)
+            });
+
         Ok(definitions)
     }
 
@@ -192,11 +184,13 @@ impl LanguageServer for SlideLS {
             text_document: TextDocumentIdentifier { uri },
             position,
         } = params.text_document_position_params;
-        // TODO: use actual position
-        let program_info = self.get_program(&uri, 0);
-        let context = self.context();
 
-        let hover = services::get_hover_info(position, program_info.deref(), context.deref());
+        let hover = self
+            .registry()
+            .with_program_at(&uri, position, |program, offset| {
+                program.get_hover_info(offset)
+            });
+
         Ok(hover)
     }
 
@@ -212,11 +206,13 @@ impl LanguageServer for SlideLS {
             },
             ..
         } = params;
-        // TODO: use actual position
-        let program_info = self.get_program(&uri, 0);
 
-        let references =
-            services::get_references(position, include_declaration, program_info.deref());
+        let references = self
+            .registry()
+            .with_program_at(&uri, position, |program, offset| {
+                program.get_references(offset, include_declaration)
+            });
+
         Ok(references)
     }
 
@@ -228,10 +224,13 @@ impl LanguageServer for SlideLS {
             text_document: TextDocumentIdentifier { uri },
             position,
         } = params.text_document_position_params;
-        // TODO: use actual position
-        let program_info = self.get_program(&uri, 0);
 
-        let highlights = services::get_semantic_highlights(position, program_info.deref());
+        let highlights = self
+            .registry()
+            .with_program_at(&uri, position, |program, offset| {
+                program.get_semantic_highlights(offset)
+            });
+
         Ok(highlights)
     }
 }

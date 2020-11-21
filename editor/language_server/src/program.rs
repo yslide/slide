@@ -8,6 +8,8 @@ use tower_lsp::lsp_types::{Diagnostic, Url};
 use crate::ast::AST;
 use crate::ptr::P;
 
+mod services;
+
 #[derive(Debug)]
 struct Analysis {
     original: RwLock<Option<AST>>,

@@ -1,33 +1,52 @@
+//! Module `references` provides references for a [`Program`](crate::Program).
+
 use crate::ast;
-use crate::shims::{to_offset, to_range};
+use crate::shims::to_range;
 use crate::Program;
 
 use libslide::*;
 use tower_lsp::lsp_types::*;
 use visit::StmtVisitor;
 
-/// Returns references relevant to a position in a document.
-/// - If the position is over an identifier (variable),
-///   - if `include_declaration` is true, all references are returned.
-///   - otherwise only non-declaration references are returned.
-/// - Otherwise, nothing is returned.
-pub(crate) fn get_references(
-    position: Position,
-    include_declaration: bool,
-    program: &Program,
-) -> Option<Vec<Location>> {
-    let uri = program.document_uri.as_ref();
-    let source = program.source.as_ref();
-    let references = get_kinded_references(position, program)?;
-    let references = references
-        .into_iter()
-        .filter_map(|rk| match rk {
-            ReferenceKind::Definition(_) if !include_declaration => None,
-            _ => Some(Location::new((*uri).clone(), to_range(rk.span(), &source))),
-        })
-        .collect();
+impl Program {
+    /// Returns references relevant to a offset in a document.
+    /// - If the offset is over an identifier (variable),
+    ///   - if `include_declaration` is true, all references are returned.
+    ///   - otherwise only non-declaration references are returned.
+    /// - Otherwise, nothing is returned.
+    pub fn get_references(
+        &self,
+        offset: usize,
+        include_declaration: bool,
+    ) -> Option<Vec<Location>> {
+        let uri = self.document_uri.as_ref();
+        let source = self.source.as_ref();
+        let references = self.get_kinded_references(offset)?;
+        let references = references
+            .into_iter()
+            .filter_map(|rk| match rk {
+                ReferenceKind::Definition(_) if !include_declaration => None,
+                _ => Some(Location::new((*uri).clone(), to_range(rk.span(), &source))),
+            })
+            .collect();
 
-    Some(references)
+        Some(references)
+    }
+
+    pub fn get_kinded_references(&self, offset: usize) -> Option<Vec<ReferenceKind>> {
+        let program_ast = &self.original_ast();
+        let tightest_expr = ast::get_tightest_expr(offset, program_ast)?;
+        let seeking = tightest_expr.get_var()?;
+
+        let mut reference_finder = ReferenceFinder {
+            seeking,
+            is_declaration: false,
+            refs: vec![],
+        };
+        reference_finder.visit_stmt_list(program_ast);
+
+        Some(reference_finder.refs)
+    }
 }
 
 /// The kind of a reference.
@@ -47,25 +66,6 @@ impl ReferenceKind {
             Self::Usage(sp) => sp,
         }
     }
-}
-
-pub(crate) fn get_kinded_references(
-    position: Position,
-    program: &Program,
-) -> Option<Vec<ReferenceKind>> {
-    let program_ast = &program.original_ast();
-    let position = to_offset(&position, &program.source);
-    let tightest_expr = ast::get_tightest_expr(position, program_ast)?;
-    let seeking = tightest_expr.get_var()?;
-
-    let mut reference_finder = ReferenceFinder {
-        seeking,
-        is_declaration: false,
-        refs: vec![],
-    };
-    reference_finder.visit_stmt_list(program_ast);
-
-    Some(reference_finder.refs)
 }
 
 struct ReferenceFinder {

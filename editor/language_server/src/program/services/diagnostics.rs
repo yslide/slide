@@ -1,7 +1,7 @@
 //! Module `diagnostics` marshalls between [libslide diagnostics](libslide::diagnostic::Diagnostic)
 //! and LSP types.
 
-use super::local_response::*;
+use super::response::*;
 
 use libslide::diagnostics as s;
 use tower_lsp::lsp_types::*;
@@ -10,10 +10,10 @@ pub fn convert_diagnostics(
     diagnostics: &[s::Diagnostic],
     provider: &str,
     uri: &Url,
-) -> Vec<LocalDiagnostic> {
+) -> Vec<ProgramDiagnostic> {
     diagnostics
         .iter()
-        .map(|diagnostic| LocalDiagnostic {
+        .map(|diagnostic| ProgramDiagnostic {
             span: diagnostic.span,
             severity: to_severity(&diagnostic.kind),
             code: diagnostic.code.to_string(),
@@ -34,13 +34,13 @@ fn flatten_diagnostic_msg(diagnostic: &s::Diagnostic) -> String {
 fn flatten_related(
     diagnostic: &s::Diagnostic,
     uri: &Url,
-) -> Vec<LocalDiagnosticRelatedInformation> {
+) -> Vec<ProgramDiagnosticRelatedInformation> {
     diagnostic
         .associated_diagnostics
         .iter()
         .chain(diagnostic.unspanned_associated_diagnostics.iter())
-        .map(|ad| LocalDiagnosticRelatedInformation {
-            location: LocalLocation {
+        .map(|ad| ProgramDiagnosticRelatedInformation {
+            location: ProgramLocation {
                 uri: uri.clone(),
                 span: ad.span,
             },

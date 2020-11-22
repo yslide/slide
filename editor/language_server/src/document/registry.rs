@@ -1,88 +1,21 @@
-//! Module `document` describes the model by which text files are handled in a server session.
-//!
-//! Every document in a server session may have multiple [`Program`](crate::Program)s, which serves
-//! the heart of all query work made by the server. A document is a conduit between a text file and
-//! the programs within it.
-//!
-//! Programs are extracted from a document using a [`DocumentParser`](self::DocumentParser).
+//! Module `registry` describes a stateful registry of documents in a server session.
+
+use super::response;
+use super::{Document, DocumentParser, DocumentParserMap};
 
 use crate::ptr::{p, P};
 use crate::shims::{to_offset, to_position};
 use crate::Program;
 
-use std::collections::{BTreeMap, HashMap};
-use tower_lsp::lsp_types::{Diagnostic, Position, Url};
+use std::collections::HashMap;
+use tower_lsp::lsp_types::{Position, Url};
 
-mod document_parser;
-
-pub(crate) use document_parser::DocumentParser;
-
-pub(crate) type DocumentParserMap = BTreeMap<String, DocumentParser>;
-
-pub(crate) struct Document {
-    _uri: P<Url>,
-    // TODO: give programs a source mapping of lsp positions to offsets or something to make
-    // lookups of offsets in a source faster.
-    source: String,
-    /// List of [`Program`](crate::Program)s in this document.
-    ///
-    /// This list must observe the invariant of `programs_{i}.end <= programs_{i+1}.start`.
-    pub programs: Vec<Program>,
-}
-
-impl Document {
-    fn new(uri: P<Url>, source: String, programs: Vec<Program>) -> Self {
-        Self {
-            _uri: uri,
-            source,
-            programs,
-        }
-    }
-
-    /// Retrieves diagnostics cross all [Program](crate::Program)s in this document.
-    pub fn all_diagnostics(&self) -> Vec<Diagnostic> {
-        let to_position = |offset| to_position(offset, self.source.as_ref());
-        self.programs
-            .iter()
-            .map(|p| p.diagnostics().clone().to_absolute(p.start, &to_position))
-            .flatten()
-            .collect()
-    }
-
-    fn program_at(&self, offset: usize) -> Option<&Program> {
-        let idx = self
-            .programs
-            .binary_search_by(|program| {
-                if offset < program.start {
-                    std::cmp::Ordering::Greater
-                } else if offset >= program.end {
-                    std::cmp::Ordering::Less
-                } else {
-                    std::cmp::Ordering::Equal
-                }
-            })
-            .ok()?;
-        Some(&self.programs[idx])
-    }
-}
-
-pub(crate) enum ChangeKind {
+pub enum ChangeKind {
     FileModified(Url, String),
     FileRemoved(Url),
 }
 
-pub(crate) trait ToAbsoluteResponse {
-    type Response;
-
-    fn to_absolute(
-        self,
-        program_offset: usize,
-        document_offset_to_position: &impl Fn(usize) -> Position,
-    ) -> Self::Response;
-}
-
 pub(crate) struct DocumentRegistry {
-    #[allow(unused)]
     parsers: DocumentParserMap,
     context: P<libslide::ProgramContext>,
     registry: HashMap<Url, Document>,
@@ -111,7 +44,7 @@ impl DocumentRegistry {
     }
 
     /// Does some work with a program at the specified `uri` and `position`.
-    pub fn with_program_at<RelativeResponse: ToAbsoluteResponse>(
+    pub fn with_program_at<RelativeResponse: response::ToDocumentResponse>(
         &self,
         uri: &Url,
         position: Position,
@@ -145,66 +78,6 @@ impl DocumentRegistry {
             .and_then(std::ffi::OsStr::to_str)
             .unwrap_or_default();
         self.parsers.get(ext)
-    }
-}
-
-#[cfg(test)]
-mod document_tests {
-    use super::{Document, DocumentParser};
-    use crate::ptr::p;
-    use tower_lsp::lsp_types::Url;
-
-    fn math_document(content: &str) -> Document {
-        DocumentParser::build(r"```math\n((?:.|\n)*?)\n```")
-            .unwrap()
-            .parse(
-                content.to_owned(),
-                p(Url::parse("file:///math.md").unwrap()),
-                p(Default::default()),
-            )
-    }
-
-    #[test]
-    fn all_diagnostics() {
-        let document = math_document(
-            r"
-# Hello 
-
-```math
-1 + 
-```
-
-## Othello
-
-```math
-3 +
-```",
-        );
-
-        assert_eq!(document.all_diagnostics().len(), 2);
-    }
-
-    #[test]
-    fn get_program() {
-        let content = r"
-# Hello 
-
-```math
-1 + 1
-```
-
-## Othello
-
-```math
-3 + 3
-```";
-        let document = math_document(content);
-
-        let start_p1 = content.find("1 + 1").unwrap();
-        let start_p2 = content.find("3 + 3").unwrap();
-
-        assert_eq!(document.program_at(start_p1).unwrap().source, "1 + 1");
-        assert_eq!(document.program_at(start_p2).unwrap().source, "3 + 3");
     }
 }
 

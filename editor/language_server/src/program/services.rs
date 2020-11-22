@@ -11,7 +11,7 @@ mod references;
 // The following modules contribute free functions to the services API.
 pub mod diagnostics;
 
-/// Module `local_response` describes the API for responses of language queries at the level of a
-/// program, and implementations of [`ToAbsoluteResponse`](crate::ToAbsoluteResponse) to raise
-/// those responses in the context of a [`Document`](crate::Document).
-pub mod local_response;
+/// Module `response` describes the API for responses of language queries at the level of a
+/// program. These can then be marshalled into a response at the level of an entire
+/// [`Document`](crate::Document) for answering queries with the LSP API.
+pub mod response;

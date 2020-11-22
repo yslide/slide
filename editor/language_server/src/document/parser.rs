@@ -22,8 +22,8 @@ impl DocumentParser {
     /// The provided regex string will be parsed as a regex subject to the following constraints:
     /// - Must observe PCRE regex syntax
     /// - Must contain exactly one explicit capturing group to denote the contents of a slide
-    ///   program. For example, `(.*)` and `\`\`\`math\n((?:.|\n)*?)\n\`\`\`` meet this
-    ///   requirement, while `.*`, `(.*)(.*)`, and `\`\`\`math\n((.|\n)*?)\n\`\`\`` do not.
+    ///   program. For example, `(.*)` and `` ```math\n((?:.|\n)*?)\n``` `` meet this requirement,
+    ///   while `.*`, `(.*)(.*)`, and `` ```math\n((.|\n)*?)\n``` `` do not.
     /// - Will be parsed as a multi-line regex; be sure to include newlines explicitly if you want
     ///   them to be captured by the regex. For example, `(.*)` captures all characters except line
     ///   feeds; to also capture line feeds, use `((?:.|\n)*)`.

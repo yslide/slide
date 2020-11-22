@@ -10,7 +10,7 @@
 
 slide is an expression rewrite system and validator. Given an expression like
 
-```
+```math
 x(x + 2 * 3) / (x + 6)
 ```
 

@@ -3,18 +3,19 @@
 
 use libslide::ProgramContext;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
-use tower_lsp::lsp_types::{Diagnostic, Url};
+use tower_lsp::lsp_types::Url;
 
 use crate::ast::AST;
 use crate::ptr::P;
 
 mod services;
+use services::local_response::LocalDiagnostic;
 
 #[derive(Debug)]
 struct Analysis {
     original: RwLock<Option<AST>>,
     simplified: RwLock<Option<AST>>,
-    diagnostics: RwLock<Option<Vec<Diagnostic>>>,
+    diagnostics: RwLock<Option<Vec<LocalDiagnostic>>>,
 }
 
 impl Analysis {
@@ -69,7 +70,7 @@ impl Program {
         self.with_analysis(|a| &a.simplified)
     }
 
-    pub fn diagnostics(&self) -> MappedRwLockReadGuard<Vec<Diagnostic>> {
+    pub fn diagnostics(&self) -> MappedRwLockReadGuard<Vec<LocalDiagnostic>> {
         self.with_analysis(|a| &a.diagnostics)
     }
 
@@ -124,12 +125,7 @@ impl Program {
             let diags = [scan_diags, parse_diags, lint_diags, eval_diags]
                 .iter()
                 .flat_map(|diags| {
-                    crate::shims::convert_diagnostics(
-                        diags,
-                        "slide",
-                        &self.document_uri,
-                        &self.source,
-                    )
+                    services::diagnostics::convert_diagnostics(diags, "slide", &self.document_uri)
                 })
                 .collect();
 

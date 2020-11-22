@@ -1,6 +1,6 @@
 //! Module `hover` provides hover services for a slide langauge server.
 
-use super::local_response::LocalHoverResponse;
+use super::response::*;
 use crate::ast;
 use crate::Program;
 
@@ -16,7 +16,7 @@ impl Program {
     ///   - if the variable is defined, its simplified definition(s) are returned.
     ///   - if the variable is not defined, an "unknown" marker is returned.
     /// - Otherwise, a simplified version of the hovered expression is returned.
-    pub fn get_hover_info(&self, offset: usize) -> Option<LocalHoverResponse> {
+    pub fn get_hover_info(&self, offset: usize) -> Option<ProgramHoverResponse> {
         let program_ast = self.original_ast();
         let tightest_expr = ast::get_tightest_expr(offset, &program_ast)?;
         let span = tightest_expr.span;
@@ -38,7 +38,7 @@ impl Program {
         };
         let hover_info = fmt_hover_info(simplified);
 
-        Some(LocalHoverResponse {
+        Some(ProgramHoverResponse {
             contents: HoverContents::Scalar(MarkedString::LanguageString(LanguageString {
                 language: "math".to_string(),
                 value: hover_info,

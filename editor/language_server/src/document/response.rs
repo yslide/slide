@@ -1,7 +1,21 @@
-use crate::ToAbsoluteResponse;
+//! Module `response` describes the API for responses of language queries at the level of a
+//! document, and generally correspond to the API surface of the LSP. In general, document-level
+//! responses are converted from [program-level responses](crate::program::response) by the
+//! implementation of the [`ToDocumentResponse`](ToDocumentResponse) trait. All such
+//! implementations should reside in this module.
 
-use libslide::Span;
+use crate::program::response::*;
 use tower_lsp::lsp_types::*;
+
+pub trait ToDocumentResponse {
+    type Response;
+
+    fn to_absolute(
+        self,
+        program_offset: usize,
+        document_offset_to_position: &impl Fn(usize) -> Position,
+    ) -> Self::Response;
+}
 
 macro_rules! to_range {
     ($document_offset_to_position:ident, $program_offset:ident, $span:ident) => {
@@ -12,13 +26,7 @@ macro_rules! to_range {
     };
 }
 
-#[derive(Debug, Clone)]
-pub struct LocalLocation {
-    pub uri: Url,
-    pub span: Span,
-}
-
-impl ToAbsoluteResponse for LocalLocation {
+impl ToDocumentResponse for ProgramLocation {
     type Response = Location;
 
     fn to_absolute(
@@ -26,12 +34,12 @@ impl ToAbsoluteResponse for LocalLocation {
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
     ) -> Self::Response {
-        let LocalLocation { uri, span } = self;
+        let ProgramLocation { uri, span } = self;
         Location::new(uri, to_range!(o2p, program_offset, span))
     }
 }
 
-impl ToAbsoluteResponse for Vec<LocalLocation> {
+impl ToDocumentResponse for Vec<ProgramLocation> {
     type Response = Vec<Location>;
 
     fn to_absolute(
@@ -40,21 +48,14 @@ impl ToAbsoluteResponse for Vec<LocalLocation> {
         o2p: &impl Fn(usize) -> Position,
     ) -> Self::Response {
         self.into_iter()
-            .map(|LocalLocation { uri, span }| {
+            .map(|ProgramLocation { uri, span }| {
                 Location::new(uri, to_range!(o2p, program_offset, span))
             })
             .collect()
     }
 }
 
-pub struct LocalLocationLink {
-    pub origin_selection_span: Span,
-    pub target_uri: Url,
-    pub target_span: Span,
-    pub target_selection_span: Span,
-}
-
-impl ToAbsoluteResponse for Vec<LocalLocationLink> {
+impl ToDocumentResponse for Vec<ProgramLocationLink> {
     type Response = Vec<LocationLink>;
 
     fn to_absolute(
@@ -64,7 +65,7 @@ impl ToAbsoluteResponse for Vec<LocalLocationLink> {
     ) -> Self::Response {
         self.into_iter()
             .map(
-                |LocalLocationLink {
+                |ProgramLocationLink {
                      origin_selection_span,
                      target_uri,
                      target_span,
@@ -90,12 +91,7 @@ impl ToAbsoluteResponse for Vec<LocalLocationLink> {
     }
 }
 
-pub struct LocalHoverResponse {
-    pub contents: HoverContents,
-    pub span: Span,
-}
-
-impl crate::ToAbsoluteResponse for LocalHoverResponse {
+impl ToDocumentResponse for ProgramHoverResponse {
     type Response = Hover;
 
     fn to_absolute(
@@ -109,12 +105,7 @@ impl crate::ToAbsoluteResponse for LocalHoverResponse {
     }
 }
 
-pub struct LocalHighlight {
-    pub kind: DocumentHighlightKind,
-    pub span: libslide::Span,
-}
-
-impl ToAbsoluteResponse for LocalHighlight {
+impl ToDocumentResponse for ProgramHighlight {
     type Response = DocumentHighlight;
 
     fn to_absolute(
@@ -122,7 +113,7 @@ impl ToAbsoluteResponse for LocalHighlight {
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
     ) -> Self::Response {
-        let LocalHighlight { kind, span } = self;
+        let ProgramHighlight { kind, span } = self;
         DocumentHighlight {
             kind: Some(kind),
             range: to_range!(o2p, program_offset, span),
@@ -130,7 +121,7 @@ impl ToAbsoluteResponse for LocalHighlight {
     }
 }
 
-impl ToAbsoluteResponse for Vec<LocalHighlight> {
+impl ToDocumentResponse for Vec<ProgramHighlight> {
     type Response = Vec<DocumentHighlight>;
 
     fn to_absolute(
@@ -139,7 +130,7 @@ impl ToAbsoluteResponse for Vec<LocalHighlight> {
         o2p: &impl Fn(usize) -> Position,
     ) -> Self::Response {
         self.into_iter()
-            .map(|LocalHighlight { kind, span }| DocumentHighlight {
+            .map(|ProgramHighlight { kind, span }| DocumentHighlight {
                 kind: Some(kind),
                 range: to_range!(o2p, program_offset, span),
             })
@@ -147,12 +138,7 @@ impl ToAbsoluteResponse for Vec<LocalHighlight> {
     }
 }
 
-pub enum LocalDefinitionResponse {
-    Array(Vec<LocalLocation>),
-    Link(Vec<LocalLocationLink>),
-}
-
-impl ToAbsoluteResponse for LocalDefinitionResponse {
+impl ToDocumentResponse for ProgramDefinitionResponse {
     type Response = GotoDefinitionResponse;
 
     fn to_absolute(
@@ -171,23 +157,7 @@ impl ToAbsoluteResponse for LocalDefinitionResponse {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct LocalDiagnosticRelatedInformation {
-    pub location: LocalLocation,
-    pub message: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct LocalDiagnostic {
-    pub span: Span,
-    pub severity: DiagnosticSeverity,
-    pub code: String,
-    pub source: String,
-    pub message: String,
-    pub related_information: Vec<LocalDiagnosticRelatedInformation>,
-}
-
-impl ToAbsoluteResponse for Vec<LocalDiagnostic> {
+impl ToDocumentResponse for Vec<ProgramDiagnostic> {
     type Response = Vec<Diagnostic>;
 
     fn to_absolute(
@@ -197,7 +167,7 @@ impl ToAbsoluteResponse for Vec<LocalDiagnostic> {
     ) -> Self::Response {
         self.into_iter()
             .map(
-                |LocalDiagnostic {
+                |ProgramDiagnostic {
                      span,
                      severity,
                      code,
@@ -214,12 +184,14 @@ impl ToAbsoluteResponse for Vec<LocalDiagnostic> {
                         related_information: Some(
                             related_information
                                 .into_iter()
-                                .map(|LocalDiagnosticRelatedInformation { location, message }| {
-                                    DiagnosticRelatedInformation {
-                                        location: location.to_absolute(program_offset, o2p),
-                                        message,
-                                    }
-                                })
+                                .map(
+                                    |ProgramDiagnosticRelatedInformation { location, message }| {
+                                        DiagnosticRelatedInformation {
+                                            location: location.to_absolute(program_offset, o2p),
+                                            message,
+                                        }
+                                    },
+                                )
                                 .collect(),
                         ),
                         tags: None,

@@ -9,13 +9,13 @@ use crate::ast::AST;
 use crate::ptr::P;
 
 mod services;
-use services::local_response::LocalDiagnostic;
+pub use services::response;
 
 #[derive(Debug)]
 struct Analysis {
     original: RwLock<Option<AST>>,
     simplified: RwLock<Option<AST>>,
-    diagnostics: RwLock<Option<Vec<LocalDiagnostic>>>,
+    diagnostics: RwLock<Option<Vec<response::ProgramDiagnostic>>>,
 }
 
 impl Analysis {
@@ -70,7 +70,7 @@ impl Program {
         self.with_analysis(|a| &a.simplified)
     }
 
-    pub fn diagnostics(&self) -> MappedRwLockReadGuard<Vec<LocalDiagnostic>> {
+    pub fn diagnostics(&self) -> MappedRwLockReadGuard<Vec<response::ProgramDiagnostic>> {
         self.with_analysis(|a| &a.diagnostics)
     }
 

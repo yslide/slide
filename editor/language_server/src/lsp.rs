@@ -20,7 +20,7 @@ mod program;
 mod ptr;
 mod shims;
 
-use document::{ChangeKind, DocumentRegistry, ToAbsoluteResponse};
+use document::{ChangeKind, DocumentRegistry};
 use init::InitializationOptions;
 use program::Program;
 use ptr::p;

@@ -9,7 +9,10 @@ pub fn range_of(subtext: &str, text: &str) -> Range {
         .expect("Subtext not found.")
         .0;
     let span = (span_start, span_start + subtext.chars().count());
-    crate::shims::to_range(&span.into(), text)
+    Range::new(
+        crate::shims::to_position(span.0, text),
+        crate::shims::to_position(span.1, text),
+    )
 }
 
 pub struct DecorationResult {

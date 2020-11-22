@@ -1,6 +1,6 @@
 //! Module `definitions` serves definitions queries for a slide langauge server.
 
-use super::local_response::*;
+use super::response::*;
 use crate::ast;
 use crate::Program;
 
@@ -12,7 +12,7 @@ impl Program {
         &self,
         offset: usize,
         supports_link: bool,
-    ) -> Option<LocalDefinitionResponse> {
+    ) -> Option<ProgramDefinitionResponse> {
         let uri = self.document_uri.as_ref();
         let program = self.original_ast();
         let tightest_expr = ast::get_tightest_expr(offset, &program)?;
@@ -23,23 +23,23 @@ impl Program {
         let definitions = if supports_link {
             let links = asgns.iter().map(|asgn| {
                 let target_span = asgn.lhs.span;
-                LocalLocationLink {
+                ProgramLocationLink {
                     origin_selection_span: tightest_expr.span,
                     target_uri: uri.clone(),
                     target_span,
                     target_selection_span: target_span,
                 }
             });
-            LocalDefinitionResponse::Link(links.collect())
+            ProgramDefinitionResponse::Link(links.collect())
         } else {
             let locs = asgns.iter().map(|asgn| {
                 let span = asgn.lhs.span;
-                LocalLocation {
+                ProgramLocation {
                     uri: uri.clone(),
                     span,
                 }
             });
-            LocalDefinitionResponse::Array(locs.collect())
+            ProgramDefinitionResponse::Array(locs.collect())
         };
 
         Some(definitions)

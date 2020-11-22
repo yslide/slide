@@ -1,6 +1,6 @@
 //! Module `references` provides references for a [`Program`](crate::Program).
 
-use super::local_response::LocalLocation;
+use super::response::*;
 use crate::ast;
 use crate::Program;
 
@@ -17,14 +17,14 @@ impl Program {
         &self,
         offset: usize,
         include_declaration: bool,
-    ) -> Option<Vec<LocalLocation>> {
+    ) -> Option<Vec<ProgramLocation>> {
         let uri = self.document_uri.as_ref();
         let references = self.get_kinded_references(offset)?;
         let references = references
             .into_iter()
             .filter_map(|rk| match rk {
                 ReferenceKind::Definition(_) if !include_declaration => None,
-                _ => Some(LocalLocation {
+                _ => Some(ProgramLocation {
                     uri: uri.clone(),
                     span: *rk.span(),
                 }),

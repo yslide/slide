@@ -2,30 +2,37 @@
 //!
 //! Every document in a server session may have multiple [`Program`](crate::Program)s, which serves
 //! the heart of all query work made by the server. A document is a conduit between a text file and
-//! the programs within it.
+//! the programs within it, and serves as the main abstraction for the language server.
 //!
 //! Programs are extracted from a document using a [`DocumentParser`](self::DocumentParser).
 
-use crate::ptr::P;
 use crate::utils::to_position;
 use crate::Program;
 
 use std::collections::BTreeMap;
-use tower_lsp::lsp_types::{Diagnostic, Url};
+use tower_lsp::lsp_types::Diagnostic;
 
 mod parser;
 mod registry;
 mod response;
 
 pub(crate) use parser::DocumentParser;
-pub(crate) use registry::ChangeKind;
+pub(crate) use registry::Change;
 pub(crate) use registry::DocumentRegistry;
 pub(crate) use response::ToDocumentResponse;
 
+/// A mapping between file extensions and a [parser](DocumentParser) for that file type.
 pub type DocumentParserMap = BTreeMap<String, DocumentParser>;
 
+/// A `Document` describes a text file known to a server session, and contains information about
+/// slide [`Program`](crate::Program)s in the file. One `Document` may have multiple `Programs`,
+/// which are discovered by [`DocumentParser`](DocumentParser)s.
+///
+/// `Document`s are most useful with a [`DocumentRegistry`](DocumentRegistry), where they serve as
+/// a conduit between requests at the level of the LSP server and the program-local queries. See
+/// the [`registry`](registry) and [`response`](response) modules for more details.
 pub(crate) struct Document {
-    _uri: P<Url>,
+    /// The source text of the document.
     // TODO: give programs a source mapping of lsp positions to offsets or something to make
     // lookups of offsets in a source faster.
     source: String,
@@ -36,24 +43,27 @@ pub(crate) struct Document {
 }
 
 impl Document {
-    fn new(uri: P<Url>, source: String, programs: Vec<Program>) -> Self {
-        Self {
-            _uri: uri,
-            source,
-            programs,
-        }
+    /// Creates a new document with the document source text and [Program](crate::Program)s parsed
+    /// out of the document.
+    fn new(source: String, programs: Vec<Program>) -> Self {
+        Self { source, programs }
     }
 
-    /// Retrieves diagnostics cross all [Program](crate::Program)s in this document.
+    /// Retrieves diagnostics across all [Program](crate::Program)s present in this document.
     pub fn all_diagnostics(&self) -> Vec<Diagnostic> {
         let to_position = |offset| to_position(offset, self.source.as_ref());
         self.programs
             .iter()
-            .map(|p| p.diagnostics().clone().to_absolute(p.start, &to_position))
+            .map(|p| {
+                p.diagnostics()
+                    .clone()
+                    .to_document_response(p.start, &to_position)
+            })
             .flatten()
             .collect()
     }
 
+    /// Retrieves the [Program](crate::Program) present at the document offset position, if any.
     fn program_at(&self, offset: usize) -> Option<&Program> {
         let idx = self
             .programs

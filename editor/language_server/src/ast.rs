@@ -5,6 +5,15 @@ use libslide::*;
 
 pub(crate) type AST = StmtList;
 
+/// Finds the nearest slide [expression](libslide::Expr) around an offset
+/// position. For example, in
+///
+/// ```math
+/// 5 * ((1 |+ 2) / 4)
+/// ```
+///
+/// where `|` is the offset position, the expression corresponding to `1 + 2`
+/// will be found.
 pub fn get_tightest_expr(pos: usize, program: &StmtList) -> Option<&RcExpr> {
     let mut finder = ExprFinder {
         tightest: None,

@@ -1,4 +1,5 @@
-//! Module `document_parser` describes how slide programs should be parsed from a document.
+//! Module `document_parser` describes how slide [Program](crate::Program)s should be parsed from a
+//! document.
 
 use super::Document;
 use crate::ptr::P;
@@ -14,6 +15,18 @@ use tower_lsp::lsp_types::Url;
 pub struct DocumentParser(regex::Regex);
 
 impl DocumentParser {
+    /// Creates a new document parser from a multi-line regex description of what slide program
+    /// blocks look like in the document. If parsing the regex fails or does not meet the
+    /// undermentioned regex requirements, an error is returned.
+    ///
+    /// The provided regex string will be parsed as a regex subject to the following constraints:
+    /// - Must observe PCRE regex syntax
+    /// - Must contain exactly one explicit capturing group to denote the contents of a slide
+    ///   program. For example, `(.*)` and `\`\`\`math\n((?:.|\n)*?)\n\`\`\`` meet this
+    ///   requirement, while `.*`, `(.*)(.*)`, and `\`\`\`math\n((.|\n)*?)\n\`\`\`` do not.
+    /// - Will be parsed as a multi-line regex; be sure to include newlines explicitly if you want
+    ///   them to be captured by the regex. For example, `(.*)` captures all characters except line
+    ///   feeds; to also capture line feeds, use `((?:.|\n)*)`.
     pub fn build(parser: &str) -> Result<DocumentParser, regex::Error> {
         let mut re = RegexBuilder::new(parser);
         let re = re.multi_line(true);
@@ -32,6 +45,8 @@ impl DocumentParser {
         Ok(Self(re))
     }
 
+    /// Parses a document's source text with this document parser, returning a fresh
+    /// [`Document`](Document) with all discovered [`Program`](Program)s.
     pub(crate) fn parse(
         &self,
         document_source: String,
@@ -55,17 +70,19 @@ impl DocumentParser {
             })
             .collect();
 
-        Document::new(document_uri, document_source, programs)
+        Document::new(document_source, programs)
     }
 }
 
 impl std::cmp::PartialEq for DocumentParser {
+    /// Two document parsers are equal iff their regex representations are equivalent.
     fn eq(&self, other: &Self) -> bool {
         self.0.as_str().eq(other.0.as_str())
     }
 }
 
 impl std::fmt::Display for DocumentParser {
+    /// Formats the parser as its regex representation.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.as_str().fmt(f)
     }

@@ -49,7 +49,7 @@ impl DocumentParser {
     /// [`Document`](Document) with all discovered [`Program`](Program)s.
     pub(crate) fn parse(
         &self,
-        document_source: String,
+        document_source: &str,
         document_uri: P<Url>,
         context: P<ProgramContext>,
     ) -> Document {
@@ -70,7 +70,7 @@ impl DocumentParser {
             })
             .collect();
 
-        Document::new(document_source, programs)
+        Document::new(&document_source, programs)
     }
 }
 
@@ -163,7 +163,7 @@ f = 9 * 8
             let context = p(libslide::ProgramContext::default());
 
             let parser = DocumentParser::build(r"```math\n((?:.|\n)*?)\n```").unwrap();
-            let document = parser.parse(document_content.to_owned(), uri.dupe(), context.dupe());
+            let document = parser.parse(document_content, uri.dupe(), context.dupe());
 
             assert_eq!(document.programs.len(), 2);
             let p1 = &document.programs[0];

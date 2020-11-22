@@ -90,7 +90,7 @@ class BuildWorkspace(Cmd):
 
     @staticmethod
     def ladder_cmd():
-        return "cargo build --verbose --workspace"
+        return "ladder build"
 
     @staticmethod
     def execute(args, extra_args):
@@ -231,6 +231,16 @@ to the project. If "ladder ensure" passes locally, it _should_ pass on a CI.
 """
 )
 ensure_parser.set_defaults(handler=Ensure.execute)
+
+build_parser = sub_parsers.add_parser(
+    "build",
+    help="Build slide workspace",
+    formatter_class=RawTextHelpFormatter,
+    description="""
+Identical to "cargo build --verbose --workspace".
+"""
+)
+build_parser.set_defaults(handler=BuildWorkspace.execute)
 
 test_parser = sub_parsers.add_parser(
     "test",

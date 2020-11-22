@@ -1,3 +1,5 @@
+//! Module `tests` provides integration tests for the slide langauge server.
+
 mod mocks;
 mod utils;
 

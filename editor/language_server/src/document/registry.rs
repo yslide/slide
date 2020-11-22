@@ -10,18 +10,33 @@ use crate::Program;
 use std::collections::HashMap;
 use tower_lsp::lsp_types::{Position, Url};
 
-pub enum ChangeKind {
-    FileModified(Url, String),
-    FileRemoved(Url),
+/// Describes a change to a [`Document`](Document).
+pub enum Change {
+    /// The [`Document`](Document) at the `Url` was modified with new content.
+    Modified(Url, String),
+    /// The [`Document`](Document) at the `Url` was removed.
+    Removed(Url),
 }
 
+/// A stateful database of [`Document`](Document)s present in a session.
+///
+/// A `DocumentRegistry` provides mechanisms for applying [change](Change)s to documents present
+/// in the registry and acts as a proxy between [server-level and program-level
+/// queries](Self::with_program_at). Thus, `DocumentRegistry` is the primary mechanism for
+/// interfacing between LSP APIs and [`Program`](crate::Program) APIs.
 pub(crate) struct DocumentRegistry {
+    /// A map of file extensions and a [parser](DocumentParser) for that file type.
     parsers: DocumentParserMap,
+    /// The slide [context](libslide::ProgramContext) to use when processing end evaluating slide
+    /// programs.
     context: P<libslide::ProgramContext>,
+    /// The actual mapping of LSP text documents (represented by a `Url`) to their
+    /// [`Document`](Document) representation.
     registry: HashMap<Url, Document>,
 }
 
 impl DocumentRegistry {
+    /// Creates a new registry with a set of document parsers and slide context.
     pub fn new(parsers: DocumentParserMap, context: P<libslide::ProgramContext>) -> Self {
         Self {
             parsers,
@@ -30,48 +45,61 @@ impl DocumentRegistry {
         }
     }
 
-    pub fn apply_change(&mut self, apply_change: ChangeKind) {
+    /// Applies a (document change)[Change] to the registry.
+    pub fn apply_change(&mut self, apply_change: Change) {
         match apply_change {
-            ChangeKind::FileRemoved(fi) => {
+            Change::Removed(fi) => {
                 self.registry.remove(&fi);
             }
-            ChangeKind::FileModified(fi, src) => self.file_modified(fi, src),
+            Change::Modified(fi, src) => {
+                if let Some(parser) = self.get_parser(&fi) {
+                    let document = parser.parse(src, p(fi.clone()), self.context.dupe());
+                    self.registry.insert(fi, document);
+                }
+            }
         }
     }
 
+    /// Retrieves the [`Document`](Document) corresponding to an LSP `Url`, if any.
     pub fn document(&self, uri: &Url) -> Option<&Document> {
         self.registry.get(uri)
     }
 
     /// Does some work with a program at the specified `uri` and `position`.
-    pub fn with_program_at<RelativeResponse: response::ToDocumentResponse>(
+    ///
+    /// This serves as the backbone of answering server queries, marshalling between [program-level
+    /// query responses](crate::program::response) and [document-level query
+    /// responses](super::response), the later generally adhering to the LSP API surface.
+    ///
+    /// The common pattern is to handle an LSP request by calling `DocumentRegistry#with_program_at`
+    /// with the `Url` and `Position` the request is for, performing some work with the provided
+    /// [`Program`](Program) via a `callback` that returns a program-level response that can be
+    /// [converted to](response::ToDocumentResponse) a document-level response, and optionally
+    /// converting that to an LSP API response if needed.
+    pub fn with_program_at<ProgramResponse: response::ToDocumentResponse>(
         &self,
         uri: &Url,
         position: Position,
-        cb: impl FnOnce(&Program, usize) -> Option<RelativeResponse>,
-    ) -> Option<RelativeResponse::Response> {
+        callback: impl FnOnce(&Program, usize) -> Option<ProgramResponse>,
+    ) -> Option<ProgramResponse::DocumentResponse> {
         let document = self.document(uri)?;
-        let absolute_offset = to_offset(&position, &document.source);
-        let program = document.program_at(absolute_offset)?;
+        let offset_in_document = to_offset(&position, &document.source);
+        let program = document.program_at(offset_in_document)?;
 
-        // Marshall to relative position in program
-        let offset_in_program = absolute_offset - program.start;
+        // Marshall to relative position in program.
+        let offset_in_program = offset_in_document - program.start;
 
-        // Get the response
-        let partial_response = cb(program, offset_in_program);
+        // Get the program response.
+        let program_response = callback(program, offset_in_program)?;
 
-        // Marshall to absolute position in document
+        // Marshall to absolute position in document and get the document response.
         let to_position = |offset| to_position(offset, document.source.as_ref());
-        partial_response.map(|pr| pr.to_absolute(program.start, &to_position))
+        let document_response = program_response.to_document_response(program.start, &to_position);
+        Some(document_response)
     }
 
-    fn file_modified(&mut self, uri: Url, source: String) {
-        if let Some(parser) = self.get_parser(&uri) {
-            let document = parser.parse(source, p(uri.clone()), self.context.dupe());
-            self.registry.insert(uri, document);
-        }
-    }
-
+    /// Retrieves a [`DocumentParser`](DocumentParser) for the given `Url` by its file extension,
+    /// if one is known.
     fn get_parser(&self, uri: &Url) -> Option<&DocumentParser> {
         let ext = std::path::Path::new(uri.path())
             .extension()
@@ -89,7 +117,7 @@ mod document_registry_tests {
 
     fn mk_parsers(parsers: &[(&str, &str)]) -> DocumentParserMap {
         parsers
-            .into_iter()
+            .iter()
             .map(|(name, parser)| (name.to_string(), DocumentParser::build(parser).unwrap()))
             .collect()
     }
@@ -123,7 +151,7 @@ mod document_registry_tests {
     }
 
     mod changes {
-        use super::super::{ChangeKind, DocumentRegistry};
+        use super::super::{Change, DocumentRegistry};
         use super::{url, SM_registry};
         use tower_lsp::lsp_types::Url;
 
@@ -144,16 +172,16 @@ mod document_registry_tests {
             let fi_math = url("file:///fi.math");
 
             // Add fi_slide
-            registry.apply_change(ChangeKind::FileModified(fi_slide.clone(), "1 + 2".into()));
+            registry.apply_change(Change::Modified(fi_slide.clone(), "1 + 2".into()));
             assert_eq!(first_program(&registry, &fi_slide), "1 + 2");
 
             // Add fi_math: now fi_slide and fi_math should be registered
-            registry.apply_change(ChangeKind::FileModified(fi_math.clone(), "3 + 4".into()));
+            registry.apply_change(Change::Modified(fi_math.clone(), "3 + 4".into()));
             assert_eq!(registry.registry.len(), 2);
             assert_eq!(first_program(&registry, &fi_math), "3 + 4");
 
             // Change fi_slide: both should still be registered
-            registry.apply_change(ChangeKind::FileModified(fi_slide.clone(), "1 + 10".into()));
+            registry.apply_change(Change::Modified(fi_slide.clone(), "1 + 10".into()));
             assert_eq!(registry.registry.len(), 2);
             assert_eq!(first_program(&registry, &fi_slide), "1 + 10");
         }
@@ -165,21 +193,21 @@ mod document_registry_tests {
             let fi_math = url("file:///fi.math");
 
             // Add fi_slide
-            registry.apply_change(ChangeKind::FileModified(fi_slide.clone(), "1 + 2".into()));
+            registry.apply_change(Change::Modified(fi_slide.clone(), "1 + 2".into()));
             assert_eq!(first_program(&registry, &fi_slide), "1 + 2");
 
             // Add fi_math: now fi_slide and fi_math should be registered
-            registry.apply_change(ChangeKind::FileModified(fi_math.clone(), "3 + 4".into()));
+            registry.apply_change(Change::Modified(fi_math.clone(), "3 + 4".into()));
             assert_eq!(registry.registry.len(), 2);
             assert_eq!(first_program(&registry, &fi_math), "3 + 4");
 
             // Delete fi_slide: fi_math should still be registered
-            registry.apply_change(ChangeKind::FileRemoved(fi_slide.clone()));
+            registry.apply_change(Change::Removed(fi_slide.clone()));
             assert_eq!(registry.registry.len(), 1);
             assert_eq!(first_program(&registry, &fi_math), "3 + 4");
 
             // Add fi_slide: both should be registered
-            registry.apply_change(ChangeKind::FileModified(fi_slide.clone(), "1 + 10".into()));
+            registry.apply_change(Change::Modified(fi_slide.clone(), "1 + 10".into()));
             assert_eq!(registry.registry.len(), 2);
             assert_eq!(first_program(&registry, &fi_slide), "1 + 10");
             assert_eq!(first_program(&registry, &fi_math), "3 + 4");
@@ -213,10 +241,7 @@ b + c
    b = 10
 ```                             // 13";
 
-            registry.apply_change(ChangeKind::FileModified(
-                fi_md.clone(),
-                fi_content.to_string(),
-            ));
+            registry.apply_change(Change::Modified(fi_md.clone(), fi_content.to_string()));
 
             fn hover_contents(value: &str) -> HoverContents {
                 HoverContents::Scalar(MarkedString::LanguageString(LanguageString {

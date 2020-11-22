@@ -1,4 +1,4 @@
-//! Module `init` describes initialization options of the slide LS.
+//! Module `init` describes initialization options of the slide language server.
 
 use crate::document::{DocumentParser, DocumentParserMap};
 
@@ -6,24 +6,37 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::collections::BTreeMap;
 
+/// Initialization options available to the server.
 #[derive(Default, Debug, PartialEq)]
 pub struct InitializationOptions {
+    /// Document file extension -> [`DocumentParser`](DocumentParser) for that document.
     pub document_parsers: DocumentParserMap,
 }
 
+/// A diagnostic produced while constructing [`InitializationOptions`](InitializationOptions).
 #[derive(Debug, PartialEq)]
 pub enum InitializationDiagnostic {
+    /// Entirely failed to parse the provided options from a JSON value. This likely means the
+    /// options JSON is malformed.
     CouldntParse(String),
+    /// Found no `document_parsers` key in the options JSON value, or the value is not an object.
     NoDocumentParserMap,
-    InvalidParserRegex(/** doc */ String, /** why */ String),
+    /// Could not construct a [`DocumentParser`](DocumentParser) for a given file extension in the
+    /// `document_parsers` object.
+    InvalidDocumentParser(/** extension */ String, /** why */ String),
 }
 
+/// The raw values parsed from an initialization options JSON value, used to construct
+/// [`InitializationOptions`](InitializationOptions).
 #[derive(Deserialize)]
 struct SerializedInitializationOptions {
     document_parsers: Option<BTreeMap<String, String>>,
 }
 
 impl InitializationOptions {
+    /// Creates a fresh [`InitializationOptions`](InitializationOptions) from a JSON value, also
+    /// returning any [diagnostics](InitializationDiagnostic) discovered during the options'
+    /// construction.
     pub fn from_json(json: Option<Value>) -> (Self, Vec<InitializationDiagnostic>) {
         let opts: SerializedInitializationOptions =
             match serde_json::from_value(json.unwrap_or_default()) {
@@ -52,7 +65,7 @@ impl InitializationOptions {
                 .filter_map(|(name, parser)| match DocumentParser::build(&parser) {
                     Ok(parser) => Some((name, parser)),
                     Err(why) => {
-                        diags.push(InitializationDiagnostic::InvalidParserRegex(
+                        diags.push(InitializationDiagnostic::InvalidDocumentParser(
                             name,
                             why.to_string(),
                         ));
@@ -72,7 +85,7 @@ impl std::fmt::Display for InitializationDiagnostic {
         match self {
                 Self::CouldntParse(why) => format!("Failed to parse language server options:\n{}", why),
                 Self::NoDocumentParserMap => "No `document_parsers` in server options; slide LS will be a no-op for all documents".to_owned(),
-                Self::InvalidParserRegex(doc, why) => format!("Failed to build parser regex for `{}`:\n{}", doc, why),
+                Self::InvalidDocumentParser(doc, why) => format!("Failed to build parser regex for `{}`:\n{}", doc, why),
             }.fmt(f)
     }
 }
@@ -126,7 +139,7 @@ mod test {
         assert_eq!(opts, InitializationOptions::default());
         assert_eq!(
             diags,
-            vec![InitializationDiagnostic::InvalidParserRegex(
+            vec![InitializationDiagnostic::InvalidDocumentParser(
                 "slide".to_owned(),
                 r"regex parse error:
     [
@@ -150,12 +163,12 @@ error: unclosed character class"
         assert_eq!(
             diags,
             vec![
-                InitializationDiagnostic::InvalidParserRegex(
+                InitializationDiagnostic::InvalidDocumentParser(
                     "one".to_owned(),
                     "must have exactly one explicit capturing group for a slide program; found 2"
                         .to_owned(),
                 ),
-                InitializationDiagnostic::InvalidParserRegex(
+                InitializationDiagnostic::InvalidDocumentParser(
                     "two".to_owned(),
                     "must have exactly one explicit capturing group for a slide program; found 0"
                         .to_owned(),

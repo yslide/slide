@@ -7,14 +7,20 @@
 use crate::program::response::*;
 use tower_lsp::lsp_types::*;
 
+/// Describes how a response (namely a [program-level response](crate::program::response)) should
+/// be converted to a response at the level of a [Document](crate::document::Document) (namely on
+/// the surface of the LSP API).
 pub trait ToDocumentResponse {
-    type Response;
+    /// The document-level response targeted by the conversion.
+    type DocumentResponse;
 
-    fn to_absolute(
+    /// Performs the conversion of `self` to the targeted
+    /// [`DocumentResponse`](Self::DocumentResponse).
+    fn to_document_response(
         self,
-        program_offset: usize,
+        program_offset_in_document: usize,
         document_offset_to_position: &impl Fn(usize) -> Position,
-    ) -> Self::Response;
+    ) -> Self::DocumentResponse;
 }
 
 macro_rules! to_range {
@@ -27,26 +33,26 @@ macro_rules! to_range {
 }
 
 impl ToDocumentResponse for ProgramLocation {
-    type Response = Location;
+    type DocumentResponse = Location;
 
-    fn to_absolute(
+    fn to_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
-    ) -> Self::Response {
+    ) -> Self::DocumentResponse {
         let ProgramLocation { uri, span } = self;
         Location::new(uri, to_range!(o2p, program_offset, span))
     }
 }
 
 impl ToDocumentResponse for Vec<ProgramLocation> {
-    type Response = Vec<Location>;
+    type DocumentResponse = Vec<Location>;
 
-    fn to_absolute(
+    fn to_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
-    ) -> Self::Response {
+    ) -> Self::DocumentResponse {
         self.into_iter()
             .map(|ProgramLocation { uri, span }| {
                 Location::new(uri, to_range!(o2p, program_offset, span))
@@ -56,13 +62,13 @@ impl ToDocumentResponse for Vec<ProgramLocation> {
 }
 
 impl ToDocumentResponse for Vec<ProgramLocationLink> {
-    type Response = Vec<LocationLink>;
+    type DocumentResponse = Vec<LocationLink>;
 
-    fn to_absolute(
+    fn to_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
-    ) -> Self::Response {
+    ) -> Self::DocumentResponse {
         self.into_iter()
             .map(
                 |ProgramLocationLink {
@@ -92,13 +98,13 @@ impl ToDocumentResponse for Vec<ProgramLocationLink> {
 }
 
 impl ToDocumentResponse for ProgramHoverResponse {
-    type Response = Hover;
+    type DocumentResponse = Hover;
 
-    fn to_absolute(
+    fn to_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
-    ) -> Self::Response {
+    ) -> Self::DocumentResponse {
         let Self { contents, span } = self;
         let range = Some(to_range!(o2p, program_offset, span));
         Hover { contents, range }
@@ -106,13 +112,13 @@ impl ToDocumentResponse for ProgramHoverResponse {
 }
 
 impl ToDocumentResponse for ProgramHighlight {
-    type Response = DocumentHighlight;
+    type DocumentResponse = DocumentHighlight;
 
-    fn to_absolute(
+    fn to_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
-    ) -> Self::Response {
+    ) -> Self::DocumentResponse {
         let ProgramHighlight { kind, span } = self;
         DocumentHighlight {
             kind: Some(kind),
@@ -122,13 +128,13 @@ impl ToDocumentResponse for ProgramHighlight {
 }
 
 impl ToDocumentResponse for Vec<ProgramHighlight> {
-    type Response = Vec<DocumentHighlight>;
+    type DocumentResponse = Vec<DocumentHighlight>;
 
-    fn to_absolute(
+    fn to_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
-    ) -> Self::Response {
+    ) -> Self::DocumentResponse {
         self.into_iter()
             .map(|ProgramHighlight { kind, span }| DocumentHighlight {
                 kind: Some(kind),
@@ -139,32 +145,32 @@ impl ToDocumentResponse for Vec<ProgramHighlight> {
 }
 
 impl ToDocumentResponse for ProgramDefinitionResponse {
-    type Response = GotoDefinitionResponse;
+    type DocumentResponse = GotoDefinitionResponse;
 
-    fn to_absolute(
+    fn to_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
-    ) -> Self::Response {
+    ) -> Self::DocumentResponse {
         match self {
             Self::Array(locs) => {
-                GotoDefinitionResponse::Array(locs.to_absolute(program_offset, o2p))
+                GotoDefinitionResponse::Array(locs.to_document_response(program_offset, o2p))
             }
             Self::Link(links) => {
-                GotoDefinitionResponse::Link(links.to_absolute(program_offset, o2p))
+                GotoDefinitionResponse::Link(links.to_document_response(program_offset, o2p))
             }
         }
     }
 }
 
 impl ToDocumentResponse for Vec<ProgramDiagnostic> {
-    type Response = Vec<Diagnostic>;
+    type DocumentResponse = Vec<Diagnostic>;
 
-    fn to_absolute(
+    fn to_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
-    ) -> Self::Response {
+    ) -> Self::DocumentResponse {
         self.into_iter()
             .map(
                 |ProgramDiagnostic {
@@ -187,7 +193,8 @@ impl ToDocumentResponse for Vec<ProgramDiagnostic> {
                                 .map(
                                     |ProgramDiagnosticRelatedInformation { location, message }| {
                                         DiagnosticRelatedInformation {
-                                            location: location.to_absolute(program_offset, o2p),
+                                            location: location
+                                                .to_document_response(program_offset, o2p),
                                             message,
                                         }
                                     },

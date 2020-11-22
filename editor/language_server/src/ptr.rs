@@ -2,15 +2,18 @@
 
 use std::sync::Arc;
 
+/// A smart pointer to data on the heap.
 // Currently Box is used, but later on it may be something else.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct P<T>(Arc<T>);
 
+/// Creates a new [`P` pointer](P) to some data.
 pub(crate) fn p<T>(item: T) -> P<T> {
     P(Arc::new(item))
 }
 
 impl<T> P<T> {
+    /// Duplicates the pointer.
     pub fn dupe(&self) -> Self {
         Self(Arc::clone(&self.0))
     }

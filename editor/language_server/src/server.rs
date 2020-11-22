@@ -20,7 +20,7 @@ mod program;
 mod ptr;
 mod utils;
 
-use document::{ChangeKind, DocumentRegistry};
+use document::{Change, DocumentRegistry};
 use init::InitializationOptions;
 use program::Program;
 use ptr::p;
@@ -30,9 +30,12 @@ mod tests;
 
 /// A slide language server.
 pub struct SlideLS {
+    /// LSP client the server communicates with.
     client: Client,
-    // These are always correctly set after `initialize`.
+    // The following fields always correctly set after `initialize`.
+    /// The database of [`Document`](document::Document)s known to the server session.
     document_registry: RwLock<Option<DocumentRegistry>>,
+    /// The [LSP client's](Self::client) capabilities.
     client_caps: RwLock<Option<ClientCapabilities>>,
 }
 
@@ -70,9 +73,10 @@ impl SlideLS {
         }
     }
 
+    /// Records a document content change.
     async fn change(&self, fi: Url, text: String, version: Option<i64>) {
         self.registry_mut()
-            .apply_change(ChangeKind::FileModified(fi.clone(), text));
+            .apply_change(Change::Modified(fi.clone(), text));
 
         let document_diagnostics = self.registry().document(&fi).map(|d| d.all_diagnostics());
         if let Some(diags) = document_diagnostics {
@@ -80,21 +84,25 @@ impl SlideLS {
         }
     }
 
+    /// Records the closing of a document.
     fn close(&self, fi: &Url) {
         self.registry_mut()
-            .apply_change(ChangeKind::FileRemoved(fi.clone()));
+            .apply_change(Change::Removed(fi.clone()));
     }
 
-    fn client_caps(&self) -> MappedRwLockReadGuard<ClientCapabilities> {
+    /// Retrieves the LSP client's capabilities.
+    fn client_capabilities(&self) -> MappedRwLockReadGuard<ClientCapabilities> {
         RwLockReadGuard::map(self.client_caps.read(), |c| c.as_ref().unwrap())
     }
 
-    fn registry_mut(&self) -> MappedRwLockWriteGuard<DocumentRegistry> {
-        RwLockWriteGuard::map(self.document_registry.write(), |r| r.as_mut().unwrap())
-    }
-
+    /// Retrieves a reference to the document registry.
     fn registry(&self) -> MappedRwLockReadGuard<DocumentRegistry> {
         RwLockReadGuard::map(self.document_registry.read(), |r| r.as_ref().unwrap())
+    }
+
+    /// Retrieves a mutable reference to the document registry.
+    fn registry_mut(&self) -> MappedRwLockWriteGuard<DocumentRegistry> {
+        RwLockWriteGuard::map(self.document_registry.write(), |r| r.as_mut().unwrap())
     }
 }
 
@@ -163,7 +171,7 @@ impl LanguageServer for SlideLS {
             position,
         } = params.text_document_position_params;
         let supports_link = self
-            .client_caps()
+            .client_capabilities()
             .text_document
             .as_ref()
             .and_then(|td| td.definition)

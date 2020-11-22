@@ -2,6 +2,7 @@
 
 use tower_lsp::lsp_types::*;
 
+/// Converts an offset to an LSP position in a source text.
 // https://docs.rs/wast/25.0.2/src/wast/ast/token.rs.html#24-36
 // TODO: batch this or provide a offset mapping.
 pub fn to_position(offset: usize, source: &str) -> Position {
@@ -18,6 +19,7 @@ pub fn to_position(offset: usize, source: &str) -> Position {
     Position::new(source.lines().count() as u64, 0)
 }
 
+/// Converts an LSP position to an offset in a source text.
 pub fn to_offset(position: &Position, source: &str) -> usize {
     // Use split_terminator instead of lines so that if there is a `\r`,
     // it is included in the offset calculation. The `+1` values below

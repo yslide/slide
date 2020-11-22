@@ -7,7 +7,7 @@
 //! Programs are extracted from a document using a [`DocumentParser`](self::DocumentParser).
 
 use crate::ptr::P;
-use crate::shims::to_position;
+use crate::utils::to_position;
 use crate::Program;
 
 use std::collections::BTreeMap;

@@ -1,4 +1,4 @@
-//! Module `shims` converts between slide and LSP types.
+//! Module `utils` provides common server utilities.
 
 use tower_lsp::lsp_types::*;
 

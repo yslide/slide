@@ -8,7 +8,7 @@ use crate::program::response::*;
 use tower_lsp::lsp_types::*;
 
 /// Describes how a response (namely a [program-level response](crate::program::response)) should
-/// be converted to a response at the level of a [Document](crate::document::Document) (namely on
+/// be converted to a response at the level of a [Document](super::document::Document) (namely on
 /// the surface of the LSP API).
 pub trait ToDocumentResponse {
     /// The document-level response targeted by the conversion.

@@ -55,17 +55,19 @@ impl Analysis {
     }
 }
 
+/// A slide program found inside a [`Document`](crate::document_registry::Document).
+/// Used to answer language queries made by a server session.
 #[derive(Debug)]
 pub(crate) struct Program {
     /// The text source of the slide program.
     // TODO: make this a &str with the same lifetime as the entire document source (?)
     // May be less efficient actually if document is very large, think about this later.
     pub source: String,
-    /// The `Url` of the [`Document`](crate::document::Document) this program resides in.
+    /// The `Url` of the document this program resides in.
     pub document_uri: P<Url>,
-    /// The start offset of this program in the enclosing [`Document`](crate::document::Document).
+    /// The start offset of this program in the enclosing document.
     pub start: usize,
-    /// The end offset of this program in the enclosing [`Document`](crate::document::Document).
+    /// The end offset of this program in the enclosing document.
     pub end: usize,
 
     /// The slide [context](ProgramContext) the slide program described by this program should be
@@ -79,7 +81,7 @@ pub(crate) struct Program {
 }
 
 impl Program {
-    /// Creates a new [`Program`](Program) in a [`Document`](crate::document::Document).
+    /// Creates a new [`Program`](Program) relative to its location in document.
     pub fn new(
         source: String,
         document_uri: P<Url>,

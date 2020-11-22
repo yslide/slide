@@ -14,12 +14,12 @@ use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 
 mod ast;
-mod document;
+mod document_registry;
 mod init;
 mod program;
 mod ptr;
 
-use document::{Change, DocumentRegistry};
+use document_registry::{Change, DocumentRegistry};
 use init::InitializationOptions;
 use program::Program;
 use ptr::p;
@@ -31,8 +31,11 @@ mod tests;
 pub struct SlideLS {
     /// LSP client the server communicates with.
     client: Client,
-    // The following fields always correctly set after `initialize`.
-    /// The database of [`Document`](document::Document)s known to the server session.
+
+    ///////////////////////////////////////////////////////////////////////////
+    ////// The following fields always correctly set after `initialize`. //////
+    ///////////////////////////////////////////////////////////////////////////
+    /// The database of documents known to the server session.
     document_registry: RwLock<Option<DocumentRegistry>>,
     /// The [LSP client's](Self::client) capabilities.
     client_caps: RwLock<Option<ClientCapabilities>>,

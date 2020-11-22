@@ -1,12 +1,17 @@
-//! Module `registry` describes a stateful registry of documents in a server session.
+//! Module `registry` describes a stateful registry of [`Document`](Document)s in a server session.
 
-use super::response;
-use super::{Document, DocumentParser, DocumentParserMap};
+mod document;
+mod document_parser;
+mod response;
+mod source_map;
+
+pub(crate) use document::Document;
+pub use document_parser::DocumentParser;
 
 use crate::ptr::{p, P};
 use crate::Program;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use tower_lsp::lsp_types::{Position, Url};
 
 /// Describes a change to a [`Document`](Document).
@@ -16,6 +21,9 @@ pub enum Change {
     /// The [`Document`](Document) at the `Url` was removed.
     Removed(Url),
 }
+
+/// A mapping between file extensions and a [parser](DocumentParser) for that file type.
+pub type DocumentParserMap = BTreeMap<String, DocumentParser>;
 
 /// A stateful database of [`Document`](Document)s present in a session.
 ///
@@ -67,8 +75,8 @@ impl DocumentRegistry {
     /// Does some work with a program at the specified `uri` and `position`.
     ///
     /// This serves as the backbone of answering server queries, marshalling between [program-level
-    /// query responses](crate::program::response) and [document-level query
-    /// responses](super::response), the later generally adhering to the LSP API surface.
+    /// query responses](crate::program::response) and [document-level query responses](response),
+    /// the later generally adhering to the LSP API surface.
     ///
     /// The common pattern is to handle an LSP request by calling `DocumentRegistry#with_program_at`
     /// with the `Url` and `Position` the request is for, performing some work with the provided

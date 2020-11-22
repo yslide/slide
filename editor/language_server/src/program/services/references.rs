@@ -1,11 +1,10 @@
 //! Module `references` provides references for a [`Program`](crate::Program).
 
+use super::local_response::LocalLocation;
 use crate::ast;
-use crate::shims::to_range;
 use crate::Program;
 
 use libslide::*;
-use tower_lsp::lsp_types::*;
 use visit::StmtVisitor;
 
 impl Program {
@@ -18,15 +17,17 @@ impl Program {
         &self,
         offset: usize,
         include_declaration: bool,
-    ) -> Option<Vec<Location>> {
+    ) -> Option<Vec<LocalLocation>> {
         let uri = self.document_uri.as_ref();
-        let source = self.source.as_ref();
         let references = self.get_kinded_references(offset)?;
         let references = references
             .into_iter()
             .filter_map(|rk| match rk {
                 ReferenceKind::Definition(_) if !include_declaration => None,
-                _ => Some(Location::new((*uri).clone(), to_range(rk.span(), &source))),
+                _ => Some(LocalLocation {
+                    uri: uri.clone(),
+                    span: *rk.span(),
+                }),
             })
             .collect();
 

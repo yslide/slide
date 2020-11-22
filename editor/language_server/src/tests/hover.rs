@@ -24,7 +24,7 @@ macro_rules! hover_tests {
 
             let (expected_range, expected_content) = decorations.into_iter().next().unwrap();
             let expected_content = HoverContents::Scalar(MarkedString::LanguageString(LanguageString {
-                language: "slide".to_string(),
+                language: "math".to_string(),
                 value: expected_content.expect("Expected hover contents!"),
             }));
 

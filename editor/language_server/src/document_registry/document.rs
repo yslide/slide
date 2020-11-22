@@ -4,37 +4,25 @@
 //! the heart of all query work made by the server. A document is a conduit between a text file and
 //! the programs within it, and serves as the main abstraction for the language server.
 //!
-//! Programs are extracted from a document using a [`DocumentParser`](self::DocumentParser).
+//! Programs are extracted from a document using a [`DocumentParser`](super::DocumentParser).
 
+use super::response::ToDocumentResponse;
+use super::source_map::SourceMap;
 use crate::Program;
 
-use std::collections::BTreeMap;
 use tower_lsp::lsp_types::Diagnostic;
-
-mod parser;
-mod registry;
-mod response;
-mod source_map;
-use source_map::SourceMap;
-
-pub(crate) use parser::DocumentParser;
-pub(crate) use registry::Change;
-pub(crate) use registry::DocumentRegistry;
-pub(crate) use response::ToDocumentResponse;
-
-/// A mapping between file extensions and a [parser](DocumentParser) for that file type.
-pub type DocumentParserMap = BTreeMap<String, DocumentParser>;
 
 /// A `Document` describes a text file known to a server session, and contains information about
 /// slide [`Program`](crate::Program)s in the file. One `Document` may have multiple `Programs`,
-/// which are discovered by [`DocumentParser`](DocumentParser)s.
+/// which are discovered by [`DocumentParser`](super::DocumentParser)s.
 ///
-/// `Document`s are most useful with a [`DocumentRegistry`](DocumentRegistry), where they serve as
-/// a conduit between requests at the level of the LSP server and the program-local queries. See
-/// the [`registry`](registry) and [`response`](response) modules for more details.
+/// `Document`s are owned by a [`DocumentRegistry`](super::DocumentRegistry), where they serve as a
+/// conduit between requests at the level of the LSP server and the program-local queries. See
+/// [`DocumentRegistry`](super::DocumentRegistry) and the [`response` module](super::response) for
+/// more details.
 pub(crate) struct Document {
     /// The [`SourceMap`](SourceMap) for the text of the document.
-    source_map: SourceMap,
+    pub source_map: SourceMap,
     /// List of [`Program`](crate::Program)s in this document.
     ///
     /// This list must observe the invariant of `programs_{i}.end <= programs_{i+1}.start`.
@@ -44,7 +32,7 @@ pub(crate) struct Document {
 impl Document {
     /// Creates a new document with the document source text and [Program](crate::Program)s parsed
     /// out of the document.
-    fn new(source: &str, programs: Vec<Program>) -> Self {
+    pub fn new(source: &str, programs: Vec<Program>) -> Self {
         Self {
             source_map: SourceMap::new(source),
             programs,
@@ -66,7 +54,7 @@ impl Document {
     }
 
     /// Retrieves the [Program](crate::Program) present at the document offset position, if any.
-    fn program_at(&self, offset: usize) -> Option<&Program> {
+    pub fn program_at(&self, offset: usize) -> Option<&Program> {
         let idx = self
             .programs
             .binary_search_by(|program| {
@@ -85,7 +73,7 @@ impl Document {
 
 #[cfg(test)]
 mod document_tests {
-    use super::{Document, DocumentParser};
+    use super::{super::DocumentParser, Document};
     use crate::ptr::p;
     use tower_lsp::lsp_types::Url;
 

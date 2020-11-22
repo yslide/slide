@@ -13,5 +13,6 @@ pub mod diagnostics;
 
 /// Module `response` describes the API for responses of language queries at the level of a
 /// program. These can then be marshalled into a response at the level of an entire
-/// [`Document`](crate::document::Document) for answering queries with the LSP API.
+/// [`Document`](crate::document_registry::Document) for answering queries with the
+/// LSP API.
 pub mod response;

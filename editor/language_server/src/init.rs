@@ -1,6 +1,6 @@
 //! Module `init` describes initialization options of the slide language server.
 
-use crate::document::{DocumentParser, DocumentParserMap};
+use crate::document_registry::{DocumentParser, DocumentParserMap};
 
 use serde::Deserialize;
 use serde_json::Value;

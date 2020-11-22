@@ -2,6 +2,23 @@
 
 use tower_lsp::lsp_types::*;
 
+/// Converts an offset to an LSP position in a source text.
+// https://docs.rs/wast/25.0.2/src/wast/ast/token.rs.html#24-36
+// TODO: batch this or provide a offset mapping.
+pub fn to_position(offset: usize, source: &str) -> Position {
+    let mut cur = 0;
+    // Use split_terminator instead of lines so that if there is a `\r`,
+    // it is included in the offset calculation. The `+1` values below
+    // account for the `\n`.
+    for (i, line) in source.split_terminator('\n').enumerate() {
+        if cur + line.len() + 1 > offset {
+            return Position::new(i as u64, (offset - cur) as u64);
+        }
+        cur += line.len() + 1;
+    }
+    Position::new(source.lines().count() as u64, 0)
+}
+
 pub fn range_of(subtext: &str, text: &str) -> Range {
     let span_start = text
         .match_indices(subtext)
@@ -9,10 +26,7 @@ pub fn range_of(subtext: &str, text: &str) -> Range {
         .expect("Subtext not found.")
         .0;
     let span = (span_start, span_start + subtext.chars().count());
-    Range::new(
-        crate::utils::to_position(span.0, text),
-        crate::utils::to_position(span.1, text),
-    )
+    Range::new(to_position(span.0, text), to_position(span.1, text))
 }
 
 pub struct DecorationResult {

@@ -4,7 +4,6 @@ use super::response;
 use super::{Document, DocumentParser, DocumentParserMap};
 
 use crate::ptr::{p, P};
-use crate::utils::{to_offset, to_position};
 use crate::Program;
 
 use std::collections::HashMap;
@@ -53,7 +52,7 @@ impl DocumentRegistry {
             }
             Change::Modified(fi, src) => {
                 if let Some(parser) = self.get_parser(&fi) {
-                    let document = parser.parse(src, p(fi.clone()), self.context.dupe());
+                    let document = parser.parse(&src, p(fi.clone()), self.context.dupe());
                     self.registry.insert(fi, document);
                 }
             }
@@ -83,7 +82,7 @@ impl DocumentRegistry {
         callback: impl FnOnce(&Program, usize) -> Option<ProgramResponse>,
     ) -> Option<ProgramResponse::DocumentResponse> {
         let document = self.document(uri)?;
-        let offset_in_document = to_offset(&position, &document.source);
+        let offset_in_document = document.source_map.to_offset(position);
         let program = document.program_at(offset_in_document)?;
 
         // Marshall to relative position in program.
@@ -93,7 +92,7 @@ impl DocumentRegistry {
         let program_response = callback(program, offset_in_program)?;
 
         // Marshall to absolute position in document and get the document response.
-        let to_position = |offset| to_position(offset, document.source.as_ref());
+        let to_position = |offset| document.source_map.to_position(offset);
         let document_response = program_response.to_document_response(program.start, &to_position);
         Some(document_response)
     }

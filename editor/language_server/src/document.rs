@@ -6,7 +6,6 @@
 //!
 //! Programs are extracted from a document using a [`DocumentParser`](self::DocumentParser).
 
-use crate::utils::to_position;
 use crate::Program;
 
 use std::collections::BTreeMap;
@@ -15,6 +14,8 @@ use tower_lsp::lsp_types::Diagnostic;
 mod parser;
 mod registry;
 mod response;
+mod source_map;
+use source_map::SourceMap;
 
 pub(crate) use parser::DocumentParser;
 pub(crate) use registry::Change;
@@ -32,10 +33,8 @@ pub type DocumentParserMap = BTreeMap<String, DocumentParser>;
 /// a conduit between requests at the level of the LSP server and the program-local queries. See
 /// the [`registry`](registry) and [`response`](response) modules for more details.
 pub(crate) struct Document {
-    /// The source text of the document.
-    // TODO: give programs a source mapping of lsp positions to offsets or something to make
-    // lookups of offsets in a source faster.
-    source: String,
+    /// The [`SourceMap`](SourceMap) for the text of the document.
+    source_map: SourceMap,
     /// List of [`Program`](crate::Program)s in this document.
     ///
     /// This list must observe the invariant of `programs_{i}.end <= programs_{i+1}.start`.
@@ -45,13 +44,16 @@ pub(crate) struct Document {
 impl Document {
     /// Creates a new document with the document source text and [Program](crate::Program)s parsed
     /// out of the document.
-    fn new(source: String, programs: Vec<Program>) -> Self {
-        Self { source, programs }
+    fn new(source: &str, programs: Vec<Program>) -> Self {
+        Self {
+            source_map: SourceMap::new(source),
+            programs,
+        }
     }
 
     /// Retrieves diagnostics across all [Program](crate::Program)s present in this document.
     pub fn all_diagnostics(&self) -> Vec<Diagnostic> {
-        let to_position = |offset| to_position(offset, self.source.as_ref());
+        let to_position = |offset| self.source_map.to_position(offset);
         self.programs
             .iter()
             .map(|p| {
@@ -91,7 +93,7 @@ mod document_tests {
         DocumentParser::build(r"```math\n((?:.|\n)*?)\n```")
             .unwrap()
             .parse(
-                content.to_owned(),
+                content,
                 p(Url::parse("file:///math.md").unwrap()),
                 p(Default::default()),
             )

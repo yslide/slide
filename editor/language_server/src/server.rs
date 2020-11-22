@@ -18,7 +18,6 @@ mod document;
 mod init;
 mod program;
 mod ptr;
-mod utils;
 
 use document::{Change, DocumentRegistry};
 use init::InitializationOptions;

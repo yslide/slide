@@ -18,7 +18,7 @@ mod document;
 mod init;
 mod program;
 mod ptr;
-mod shims;
+mod utils;
 
 use document::{ChangeKind, DocumentRegistry};
 use init::InitializationOptions;

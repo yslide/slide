@@ -4,7 +4,7 @@ use super::response;
 use super::{Document, DocumentParser, DocumentParserMap};
 
 use crate::ptr::{p, P};
-use crate::shims::{to_offset, to_position};
+use crate::utils::{to_offset, to_position};
 use crate::Program;
 
 use std::collections::HashMap;

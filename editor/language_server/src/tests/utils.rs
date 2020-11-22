@@ -10,8 +10,8 @@ pub fn range_of(subtext: &str, text: &str) -> Range {
         .0;
     let span = (span_start, span_start + subtext.chars().count());
     Range::new(
-        crate::shims::to_position(span.0, text),
-        crate::shims::to_position(span.1, text),
+        crate::utils::to_position(span.0, text),
+        crate::utils::to_position(span.1, text),
     )
 }
 

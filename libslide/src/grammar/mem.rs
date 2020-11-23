@@ -47,6 +47,17 @@ impl InternedStr {
     }
 }
 
+impl AsRef<str> for InternedStr {
+    fn as_ref(&self) -> &str {
+        unsafe {
+            &*(INTERNED_STRS
+                .read()
+                .expect("Failed to read intern arena.")
+                .resolve_unchecked(&self.0) as *const str)
+        }
+    }
+}
+
 impl std::fmt::Display for InternedStr {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.get())

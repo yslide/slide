@@ -208,3 +208,49 @@ impl ToDocumentResponse for Vec<ProgramDiagnostic> {
             .collect()
     }
 }
+
+impl ToDocumentResponse for ProgramSymbolKind {
+    type DocumentResponse = SymbolKind;
+
+    fn to_document_response(
+        self,
+        _offset: usize,
+        _o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        match self {
+            Self::Variable => SymbolKind::Variable,
+        }
+    }
+}
+
+impl ToDocumentResponse for Vec<ProgramSymbolInformation> {
+    type DocumentResponse = Vec<SymbolInformation>;
+
+    fn to_document_response(
+        self,
+        program_offset: usize,
+        o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        self.into_iter()
+            .map(
+                |ProgramSymbolInformation {
+                     name,
+                     kind,
+                     location,
+                     ..
+                 }| {
+                    // The `deprecated` field is marked as deprecated.. but also required on the
+                    // struct 🤔
+                    #[allow(deprecated)]
+                    SymbolInformation {
+                        name,
+                        kind: kind.to_document_response(program_offset, o2p),
+                        location: location.to_document_response(program_offset, o2p),
+                        deprecated: None,
+                        container_name: None,
+                    }
+                },
+            )
+            .collect()
+    }
+}

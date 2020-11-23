@@ -49,7 +49,7 @@ macro_rules! definitions_tests {
                 _ => Some(expected_defs),
             };
 
-            let defs = service.definition(&file, cursor).await;
+            let defs = service.definition(&file, cursor.expect("cursor not found")).await;
 
             assert_eq!(defs, expected_defs);
 

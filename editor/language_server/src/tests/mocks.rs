@@ -19,6 +19,18 @@ pub fn default_initialization_options() -> Value {
     })
 }
 
+pub fn markdown_file() -> Url {
+    Url::parse("file:///fi.md").unwrap()
+}
+
+pub fn markdown_math_document_parsers() -> Value {
+    serde_json::json!({
+        "document_parsers": {
+            "md": r"```math\n((?:.|\n)*?)\n```",
+        },
+    })
+}
+
 pub struct MockService {
     service: Spawn<LspService>,
     msg_stream: MessageStream,
@@ -162,6 +174,21 @@ impl MockService {
             .send(text_document::highlight::request(uri, position))
             .await
             .unwrap();
+        serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
+    }
+
+    pub async fn document_symbol(&mut self, uri: &Url) -> Option<DocumentSymbolResponse> {
+        self.assert_ready();
+        let hover_resp = self
+            .send(text_document::document_symbol::request(uri))
+            .await
+            .unwrap();
+        serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
+    }
+
+    pub async fn workspace_symbol(&mut self, query: &str) -> Option<Vec<SymbolInformation>> {
+        self.assert_ready();
+        let hover_resp = self.send(workspace::symbol::request(query)).await.unwrap();
         serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
     }
 }
@@ -368,6 +395,43 @@ pub mod text_document {
                         "uri": uri,
                     },
                     "position": position,
+                },
+                "id": 1,
+            })
+        }
+    }
+
+    pub mod document_symbol {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/documentSymbol",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
+                },
+                "id": 1,
+            })
+        }
+    }
+}
+
+mod workspace {
+    pub mod symbol {
+        use serde_json::{json, Value};
+
+        #[allow(unused)]
+        pub fn request(query: &str) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "workspace/symbol",
+                "params": {
+                    "query": query,
                 },
                 "id": 1,
             })

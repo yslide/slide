@@ -29,8 +29,8 @@ pub type DocumentParserMap = BTreeMap<String, DocumentParser>;
 ///
 /// A `DocumentRegistry` provides mechanisms for applying [change](Change)s to documents present
 /// in the registry and acts as a proxy between [server-level and program-level
-/// queries](Self::with_program_at). Thus, `DocumentRegistry` is the primary mechanism for
-/// interfacing between LSP APIs and [`Program`](crate::Program) APIs.
+/// queries](Self::with_program_at_uri_and_position). Thus, `DocumentRegistry` is the primary
+/// mechanism for interfacing between LSP APIs and [`Program`](crate::Program) APIs.
 pub(crate) struct DocumentRegistry {
     /// A map of file extensions and a [parser](DocumentParser) for that file type.
     parsers: DocumentParserMap,
@@ -83,7 +83,7 @@ impl DocumentRegistry {
     /// [`Program`](Program) via a `callback` that returns a program-level response that can be
     /// [converted to](response::ToDocumentResponse) a document-level response, and optionally
     /// converting that to an LSP API response if needed.
-    pub fn with_program_at<ProgramResponse: response::ToDocumentResponse>(
+    pub fn with_program_at_uri_and_position<ProgramResponse: response::ToDocumentResponse>(
         &self,
         uri: &Url,
         position: Position,
@@ -103,6 +103,51 @@ impl DocumentRegistry {
         let to_position = |offset| document.source_map.to_position(offset);
         let document_response = program_response.to_document_response(program.start, &to_position);
         Some(document_response)
+    }
+
+    /// Like [`with_program_at_uri_and_position`](Self::with_program_at_uri_and_position), but works
+    /// on all [`Program`](Program)s in the document corresponding to the `uri`.
+    ///
+    /// Returns a `Vec` of responses, each response corresponding to a `Program` in the document.
+    /// `Program`s returning an empty response are dropped, and linear order of `Program` response
+    /// is not guaranteed.
+    pub fn with_programs_at_uri<ProgramResponse: response::ToDocumentResponse>(
+        &self,
+        uri: &Url,
+        callback: impl Fn(&Program) -> Option<ProgramResponse>,
+    ) -> Option<Vec<ProgramResponse::DocumentResponse>> {
+        let document = self.document(uri)?;
+
+        // Get the program-level responses and marshall back to document-level responses.
+        let to_position = |offset| document.source_map.to_position(offset);
+        let document_response = document
+            .programs
+            .iter()
+            .filter_map(|program| callback(program).map(|r| (r, program.start)))
+            .map(|(program_response, program_offset)| {
+                program_response.to_document_response(program_offset, &to_position)
+            })
+            .collect();
+        Some(document_response)
+    }
+
+    /// Like [`with_programs_at_uri`](Self::with_program_at_uri_and_position), but for all documents
+    /// in the server session.
+    ///
+    /// Returns a `Vec` of responses, each response corresponding to a `Program` in the server
+    /// session. `Program`s returning an empty response are dropped, and linear order of `Program`
+    /// response is not guaranteed.
+    pub fn with_all_programs<ProgramResponse: response::ToDocumentResponse>(
+        &self,
+        callback: impl Fn(&Program) -> Option<ProgramResponse>,
+    ) -> Option<Vec<ProgramResponse::DocumentResponse>> {
+        let response = self
+            .registry
+            .keys()
+            .filter_map(|uri| self.with_programs_at_uri(uri, &callback))
+            .flatten()
+            .collect();
+        Some(response)
     }
 
     /// Retrieves a [`DocumentParser`](DocumentParser) for the given `Url` by its file extension,
@@ -260,9 +305,11 @@ b + c
             {
                 // test "a" in "a + b"
                 let hover = registry
-                    .with_program_at(&fi_md, Position::new(5, 0), |program, offset| {
-                        program.get_hover_info(offset)
-                    })
+                    .with_program_at_uri_and_position(
+                        &fi_md,
+                        Position::new(5, 0),
+                        |program, offset| program.get_hover_info(offset),
+                    )
                     .unwrap();
 
                 assert_eq!(hover.contents, hover_contents("= 1"));
@@ -271,9 +318,11 @@ b + c
             {
                 // test "b" in "b + c"
                 let hover = registry
-                    .with_program_at(&fi_md, Position::new(11, 0), |program, offset| {
-                        program.get_hover_info(offset)
-                    })
+                    .with_program_at_uri_and_position(
+                        &fi_md,
+                        Position::new(11, 0),
+                        |program, offset| program.get_hover_info(offset),
+                    )
                     .unwrap();
 
                 assert_eq!(hover.contents, hover_contents("= 10"));

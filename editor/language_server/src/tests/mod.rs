@@ -9,6 +9,7 @@ mod document_symbol;
 mod formatting;
 mod highlight;
 mod hover;
+mod prepare_rename;
 mod range_formatting;
 mod references;
 mod workspace_symbol;

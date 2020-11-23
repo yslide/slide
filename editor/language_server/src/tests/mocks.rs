@@ -204,6 +204,23 @@ impl MockService {
         serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
     }
 
+    pub async fn prepare_rename(
+        &mut self,
+        uri: &Url,
+        position: &Position,
+    ) -> tower_lsp::jsonrpc::Result<Option<PrepareRenameResponse>> {
+        self.assert_ready();
+        let resp = self
+            .send(text_document::prepare_rename::request(uri, position))
+            .await
+            .unwrap();
+        if let Some(result) = resp.get("result") {
+            Ok(serde_json::from_value(result.clone()).ok())
+        } else {
+            Err(serde_json::from_value(resp.get("error").unwrap().clone()).unwrap())
+        }
+    }
+
     pub async fn workspace_symbol(&mut self, query: &str) -> Option<Vec<SymbolInformation>> {
         self.assert_ready();
         let hover_resp = self.send(workspace::symbol::request(query)).await.unwrap();
@@ -480,6 +497,26 @@ pub mod text_document {
                     },
                     "range": range,
                     "options": super::format_options(),
+                },
+                "id": 1,
+            })
+        }
+    }
+
+    pub mod prepare_rename {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url, position: &Position) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/prepareRename",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
+                    "position": position,
                 },
                 "id": 1,
             })

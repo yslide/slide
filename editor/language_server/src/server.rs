@@ -1,6 +1,6 @@
 //! Crate `slide_ls` implements a language server for [slide](libslide).
 
-// #![deny(warnings)]
+#![deny(warnings)]
 #![deny(missing_docs)]
 #![doc(html_logo_url = "https://raw.githubusercontent.com/yslide/slide/base/assets/logo.png")]
 
@@ -68,6 +68,10 @@ impl SlideLS {
         let workspace_symbol_provider = Some(true);
         let document_formatting_provider = Some(true);
         let document_range_formatting_provider = Some(true);
+        let rename_provider = Some(RenameProviderCapability::Options(RenameOptions {
+            prepare_provider: Some(true),
+            work_done_progress_options: WorkDoneProgressOptions::default(),
+        }));
 
         ServerCapabilities {
             definition_provider,
@@ -79,6 +83,7 @@ impl SlideLS {
             workspace_symbol_provider,
             document_formatting_provider,
             document_range_formatting_provider,
+            rename_provider,
             ..ServerCapabilities::default()
         }
     }
@@ -316,6 +321,24 @@ impl LanguageServer for SlideLS {
             .map(|f| vec![f]);
 
         Ok(formatting)
+    }
+
+    async fn prepare_rename(
+        &self,
+        params: TextDocumentPositionParams,
+    ) -> Result<Option<PrepareRenameResponse>> {
+        let TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier { uri },
+            position,
+        } = params;
+
+        let can_rename =
+            self.registry()
+                .with_program_at_uri_and_position(&uri, position, |program, offset| {
+                    Some(program.can_rename(offset))
+                });
+
+        can_rename.unwrap_or(Ok(None))
     }
 }
 

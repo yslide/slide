@@ -8,6 +8,7 @@ mod format;
 mod highlight;
 mod hover;
 mod references;
+mod rename;
 mod symbols;
 
 // The following modules contribute free functions to the services API.

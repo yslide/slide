@@ -186,6 +186,24 @@ impl MockService {
         serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
     }
 
+    pub async fn formatting(&mut self, uri: &Url) -> Option<Vec<TextEdit>> {
+        self.assert_ready();
+        let hover_resp = self
+            .send(text_document::formatting::request(uri))
+            .await
+            .unwrap();
+        serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
+    }
+
+    pub async fn range_formatting(&mut self, uri: &Url, range: &Range) -> Option<Vec<TextEdit>> {
+        self.assert_ready();
+        let hover_resp = self
+            .send(text_document::range_formatting::request(uri, range))
+            .await
+            .unwrap();
+        serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
+    }
+
     pub async fn workspace_symbol(&mut self, query: &str) -> Option<Vec<SymbolInformation>> {
         self.assert_ready();
         let hover_resp = self.send(workspace::symbol::request(query)).await.unwrap();
@@ -414,6 +432,54 @@ pub mod text_document {
                     "textDocument": {
                         "uri": uri,
                     },
+                },
+                "id": 1,
+            })
+        }
+    }
+
+    fn format_options() -> serde_json::Value {
+        serde_json::json!({
+            "tabSize": 4,
+            "insertSpaces": true,
+        })
+    }
+
+    pub mod formatting {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/formatting",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
+                    "options": super::format_options(),
+                },
+                "id": 1,
+            })
+        }
+    }
+
+    pub mod range_formatting {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url, range: &Range) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/rangeFormatting",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
+                    "range": range,
+                    "options": super::format_options(),
                 },
                 "id": 1,
             })

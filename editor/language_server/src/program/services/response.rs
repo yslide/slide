@@ -55,3 +55,8 @@ pub struct ProgramSymbolInformation {
     pub documentation: String,
     pub location: ProgramLocation,
 }
+
+pub struct ProgramTextEdit {
+    pub span: Span,
+    pub edit: String,
+}

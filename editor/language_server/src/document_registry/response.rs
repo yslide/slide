@@ -254,3 +254,19 @@ impl ToDocumentResponse for Vec<ProgramSymbolInformation> {
             .collect()
     }
 }
+
+impl ToDocumentResponse for ProgramTextEdit {
+    type DocumentResponse = TextEdit;
+
+    fn to_document_response(
+        self,
+        program_offset: usize,
+        o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        let ProgramTextEdit { span, edit } = self;
+        TextEdit {
+            range: to_range!(o2p, program_offset, span),
+            new_text: edit,
+        }
+    }
+}

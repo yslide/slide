@@ -7,12 +7,14 @@ mod source_map;
 
 pub(crate) use document::Document;
 pub use document_parser::DocumentParser;
+pub use source_map::SourceMap;
 
 use crate::ptr::{p, P};
 use crate::Program;
 
+use libslide::Span;
 use std::collections::{BTreeMap, HashMap};
-use tower_lsp::lsp_types::{Position, Url};
+use tower_lsp::lsp_types::{Position, Range, Url};
 
 /// Describes a change to a [`Document`](Document).
 pub enum Change {
@@ -98,6 +100,40 @@ impl DocumentRegistry {
 
         // Get the program response.
         let program_response = callback(program, offset_in_program)?;
+
+        // Marshall to absolute position in document and get the document response.
+        let to_position = |offset| document.source_map.to_position(offset);
+        let document_response = program_response.to_document_response(program.start, &to_position);
+        Some(document_response)
+    }
+
+    /// Like [`with_program_at_uri_and_position`](Self::with_program_at_uri_and_position), but
+    /// matches a program at a range and provides the callback a span.
+    pub fn with_program_at_uri_and_range<ProgramResponse: response::ToDocumentResponse>(
+        &self,
+        uri: &Url,
+        range: Range,
+        callback: impl FnOnce(&Program, Span) -> Option<ProgramResponse>,
+    ) -> Option<ProgramResponse::DocumentResponse> {
+        let document = self.document(uri)?;
+        let (start_offset_in_document, end_offset_in_document) = {
+            let Range { start, end } = range;
+            (
+                document.source_map.to_offset(start),
+                document.source_map.to_offset(end),
+            )
+        };
+        let program =
+            document.program_including(start_offset_in_document, end_offset_in_document)?;
+
+        // Marshall to relative position in program.
+        let span_in_program = Span::new(
+            start_offset_in_document - program.start,
+            end_offset_in_document - program.start,
+        );
+
+        // Get the program response.
+        let program_response = callback(program, span_in_program)?;
 
         // Marshall to absolute position in document and get the document response.
         let to_position = |offset| document.source_map.to_position(offset);

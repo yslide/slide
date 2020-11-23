@@ -32,6 +32,11 @@ macro_rules! to_range {
     };
 }
 
+enum ServerErrorCode {
+    // Rename errors
+    CursorNotOverVariable = 100,
+}
+
 impl ToDocumentResponse for ProgramLocation {
     type DocumentResponse = Location;
 
@@ -268,5 +273,57 @@ impl ToDocumentResponse for ProgramTextEdit {
             range: to_range!(o2p, program_offset, span),
             new_text: edit,
         }
+    }
+}
+
+impl ToDocumentResponse for ProgramCanRenameResponse {
+    type DocumentResponse = PrepareRenameResponse;
+
+    fn to_document_response(
+        self,
+        program_offset: usize,
+        o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        let ProgramCanRenameResponse { span, placeholder } = self;
+        PrepareRenameResponse::RangeWithPlaceholder {
+            range: to_range!(o2p, program_offset, span),
+            placeholder,
+        }
+    }
+}
+
+impl ToDocumentResponse for ProgramCannotRenameBecause {
+    type DocumentResponse = tower_lsp::jsonrpc::Error;
+
+    fn to_document_response(
+        self,
+        _program_offset: usize,
+        _o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        use tower_lsp::jsonrpc::{Error, ErrorCode};
+        let (code, message) = match self {
+            ProgramCannotRenameBecause::CursorNotOverVariable => (
+                ServerErrorCode::CursorNotOverVariable,
+                "cursor is not over a variable",
+            ),
+        };
+        Error {
+            code: ErrorCode::ServerError(code as i64),
+            message: message.to_owned(),
+            data: None,
+        }
+    }
+}
+
+impl ToDocumentResponse for Result<ProgramCanRenameResponse, ProgramCannotRenameBecause> {
+    type DocumentResponse = tower_lsp::jsonrpc::Result<Option<PrepareRenameResponse>>;
+
+    fn to_document_response(
+        self,
+        program_offset: usize,
+        o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        self.map(|v| Some(v.to_document_response(program_offset, o2p)))
+            .map_err(|e| e.to_document_response(program_offset, o2p))
     }
 }

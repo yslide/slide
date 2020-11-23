@@ -60,3 +60,12 @@ pub struct ProgramTextEdit {
     pub span: Span,
     pub edit: String,
 }
+
+pub enum ProgramCannotRenameBecause {
+    CursorNotOverVariable,
+}
+
+pub struct ProgramCanRenameResponse {
+    pub span: Span,
+    pub placeholder: String,
+}

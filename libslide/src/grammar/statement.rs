@@ -205,6 +205,11 @@ impl Expr {
             _ => None,
         }
     }
+
+    /// Returns `true` iff the expression is a variable.
+    pub fn is_var(&self) -> bool {
+        matches!(self, Self::Var(_))
+    }
 }
 
 impl Eq for Expr {}

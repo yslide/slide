@@ -1,6 +1,6 @@
 //! Crate `slide_ls` implements a language server for [slide](libslide).
 
-#![deny(warnings)]
+// #![deny(warnings)]
 #![deny(missing_docs)]
 #![doc(html_logo_url = "https://raw.githubusercontent.com/yslide/slide/base/assets/logo.png")]
 
@@ -64,6 +64,8 @@ impl SlideLS {
         let hover_provider = Some(HoverProviderCapability::Simple(true));
         let references_provider = Some(true);
         let document_highlight_provider = Some(true);
+        let document_symbol_provider = Some(true);
+        let workspace_symbol_provider = Some(true);
 
         ServerCapabilities {
             definition_provider,
@@ -71,6 +73,8 @@ impl SlideLS {
             hover_provider,
             references_provider,
             document_highlight_provider,
+            document_symbol_provider,
+            workspace_symbol_provider,
             ..ServerCapabilities::default()
         }
     }
@@ -180,11 +184,11 @@ impl LanguageServer for SlideLS {
             .and_then(|def| def.link_support)
             .unwrap_or(false);
 
-        let definitions = self
-            .registry()
-            .with_program_at(&uri, position, |program, offset| {
-                program.get_definitions(offset, supports_link)
-            });
+        let definitions =
+            self.registry()
+                .with_program_at_uri_and_position(&uri, position, |program, offset| {
+                    program.get_definitions(offset, supports_link)
+                });
 
         Ok(definitions)
     }
@@ -195,11 +199,11 @@ impl LanguageServer for SlideLS {
             position,
         } = params.text_document_position_params;
 
-        let hover = self
-            .registry()
-            .with_program_at(&uri, position, |program, offset| {
-                program.get_hover_info(offset)
-            });
+        let hover =
+            self.registry()
+                .with_program_at_uri_and_position(&uri, position, |program, offset| {
+                    program.get_hover_info(offset)
+                });
 
         Ok(hover)
     }
@@ -217,11 +221,11 @@ impl LanguageServer for SlideLS {
             ..
         } = params;
 
-        let references = self
-            .registry()
-            .with_program_at(&uri, position, |program, offset| {
-                program.get_references(offset, include_declaration)
-            });
+        let references =
+            self.registry()
+                .with_program_at_uri_and_position(&uri, position, |program, offset| {
+                    program.get_references(offset, include_declaration)
+                });
 
         Ok(references)
     }
@@ -235,13 +239,44 @@ impl LanguageServer for SlideLS {
             position,
         } = params.text_document_position_params;
 
-        let highlights = self
-            .registry()
-            .with_program_at(&uri, position, |program, offset| {
-                program.get_semantic_highlights(offset)
-            });
+        let highlights =
+            self.registry()
+                .with_program_at_uri_and_position(&uri, position, |program, offset| {
+                    program.get_semantic_highlights(offset)
+                });
 
         Ok(highlights)
+    }
+
+    async fn document_symbol(
+        &self,
+        params: DocumentSymbolParams,
+    ) -> Result<Option<DocumentSymbolResponse>> {
+        let DocumentSymbolParams {
+            text_document: TextDocumentIdentifier { uri },
+            ..
+        } = params;
+
+        let symbols = self
+            .registry()
+            .with_programs_at_uri(&uri, |program| Some(program.get_symbols(None)));
+        let symbols = symbols.map(|s| DocumentSymbolResponse::Flat(s.concat()));
+
+        Ok(symbols)
+    }
+
+    async fn symbol(
+        &self,
+        params: WorkspaceSymbolParams,
+    ) -> Result<Option<Vec<SymbolInformation>>> {
+        let WorkspaceSymbolParams { query, .. } = params;
+
+        let symbols = self
+            .registry()
+            .with_all_programs(|program| Some(program.get_symbols(Some(query.as_ref()))));
+        let symbols = symbols.map(|s| s.concat());
+
+        Ok(symbols)
     }
 }
 

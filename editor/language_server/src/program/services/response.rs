@@ -44,3 +44,14 @@ pub struct ProgramDiagnostic {
     pub message: String,
     pub related_information: Vec<ProgramDiagnosticRelatedInformation>,
 }
+
+pub enum ProgramSymbolKind {
+    Variable,
+}
+
+pub struct ProgramSymbolInformation {
+    pub name: String,
+    pub kind: ProgramSymbolKind,
+    pub documentation: String,
+    pub location: ProgramLocation,
+}

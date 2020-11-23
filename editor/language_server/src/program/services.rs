@@ -7,6 +7,7 @@ mod definitions;
 mod highlight;
 mod hover;
 mod references;
+mod symbols;
 
 // The following modules contribute free functions to the services API.
 pub mod diagnostics;

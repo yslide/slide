@@ -1,5 +1,6 @@
 //! Module `utils` provides test utilities for the slide language server.
 
+use pretty_assertions::assert_eq;
 use tower_lsp::lsp_types::*;
 
 /// Converts an offset to an LSP position in a source text.
@@ -31,7 +32,7 @@ pub fn range_of(subtext: &str, text: &str) -> Range {
 
 pub struct DecorationResult {
     pub decorations: Vec<(Range, Option<String>)>,
-    pub cursor: Position,
+    pub cursor: Option<Position>,
     pub text: String,
 }
 
@@ -126,9 +127,34 @@ pub fn process_decorations(text: &str) -> DecorationResult {
 
     DecorationResult {
         decorations,
-        cursor: cursor.expect("Did not find a cursor."),
+        cursor,
         text: cleaned_lines.join("\n"),
     }
+}
+
+pub fn cmp_document_symbols(s1: DocumentSymbolResponse, s2: DocumentSymbolResponse) {
+    match (s1, s2) {
+        (DocumentSymbolResponse::Flat(s1), DocumentSymbolResponse::Flat(s2)) => cmp_symbols(s1, s2),
+        _ => unreachable!(r#"Response must be "Flat" variant"#),
+    }
+}
+
+pub fn cmp_symbols(mut s1: Vec<SymbolInformation>, mut s2: Vec<SymbolInformation>) {
+    use std::cmp::Ordering::*;
+    let sorter = |s1: &SymbolInformation, s2: &SymbolInformation| {
+        let SymbolInformation { location: l1, .. } = s1;
+        let SymbolInformation { location: l2, .. } = s2;
+        match l1.uri.cmp(&l2.uri) {
+            Equal => match l1.range.start.cmp(&l2.range.start) {
+                Equal => l1.range.end.cmp(&l2.range.end),
+                o => o,
+            },
+            o => o,
+        }
+    };
+    s1.sort_by(sorter);
+    s2.sort_by(sorter);
+    assert_eq!(s1, s2);
 }
 
 #[cfg(test)]
@@ -158,7 +184,7 @@ mod test {
         } = super::process_decorations(text);
 
         assert_eq!(text, processed_text);
-        assert_eq!(cursor, Position::new(2, 16));
+        assert_eq!(cursor.unwrap(), Position::new(2, 16));
         assert_eq!(
             decorations,
             vec![

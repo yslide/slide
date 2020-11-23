@@ -25,6 +25,11 @@ pub struct Span {
 pub(crate) static DUMMY_SP: Span = Span { lo: 10001, hi: 1 };
 
 impl Span {
+    /// Creates a new span between `lo` and `hi` offsets.
+    pub fn new(lo: usize, hi: usize) -> Self {
+        Self { lo, hi }
+    }
+
     pub(crate) fn to(&self, other: Span) -> Span {
         Self {
             lo: self.lo,
@@ -46,6 +51,11 @@ impl Span {
     /// Returns `true` iff the span contains `pos`.
     pub fn contains(&self, pos: usize) -> bool {
         self.lo <= pos && self.hi > pos
+    }
+
+    /// Returns `true` iff the span is a superset of `inner_span`.
+    pub fn supersets(&self, inner_span: Span) -> bool {
+        self.lo <= inner_span.lo && self.hi >= inner_span.hi
     }
 }
 

@@ -57,17 +57,44 @@ impl Document {
     pub fn program_at(&self, offset: usize) -> Option<&Program> {
         let idx = self
             .programs
-            .binary_search_by(|program| {
-                if offset < program.start {
-                    std::cmp::Ordering::Greater
-                } else if offset >= program.end {
-                    std::cmp::Ordering::Less
-                } else {
-                    std::cmp::Ordering::Equal
-                }
-            })
+            .binary_search_by(Self::program_search(offset, false))
             .ok()?;
         Some(&self.programs[idx])
+    }
+
+    /// Retrieves the [Program](crate::Program) enclosing the given start and end document offsets,
+    /// if any.
+    pub fn program_including(&self, start_offset: usize, end_offset: usize) -> Option<&Program> {
+        let program_start = self
+            .programs
+            .binary_search_by(Self::program_search(start_offset, false))
+            .ok()?;
+        let program_end = self
+            .programs
+            .binary_search_by(Self::program_search(end_offset, true))
+            .ok()?;
+        if program_start != program_end {
+            None
+        } else {
+            Some(&self.programs[program_start])
+        }
+    }
+
+    /// Comparator for finding a program at a document offset.
+    /// If `include_end`, the ending offset of a program should be included when searching for a
+    /// program at the offset.
+    fn program_search(offset: usize, include_end: bool) -> impl Fn(&Program) -> std::cmp::Ordering {
+        move |program: &Program| {
+            if offset < program.start {
+                std::cmp::Ordering::Greater
+            } else if (include_end && offset > program.end)
+                || (!include_end && offset >= program.end)
+            {
+                std::cmp::Ordering::Less
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        }
     }
 }
 

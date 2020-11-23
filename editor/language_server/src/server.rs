@@ -66,6 +66,8 @@ impl SlideLS {
         let document_highlight_provider = Some(true);
         let document_symbol_provider = Some(true);
         let workspace_symbol_provider = Some(true);
+        let document_formatting_provider = Some(true);
+        let document_range_formatting_provider = Some(true);
 
         ServerCapabilities {
             definition_provider,
@@ -75,6 +77,8 @@ impl SlideLS {
             document_highlight_provider,
             document_symbol_provider,
             workspace_symbol_provider,
+            document_formatting_provider,
+            document_range_formatting_provider,
             ..ServerCapabilities::default()
         }
     }
@@ -277,6 +281,41 @@ impl LanguageServer for SlideLS {
         let symbols = symbols.map(|s| s.concat());
 
         Ok(symbols)
+    }
+
+    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+        let DocumentFormattingParams {
+            text_document: TextDocumentIdentifier { uri },
+            ..
+        } = params;
+
+        let formattings = self.registry().with_programs_at_uri(&uri, |program| {
+            // TODO: use user emit config
+            Some(program.format(EmitConfig::default()))
+        });
+
+        Ok(formattings)
+    }
+
+    async fn range_formatting(
+        &self,
+        params: DocumentRangeFormattingParams,
+    ) -> Result<Option<Vec<TextEdit>>> {
+        let DocumentRangeFormattingParams {
+            text_document: TextDocumentIdentifier { uri },
+            range,
+            ..
+        } = params;
+
+        let formatting = self
+            .registry()
+            .with_program_at_uri_and_range(&uri, range, |program, span| {
+                // TODO: use user emit config
+                program.format_span(span, EmitConfig::default())
+            })
+            .map(|f| vec![f]);
+
+        Ok(formatting)
     }
 }
 

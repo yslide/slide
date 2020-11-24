@@ -3,6 +3,7 @@
 mod mocks;
 mod utils;
 
+mod code_action;
 mod definitions;
 mod diagnostics;
 mod document_symbol;

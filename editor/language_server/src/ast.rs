@@ -10,6 +10,15 @@ pub enum AstItem<'a> {
     Expr(&'a RcExpr),
 }
 
+impl<'a> AstItem<'a> {
+    pub fn span(&self) -> Span {
+        match self {
+            Self::Assignment(a) => a.span,
+            Self::Expr(e) => e.span,
+        }
+    }
+}
+
 /// Retrieves the path of items descended to a program byte offset. The path is ordered from
 /// broadest to narrowest item around the offset. For example, in
 ///

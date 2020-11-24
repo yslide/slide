@@ -74,6 +74,7 @@ impl SlideLS {
         }));
         let folding_range_provider = Some(FoldingRangeProviderCapability::Simple(true));
         let selection_range_provider = Some(SelectionRangeProviderCapability::Simple(true));
+        let code_action_provider = Some(CodeActionProviderCapability::Simple(true));
 
         ServerCapabilities {
             definition_provider,
@@ -88,6 +89,7 @@ impl SlideLS {
             rename_provider,
             folding_range_provider,
             selection_range_provider,
+            code_action_provider,
             ..ServerCapabilities::default()
         }
     }
@@ -398,6 +400,28 @@ impl LanguageServer for SlideLS {
             .collect();
 
         Ok(ranges)
+    }
+
+    async fn code_action(&self, params: CodeActionParams) -> Result<Option<CodeActionResponse>> {
+        let CodeActionParams {
+            text_document: TextDocumentIdentifier { uri },
+            range,
+            ..
+        } = params;
+
+        let actions =
+            self.registry()
+                .with_program_at_uri_and_range(&uri, range, |program, span| {
+                    Some(program.actions(span))
+                });
+        let actions = actions.map(|actions| {
+            actions
+                .into_iter()
+                .map(CodeActionOrCommand::CodeAction)
+                .collect()
+        });
+
+        Ok(actions)
     }
 }
 

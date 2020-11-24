@@ -184,15 +184,16 @@ impl ToDocumentResponse for Vec<ProgramDiagnostic> {
                      severity,
                      code,
                      source,
-                     message,
+                     display_message,
                      related_information,
+                     ..
                  }| {
                     Diagnostic {
                         range: to_range!(o2p, program_offset, span),
                         severity: Some(severity),
                         code: Some(NumberOrString::String(code)),
                         source: Some(source),
-                        message,
+                        message: display_message,
                         related_information: Some(
                             related_information
                                 .into_iter()
@@ -409,5 +410,69 @@ impl ToDocumentResponse for ProgramSelectionRanges {
             })
             .map(|boxed| *boxed)
             .expect("Bad state: expected at least one selection range")
+    }
+}
+
+impl ToDocumentResponse for ProgramActionKind {
+    type DocumentResponse = CodeActionKind;
+
+    fn to_document_response(
+        self,
+        _: usize,
+        _: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        match self {
+            Self::DiagnosticFix => CodeActionKind::QUICKFIX,
+            Self::Rewrite => CodeActionKind::REFACTOR_REWRITE,
+        }
+    }
+}
+
+impl ToDocumentResponse for ProgramAction {
+    type DocumentResponse = CodeAction;
+
+    fn to_document_response(
+        self,
+        program_offset: usize,
+        o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        let ProgramAction {
+            title,
+            kind,
+            resolved_diagnostic,
+            uri,
+            edit,
+            is_preferred,
+        } = self;
+        CodeAction {
+            title,
+            kind: Some(kind.to_document_response(program_offset, o2p)),
+            diagnostics: resolved_diagnostic
+                .map(|d| vec![d].to_document_response(program_offset, o2p)),
+            edit: {
+                let mut changes = HashMap::new();
+                changes.insert(uri, vec![edit.to_document_response(program_offset, o2p)]);
+                Some(WorkspaceEdit {
+                    changes: Some(changes),
+                    ..WorkspaceEdit::default()
+                })
+            },
+            command: None,
+            is_preferred: Some(is_preferred),
+        }
+    }
+}
+
+impl ToDocumentResponse for Vec<ProgramAction> {
+    type DocumentResponse = Vec<CodeAction>;
+
+    fn to_document_response(
+        self,
+        program_offset: usize,
+        o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        self.into_iter()
+            .map(|pa| pa.to_document_response(program_offset, o2p))
+            .collect()
     }
 }

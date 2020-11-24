@@ -13,10 +13,7 @@ impl Program {
         let ast = self.original_ast();
         let ranges: Vec<_> = get_item_path_to_offset(offset, &ast)
             .into_iter()
-            .map(|item| match item {
-                AstItem::Expr(e) => e.span,
-                AstItem::Assignment(a) => a.span,
-            })
+            .map(|item| item.span())
             .collect();
         if ranges.is_empty() {
             None

@@ -42,6 +42,7 @@ pub struct AssociatedDiagnostic {
 
 /// Describes the confidence that should be taken in whether an [`Autofix`](Autofix) should be
 /// applied.
+#[derive(Debug, Clone)]
 pub enum AutofixConfidence {
     /// This fix is for sure what the user meant, and for sure will resolve a
     /// [`Diagnostic`](Diagnostic).
@@ -51,6 +52,7 @@ pub enum AutofixConfidence {
 }
 
 /// A text edit to be made over some range.
+#[derive(Debug, Clone)]
 pub enum Edit {
     /// Replace the range with a string.
     Replace(String),
@@ -59,6 +61,7 @@ pub enum Edit {
 }
 
 /// An autofix for a [`Diagnostic`](Diagnostic), over its range.
+#[derive(Debug, Clone)]
 pub struct Autofix {
     /// Confidence of the fix.
     pub confidence: AutofixConfidence,

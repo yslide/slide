@@ -31,7 +31,7 @@ a := 1 + 2 / 5
         Range::new(sm.to_position(start), sm.to_position(start + over.len()))
     };
 
-    let pos_2 = sm.to_position(content.find("2").unwrap());
+    let pos_2 = sm.to_position(content.find('2').unwrap());
     let selection_range_2 = SelectionRange {
         range: range("2"),
         parent: Some(Box::new(SelectionRange {

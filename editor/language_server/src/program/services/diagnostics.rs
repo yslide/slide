@@ -18,8 +18,10 @@ pub fn convert_diagnostics(
             severity: to_severity(&diagnostic.kind),
             code: diagnostic.code.to_string(),
             source: provider.to_string(),
-            message: flatten_diagnostic_msg(diagnostic),
+            title: diagnostic.title.to_string(),
+            display_message: flatten_diagnostic_msg(diagnostic),
             related_information: flatten_related(diagnostic, uri),
+            autofix: diagnostic.autofix.clone(),
         })
         .collect()
 }

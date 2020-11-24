@@ -41,8 +41,10 @@ pub struct ProgramDiagnostic {
     pub severity: DiagnosticSeverity,
     pub code: String,
     pub source: String,
-    pub message: String,
+    pub title: String,
+    pub display_message: String,
     pub related_information: Vec<ProgramDiagnosticRelatedInformation>,
+    pub autofix: Option<libslide::diagnostics::Autofix>,
 }
 
 pub enum ProgramSymbolKind {
@@ -78,3 +80,17 @@ pub struct ProgramRenameResponse {
 pub struct ProgramFoldingRanges(pub Vec<Span>);
 
 pub struct ProgramSelectionRanges(pub Vec<Span>);
+
+pub enum ProgramActionKind {
+    DiagnosticFix,
+    Rewrite,
+}
+
+pub struct ProgramAction {
+    pub title: String,
+    pub kind: ProgramActionKind,
+    pub resolved_diagnostic: Option<ProgramDiagnostic>,
+    pub uri: Url,
+    pub edit: ProgramTextEdit,
+    pub is_preferred: bool,
+}

@@ -57,6 +57,16 @@ impl Span {
     pub fn supersets(&self, inner_span: Span) -> bool {
         self.lo <= inner_span.lo && self.hi >= inner_span.hi
     }
+
+    /// Returns `true` iff the span intersects the `other`.
+    pub fn intersects(&self, other: Span) -> bool {
+        // 1----2
+        //   3----4
+        // or
+        //   1----2
+        // 3----4
+        !(self.lo >= other.hi || other.lo >= self.hi)
+    }
 }
 
 impl PartialOrd for Span {
@@ -148,5 +158,24 @@ impl ProgramContext {
     pub fn lint(mut self, lint: bool) -> Self {
         self.lint = lint;
         self
+    }
+}
+
+#[cfg(test)]
+mod test {
+    mod span {
+        use super::super::Span;
+
+        #[test]
+        fn intersects() {
+            for &(s1, s2, expected) in &[
+                ((0, 5), (1, 6), true),
+                ((1, 6), (0, 5), true),
+                ((1, 2), (0, 1), false),
+                ((0, 1), (1, 2), false),
+            ] {
+                assert_eq!(Span::from(s1).intersects(Span::from(s2)), expected);
+            }
+        }
     }
 }

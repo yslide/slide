@@ -257,6 +257,15 @@ impl MockService {
         serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
     }
 
+    pub async fn code_action(&mut self, uri: &Url, range: &Range) -> Option<CodeActionResponse> {
+        self.assert_ready();
+        let action_resp = self
+            .send(text_document::code_action::request(uri, range))
+            .await
+            .unwrap();
+        serde_json::from_value(action_resp.get("result").unwrap().clone()).ok()
+    }
+
     pub async fn workspace_symbol(&mut self, query: &str) -> Option<Vec<SymbolInformation>> {
         self.assert_ready();
         let hover_resp = self.send(workspace::symbol::request(query)).await.unwrap();
@@ -613,6 +622,29 @@ pub mod text_document {
                         "uri": uri,
                     },
                     "positions": positions,
+                },
+                "id": 1,
+            })
+        }
+    }
+
+    pub mod code_action {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url, range: &Range) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/codeAction",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
+                    "range": range,
+                    "context": {
+                        "diagnostics": [],
+                    }
                 },
                 "id": 1,
             })

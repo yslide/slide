@@ -5,6 +5,7 @@
 //! implementations should reside in this module.
 
 use crate::program::response::*;
+use std::collections::HashMap;
 use tower_lsp::lsp_types::*;
 
 /// Describes how a response (namely a [program-level response](crate::program::response)) should
@@ -325,5 +326,31 @@ impl ToDocumentResponse for Result<ProgramCanRenameResponse, ProgramCannotRename
     ) -> Self::DocumentResponse {
         self.map(|v| Some(v.to_document_response(program_offset, o2p)))
             .map_err(|e| e.to_document_response(program_offset, o2p))
+    }
+}
+
+impl ToDocumentResponse for ProgramRenameResponse {
+    type DocumentResponse = WorkspaceEdit;
+
+    fn to_document_response(
+        self,
+        program_offset: usize,
+        o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        let ProgramRenameResponse { uri, edits } = self;
+        WorkspaceEdit {
+            changes: {
+                let mut changes = HashMap::with_capacity(1);
+                changes.insert(
+                    uri,
+                    edits
+                        .into_iter()
+                        .map(|e| e.to_document_response(program_offset, o2p))
+                        .collect(),
+                );
+                Some(changes)
+            },
+            ..WorkspaceEdit::default()
+        }
     }
 }

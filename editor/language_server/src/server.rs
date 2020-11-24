@@ -340,6 +340,26 @@ impl LanguageServer for SlideLS {
 
         can_rename.unwrap_or(Ok(None))
     }
+
+    async fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
+        let RenameParams {
+            text_document_position:
+                TextDocumentPositionParams {
+                    text_document: TextDocumentIdentifier { uri },
+                    position,
+                },
+            new_name,
+            ..
+        } = params;
+
+        let renames =
+            self.registry()
+                .with_program_at_uri_and_position(&uri, position, |program, offset| {
+                    program.get_rename_edits(offset, new_name)
+                });
+
+        Ok(renames)
+    }
 }
 
 #[tokio::main]

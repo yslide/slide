@@ -221,6 +221,20 @@ impl MockService {
         }
     }
 
+    pub async fn rename(
+        &mut self,
+        uri: &Url,
+        position: &Position,
+        new_name: &str,
+    ) -> Option<WorkspaceEdit> {
+        self.assert_ready();
+        let hover_resp = self
+            .send(text_document::rename::request(uri, position, new_name))
+            .await
+            .unwrap();
+        serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
+    }
+
     pub async fn workspace_symbol(&mut self, query: &str) -> Option<Vec<SymbolInformation>> {
         self.assert_ready();
         let hover_resp = self.send(workspace::symbol::request(query)).await.unwrap();
@@ -517,6 +531,27 @@ pub mod text_document {
                         "uri": uri,
                     },
                     "position": position,
+                },
+                "id": 1,
+            })
+        }
+    }
+
+    pub mod rename {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url, position: &Position, new_name: &str) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/rename",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
+                    "position": position,
+                    "newName": new_name,
                 },
                 "id": 1,
             })

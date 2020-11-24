@@ -72,6 +72,7 @@ impl SlideLS {
             prepare_provider: Some(true),
             work_done_progress_options: WorkDoneProgressOptions::default(),
         }));
+        let folding_range_provider = Some(FoldingRangeProviderCapability::Simple(true));
 
         ServerCapabilities {
             definition_provider,
@@ -84,6 +85,7 @@ impl SlideLS {
             document_formatting_provider,
             document_range_formatting_provider,
             rename_provider,
+            folding_range_provider,
             ..ServerCapabilities::default()
         }
     }
@@ -359,6 +361,17 @@ impl LanguageServer for SlideLS {
                 });
 
         Ok(renames)
+    }
+
+    async fn folding_range(&self, params: FoldingRangeParams) -> Result<Option<Vec<FoldingRange>>> {
+        let TextDocumentIdentifier { uri } = params.text_document;
+
+        let folding_ranges = self
+            .registry()
+            .with_programs_at_uri(&uri, |program| Some(program.folding_ranges()))
+            .map(|ranges| ranges.concat());
+
+        Ok(folding_ranges)
     }
 }
 

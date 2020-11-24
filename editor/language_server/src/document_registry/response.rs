@@ -5,6 +5,7 @@
 //! implementations should reside in this module.
 
 use crate::program::response::*;
+use libslide::Span;
 use std::collections::HashMap;
 use tower_lsp::lsp_types::*;
 
@@ -352,5 +353,39 @@ impl ToDocumentResponse for ProgramRenameResponse {
             },
             ..WorkspaceEdit::default()
         }
+    }
+}
+
+impl ToDocumentResponse for Vec<Span> {
+    type DocumentResponse = Vec<FoldingRange>;
+
+    fn to_document_response(
+        self,
+        program_offset: usize,
+        o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        self.into_iter()
+            .map(|span| {
+                let Range {
+                    start:
+                        Position {
+                            line: start_line,
+                            character: start_ch,
+                        },
+                    end:
+                        Position {
+                            line: end_line,
+                            character: end_ch,
+                        },
+                } = to_range!(o2p, program_offset, span);
+                FoldingRange {
+                    start_line,
+                    start_character: Some(start_ch),
+                    end_line,
+                    end_character: Some(end_ch),
+                    kind: None,
+                }
+            })
+            .collect()
     }
 }

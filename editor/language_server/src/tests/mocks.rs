@@ -235,6 +235,15 @@ impl MockService {
         serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
     }
 
+    pub async fn folding_range(&mut self, uri: &Url) -> Option<Vec<FoldingRange>> {
+        self.assert_ready();
+        let hover_resp = self
+            .send(text_document::folding_range::request(uri))
+            .await
+            .unwrap();
+        serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
+    }
+
     pub async fn workspace_symbol(&mut self, query: &str) -> Option<Vec<SymbolInformation>> {
         self.assert_ready();
         let hover_resp = self.send(workspace::symbol::request(query)).await.unwrap();
@@ -552,6 +561,25 @@ pub mod text_document {
                     },
                     "position": position,
                     "newName": new_name,
+                },
+                "id": 1,
+            })
+        }
+    }
+
+    pub mod folding_range {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/foldingRange",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
                 },
                 "id": 1,
             })

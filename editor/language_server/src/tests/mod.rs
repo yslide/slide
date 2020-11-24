@@ -6,6 +6,7 @@ mod utils;
 mod definitions;
 mod diagnostics;
 mod document_symbol;
+mod folding_range;
 mod formatting;
 mod highlight;
 mod hover;

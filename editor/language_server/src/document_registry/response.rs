@@ -5,7 +5,6 @@
 //! implementations should reside in this module.
 
 use crate::program::response::*;
-use libslide::Span;
 use std::collections::HashMap;
 use tower_lsp::lsp_types::*;
 
@@ -356,7 +355,7 @@ impl ToDocumentResponse for ProgramRenameResponse {
     }
 }
 
-impl ToDocumentResponse for Vec<Span> {
+impl ToDocumentResponse for ProgramFoldingRanges {
     type DocumentResponse = Vec<FoldingRange>;
 
     fn to_document_response(
@@ -364,7 +363,8 @@ impl ToDocumentResponse for Vec<Span> {
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
     ) -> Self::DocumentResponse {
-        self.into_iter()
+        self.0
+            .into_iter()
             .map(|span| {
                 let Range {
                     start:
@@ -387,5 +387,27 @@ impl ToDocumentResponse for Vec<Span> {
                 }
             })
             .collect()
+    }
+}
+
+impl ToDocumentResponse for ProgramSelectionRanges {
+    type DocumentResponse = SelectionRange;
+
+    fn to_document_response(
+        self,
+        program_offset: usize,
+        o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        self.0
+            .into_iter()
+            .map(|span| to_range!(o2p, program_offset, span))
+            .fold(None, |parent, cur_range| {
+                Some(Box::new(SelectionRange {
+                    range: cur_range,
+                    parent,
+                }))
+            })
+            .map(|boxed| *boxed)
+            .expect("Bad state: expected at least one selection range")
     }
 }

@@ -10,6 +10,7 @@ mod highlight;
 mod hover;
 mod references;
 mod rename;
+mod selection_ranges;
 mod symbols;
 
 // The following modules contribute free functions to the services API.

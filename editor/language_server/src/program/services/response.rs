@@ -74,3 +74,7 @@ pub struct ProgramRenameResponse {
     pub uri: Url,
     pub edits: Vec<ProgramTextEdit>,
 }
+
+pub struct ProgramFoldingRanges(pub Vec<Span>);
+
+pub struct ProgramSelectionRanges(pub Vec<Span>);

@@ -244,6 +244,19 @@ impl MockService {
         serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
     }
 
+    pub async fn selection_range(
+        &mut self,
+        uri: &Url,
+        positions: &[Position],
+    ) -> Option<Vec<SelectionRange>> {
+        self.assert_ready();
+        let hover_resp = self
+            .send(text_document::selection_range::request(uri, positions))
+            .await
+            .unwrap();
+        serde_json::from_value(hover_resp.get("result").unwrap().clone()).ok()
+    }
+
     pub async fn workspace_symbol(&mut self, query: &str) -> Option<Vec<SymbolInformation>> {
         self.assert_ready();
         let hover_resp = self.send(workspace::symbol::request(query)).await.unwrap();
@@ -580,6 +593,26 @@ pub mod text_document {
                     "textDocument": {
                         "uri": uri,
                     },
+                },
+                "id": 1,
+            })
+        }
+    }
+
+    pub mod selection_range {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url, positions: &[Position]) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/selectionRange",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
+                    "positions": positions,
                 },
                 "id": 1,
             })

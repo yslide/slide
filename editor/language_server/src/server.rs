@@ -73,6 +73,7 @@ impl SlideLS {
             work_done_progress_options: WorkDoneProgressOptions::default(),
         }));
         let folding_range_provider = Some(FoldingRangeProviderCapability::Simple(true));
+        let selection_range_provider = Some(SelectionRangeProviderCapability::Simple(true));
 
         ServerCapabilities {
             definition_provider,
@@ -86,6 +87,7 @@ impl SlideLS {
             document_range_formatting_provider,
             rename_provider,
             folding_range_provider,
+            selection_range_provider,
             ..ServerCapabilities::default()
         }
     }
@@ -372,6 +374,30 @@ impl LanguageServer for SlideLS {
             .map(|ranges| ranges.concat());
 
         Ok(folding_ranges)
+    }
+
+    async fn selection_range(
+        &self,
+        params: SelectionRangeParams,
+    ) -> Result<Option<Vec<SelectionRange>>> {
+        let SelectionRangeParams {
+            text_document: TextDocumentIdentifier { uri },
+            positions,
+            ..
+        } = params;
+
+        let ranges: Option<Vec<_>> = positions
+            .into_iter()
+            .map(|position| {
+                self.registry().with_program_at_uri_and_position(
+                    &uri,
+                    position,
+                    |program, offset| program.selection_ranges(offset),
+                )
+            })
+            .collect();
+
+        Ok(ranges)
     }
 }
 

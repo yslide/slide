@@ -10,6 +10,39 @@ pub enum AstItem<'a> {
     Expr(&'a RcExpr),
 }
 
+/// Retrieves the path of items descended to a program byte offset. The path is ordered from
+/// broadest to narrowest item around the offset. For example, in
+///
+/// ```math
+/// a = 1 ^ (|2 + 3)
+/// ```
+///
+/// The path would be { "a = 1 ^ (2 + 3)", "1 ^ (2 + 3)", "2 + 3", "2" }.
+pub fn get_item_path_to_offset(pos: usize, program: &AST) -> Vec<AstItem> {
+    let mut finder = ItemPathFinder { pos, path: vec![] };
+    finder.visit_stmt_list(program);
+    finder.path
+}
+struct ItemPathFinder<'a> {
+    pos: usize,
+    path: Vec<AstItem<'a>>,
+}
+impl<'a> StmtVisitor<'a> for ItemPathFinder<'a> {
+    fn visit_asgn(&mut self, asgn: &'a Assignment) {
+        if asgn.span.contains(self.pos) {
+            self.path.push(AstItem::Assignment(asgn));
+            visit::descend_asgn(self, asgn);
+        }
+    }
+
+    fn visit_expr(&mut self, expr: &'a RcExpr) {
+        if expr.span.contains(self.pos) {
+            self.path.push(AstItem::Expr(expr));
+            visit::descend_expr(self, expr);
+        }
+    }
+}
+
 /// Finds the nearest slide [expression](libslide::Expr) around an offset
 /// position. For example, in
 ///
@@ -20,29 +53,9 @@ pub enum AstItem<'a> {
 /// where `|` is the offset position, the expression corresponding to `1 + 2`
 /// will be found.
 pub fn get_tightest_expr(pos: usize, program: &AST) -> Option<&RcExpr> {
-    let mut finder = ExprFinder {
-        tightest: None,
-        pos,
-    };
-    finder.visit_stmt_list(program);
-    finder.tightest
-}
-struct ExprFinder<'a> {
-    tightest: Option<&'a RcExpr>,
-    pos: usize,
-}
-impl<'a> StmtVisitor<'a> for ExprFinder<'a> {
-    fn visit_stmt(&mut self, stmt: &'a Stmt) {
-        if stmt.span().contains(self.pos) {
-            visit::descend_stmt(self, stmt);
-        }
-    }
-
-    fn visit_expr(&mut self, expr: &'a RcExpr) {
-        if expr.span.contains(self.pos) {
-            self.tightest = Some(expr);
-            visit::descend_expr(self, expr);
-        }
+    match get_item_path_to_offset(pos, program).pop() {
+        Some(AstItem::Expr(e)) => Some(e),
+        _ => None,
     }
 }
 

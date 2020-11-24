@@ -69,3 +69,8 @@ pub struct ProgramCanRenameResponse {
     pub span: Span,
     pub placeholder: String,
 }
+
+pub struct ProgramRenameResponse {
+    pub uri: Url,
+    pub edits: Vec<ProgramTextEdit>,
+}

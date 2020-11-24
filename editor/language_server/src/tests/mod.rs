@@ -12,4 +12,5 @@ mod hover;
 mod prepare_rename;
 mod range_formatting;
 mod references;
+mod rename;
 mod workspace_symbol;

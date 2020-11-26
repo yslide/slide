@@ -1,4 +1,4 @@
-//! Module `diagnostics` marshalls between
+//! Module `diagnostics` marshals between
 //! [libslide diagnostics](libslide::diagnostics::Diagnostic) and LSP types.
 
 use super::response::*;

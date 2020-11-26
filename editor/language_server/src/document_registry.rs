@@ -76,7 +76,7 @@ impl DocumentRegistry {
 
     /// Does some work with a program at the specified `uri` and `position`.
     ///
-    /// This serves as the backbone of answering server queries, marshalling between [program-level
+    /// This serves as the backbone of answering server queries, marshaling between [program-level
     /// query responses](crate::program::response) and [document-level query responses](response),
     /// the later generally adhering to the LSP API surface.
     ///
@@ -154,7 +154,7 @@ impl DocumentRegistry {
     ) -> Option<Vec<ProgramResponse::DocumentResponse>> {
         let document = self.document(uri)?;
 
-        // Get the program-level responses and marshall back to document-level responses.
+        // Get the program-level responses and marshal back to document-level responses.
         let to_position = |offset| document.source_map.to_position(offset);
         let document_response = document
             .programs

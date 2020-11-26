@@ -266,6 +266,19 @@ impl MockService {
         serde_json::from_value(action_resp.get("result").unwrap().clone()).ok()
     }
 
+    pub async fn completion(
+        &mut self,
+        uri: &Url,
+        position: Position,
+    ) -> Option<CompletionResponse> {
+        self.assert_ready();
+        let completion_resp = self
+            .send(text_document::completion::request(uri, position))
+            .await
+            .unwrap();
+        serde_json::from_value(completion_resp.get("result").unwrap().clone()).ok()
+    }
+
     pub async fn workspace_symbol(&mut self, query: &str) -> Option<Vec<SymbolInformation>> {
         self.assert_ready();
         let hover_resp = self.send(workspace::symbol::request(query)).await.unwrap();
@@ -645,6 +658,26 @@ pub mod text_document {
                     "context": {
                         "diagnostics": [],
                     }
+                },
+                "id": 1,
+            })
+        }
+    }
+
+    pub mod completion {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url, position: Position) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/completion",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
+                    "position": position,
                 },
                 "id": 1,
             })

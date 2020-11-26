@@ -4,6 +4,7 @@
 // The following modules contribute to the API interface of Program, and do not expose any free
 // functions publicly.
 mod actions;
+mod completions;
 mod definitions;
 mod folding_ranges;
 mod format;

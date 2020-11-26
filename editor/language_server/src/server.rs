@@ -75,6 +75,16 @@ impl SlideLS {
         let folding_range_provider = Some(FoldingRangeProviderCapability::Simple(true));
         let selection_range_provider = Some(SelectionRangeProviderCapability::Simple(true));
         let code_action_provider = Some(CodeActionProviderCapability::Simple(true));
+        let completion_provider = Some(CompletionOptions {
+            resolve_provider: Some(false),
+            trigger_characters: Some(
+                vec!["=", "(", "[", "+", "-", "*", "/", "%", "^"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect(),
+            ),
+            ..CompletionOptions::default()
+        });
 
         ServerCapabilities {
             definition_provider,
@@ -90,6 +100,7 @@ impl SlideLS {
             folding_range_provider,
             selection_range_provider,
             code_action_provider,
+            completion_provider,
             ..ServerCapabilities::default()
         }
     }
@@ -422,6 +433,21 @@ impl LanguageServer for SlideLS {
         });
 
         Ok(actions)
+    }
+
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        let TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier { uri },
+            position,
+        } = params.text_document_position;
+
+        let completions =
+            self.registry()
+                .with_program_at_uri_and_position(&uri, position, |program, offset| {
+                    Some(program.completions(offset))
+                });
+
+        Ok(completions)
     }
 }
 

@@ -94,3 +94,13 @@ pub struct ProgramAction {
     pub edit: ProgramTextEdit,
     pub is_preferred: bool,
 }
+
+pub enum ProgramCompletionKind {
+    Variable,
+}
+
+pub struct ProgramCompletion {
+    pub label: String,
+    pub kind: ProgramCompletionKind,
+    pub documentation: String,
+}

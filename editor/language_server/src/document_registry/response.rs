@@ -476,3 +476,56 @@ impl ToDocumentResponse for Vec<ProgramAction> {
             .collect()
     }
 }
+
+impl ToDocumentResponse for ProgramCompletionKind {
+    type DocumentResponse = CompletionItemKind;
+
+    fn to_document_response(
+        self,
+        _: usize,
+        _: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        match self {
+            ProgramCompletionKind::Variable => CompletionItemKind::Variable,
+        }
+    }
+}
+
+impl ToDocumentResponse for ProgramCompletion {
+    type DocumentResponse = CompletionItem;
+
+    fn to_document_response(
+        self,
+        program_offset: usize,
+        o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        let ProgramCompletion {
+            label,
+            kind,
+            documentation,
+        } = self;
+        CompletionItem {
+            label,
+            kind: Some(kind.to_document_response(program_offset, o2p)),
+            documentation: Some(Documentation::String(documentation)),
+            insert_text_format: Some(InsertTextFormat::PlainText),
+            ..CompletionItem::default()
+        }
+    }
+}
+
+impl ToDocumentResponse for Vec<ProgramCompletion> {
+    type DocumentResponse = CompletionResponse;
+
+    fn to_document_response(
+        self,
+        program_offset: usize,
+        o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        CompletionResponse::Array(
+            self.into_iter()
+                .map(|c| c.to_document_response(program_offset, o2p))
+                .collect(),
+        )
+    }
+}

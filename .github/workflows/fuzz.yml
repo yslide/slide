@@ -1,8 +1,9 @@
 name: Fuzz
 
 on:
-  schedule:
-    - cron:  '0 5 31 2 *'
+  pull_request_target:
+    branches:
+      - temporary-prevent-fuzz
 
 jobs:
   fuzz:

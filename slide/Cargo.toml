@@ -37,7 +37,7 @@ image = "0.20"
 lazy_static = "1.4.0"
 lcs-image-diff = { version = "0.1.7", default-features = false }
 libtest-mimic = { git = "https://github.com/ayazhafiz/libtest-mimic", branch = "master" }
-reqwest = { version = "0.10.8", features = ["blocking"] }
+reqwest = { version = "0.11.0", features = ["blocking"] }
 
 [features]
 wasm = ["wasm-bindgen", "wee_alloc", "serde"]

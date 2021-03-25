@@ -87,20 +87,20 @@ impl SlideLS {
         });
 
         ServerCapabilities {
-            definition_provider,
             text_document_sync,
+            selection_range_provider,
             hover_provider,
+            completion_provider,
+            definition_provider,
             references_provider,
             document_highlight_provider,
             document_symbol_provider,
             workspace_symbol_provider,
+            code_action_provider,
             document_formatting_provider,
             document_range_formatting_provider,
             rename_provider,
             folding_range_provider,
-            selection_range_provider,
-            code_action_provider,
-            completion_provider,
             ..ServerCapabilities::default()
         }
     }

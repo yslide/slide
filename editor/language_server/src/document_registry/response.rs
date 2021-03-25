@@ -17,7 +17,7 @@ pub trait ToDocumentResponse {
 
     /// Performs the conversion of `self` to the targeted
     /// [`DocumentResponse`](Self::DocumentResponse).
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset_in_document: usize,
         document_offset_to_position: &impl Fn(usize) -> Position,
@@ -41,7 +41,7 @@ enum ServerErrorCode {
 impl ToDocumentResponse for ProgramLocation {
     type DocumentResponse = Location;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -54,7 +54,7 @@ impl ToDocumentResponse for ProgramLocation {
 impl ToDocumentResponse for Vec<ProgramLocation> {
     type DocumentResponse = Vec<Location>;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -70,7 +70,7 @@ impl ToDocumentResponse for Vec<ProgramLocation> {
 impl ToDocumentResponse for Vec<ProgramLocationLink> {
     type DocumentResponse = Vec<LocationLink>;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -106,7 +106,7 @@ impl ToDocumentResponse for Vec<ProgramLocationLink> {
 impl ToDocumentResponse for ProgramHoverResponse {
     type DocumentResponse = Hover;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -120,7 +120,7 @@ impl ToDocumentResponse for ProgramHoverResponse {
 impl ToDocumentResponse for ProgramHighlight {
     type DocumentResponse = DocumentHighlight;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -136,7 +136,7 @@ impl ToDocumentResponse for ProgramHighlight {
 impl ToDocumentResponse for Vec<ProgramHighlight> {
     type DocumentResponse = Vec<DocumentHighlight>;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -153,17 +153,17 @@ impl ToDocumentResponse for Vec<ProgramHighlight> {
 impl ToDocumentResponse for ProgramDefinitionResponse {
     type DocumentResponse = GotoDefinitionResponse;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
     ) -> Self::DocumentResponse {
         match self {
             Self::Array(locs) => {
-                GotoDefinitionResponse::Array(locs.to_document_response(program_offset, o2p))
+                GotoDefinitionResponse::Array(locs.into_document_response(program_offset, o2p))
             }
             Self::Link(links) => {
-                GotoDefinitionResponse::Link(links.to_document_response(program_offset, o2p))
+                GotoDefinitionResponse::Link(links.into_document_response(program_offset, o2p))
             }
         }
     }
@@ -172,7 +172,7 @@ impl ToDocumentResponse for ProgramDefinitionResponse {
 impl ToDocumentResponse for Vec<ProgramDiagnostic> {
     type DocumentResponse = Vec<Diagnostic>;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -201,7 +201,7 @@ impl ToDocumentResponse for Vec<ProgramDiagnostic> {
                                     |ProgramDiagnosticRelatedInformation { location, message }| {
                                         DiagnosticRelatedInformation {
                                             location: location
-                                                .to_document_response(program_offset, o2p),
+                                                .into_document_response(program_offset, o2p),
                                             message,
                                         }
                                     },
@@ -219,7 +219,7 @@ impl ToDocumentResponse for Vec<ProgramDiagnostic> {
 impl ToDocumentResponse for ProgramSymbolKind {
     type DocumentResponse = SymbolKind;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         _offset: usize,
         _o2p: &impl Fn(usize) -> Position,
@@ -233,7 +233,7 @@ impl ToDocumentResponse for ProgramSymbolKind {
 impl ToDocumentResponse for Vec<ProgramSymbolInformation> {
     type DocumentResponse = Vec<SymbolInformation>;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -251,8 +251,8 @@ impl ToDocumentResponse for Vec<ProgramSymbolInformation> {
                     #[allow(deprecated)]
                     SymbolInformation {
                         name,
-                        kind: kind.to_document_response(program_offset, o2p),
-                        location: location.to_document_response(program_offset, o2p),
+                        kind: kind.into_document_response(program_offset, o2p),
+                        location: location.into_document_response(program_offset, o2p),
                         deprecated: None,
                         container_name: None,
                     }
@@ -265,7 +265,7 @@ impl ToDocumentResponse for Vec<ProgramSymbolInformation> {
 impl ToDocumentResponse for ProgramTextEdit {
     type DocumentResponse = TextEdit;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -281,7 +281,7 @@ impl ToDocumentResponse for ProgramTextEdit {
 impl ToDocumentResponse for ProgramCanRenameResponse {
     type DocumentResponse = PrepareRenameResponse;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -297,7 +297,7 @@ impl ToDocumentResponse for ProgramCanRenameResponse {
 impl ToDocumentResponse for ProgramCannotRenameBecause {
     type DocumentResponse = tower_lsp::jsonrpc::Error;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         _program_offset: usize,
         _o2p: &impl Fn(usize) -> Position,
@@ -320,20 +320,20 @@ impl ToDocumentResponse for ProgramCannotRenameBecause {
 impl ToDocumentResponse for Result<ProgramCanRenameResponse, ProgramCannotRenameBecause> {
     type DocumentResponse = tower_lsp::jsonrpc::Result<Option<PrepareRenameResponse>>;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
     ) -> Self::DocumentResponse {
-        self.map(|v| Some(v.to_document_response(program_offset, o2p)))
-            .map_err(|e| e.to_document_response(program_offset, o2p))
+        self.map(|v| Some(v.into_document_response(program_offset, o2p)))
+            .map_err(|e| e.into_document_response(program_offset, o2p))
     }
 }
 
 impl ToDocumentResponse for ProgramRenameResponse {
     type DocumentResponse = WorkspaceEdit;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -346,7 +346,7 @@ impl ToDocumentResponse for ProgramRenameResponse {
                     uri,
                     edits
                         .into_iter()
-                        .map(|e| e.to_document_response(program_offset, o2p))
+                        .map(|e| e.into_document_response(program_offset, o2p))
                         .collect(),
                 );
                 Some(changes)
@@ -359,7 +359,7 @@ impl ToDocumentResponse for ProgramRenameResponse {
 impl ToDocumentResponse for ProgramFoldingRanges {
     type DocumentResponse = Vec<FoldingRange>;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -394,7 +394,7 @@ impl ToDocumentResponse for ProgramFoldingRanges {
 impl ToDocumentResponse for ProgramSelectionRanges {
     type DocumentResponse = SelectionRange;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -416,7 +416,7 @@ impl ToDocumentResponse for ProgramSelectionRanges {
 impl ToDocumentResponse for ProgramActionKind {
     type DocumentResponse = CodeActionKind;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         _: usize,
         _: &impl Fn(usize) -> Position,
@@ -431,7 +431,7 @@ impl ToDocumentResponse for ProgramActionKind {
 impl ToDocumentResponse for ProgramAction {
     type DocumentResponse = CodeAction;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -446,12 +446,12 @@ impl ToDocumentResponse for ProgramAction {
         } = self;
         CodeAction {
             title,
-            kind: Some(kind.to_document_response(program_offset, o2p)),
+            kind: Some(kind.into_document_response(program_offset, o2p)),
             diagnostics: resolved_diagnostic
-                .map(|d| vec![d].to_document_response(program_offset, o2p)),
+                .map(|d| vec![d].into_document_response(program_offset, o2p)),
             edit: {
                 let mut changes = HashMap::new();
-                changes.insert(uri, vec![edit.to_document_response(program_offset, o2p)]);
+                changes.insert(uri, vec![edit.into_document_response(program_offset, o2p)]);
                 Some(WorkspaceEdit {
                     changes: Some(changes),
                     ..WorkspaceEdit::default()
@@ -466,13 +466,13 @@ impl ToDocumentResponse for ProgramAction {
 impl ToDocumentResponse for Vec<ProgramAction> {
     type DocumentResponse = Vec<CodeAction>;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
     ) -> Self::DocumentResponse {
         self.into_iter()
-            .map(|pa| pa.to_document_response(program_offset, o2p))
+            .map(|pa| pa.into_document_response(program_offset, o2p))
             .collect()
     }
 }
@@ -480,7 +480,7 @@ impl ToDocumentResponse for Vec<ProgramAction> {
 impl ToDocumentResponse for ProgramCompletionKind {
     type DocumentResponse = CompletionItemKind;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         _: usize,
         _: &impl Fn(usize) -> Position,
@@ -494,7 +494,7 @@ impl ToDocumentResponse for ProgramCompletionKind {
 impl ToDocumentResponse for ProgramCompletion {
     type DocumentResponse = CompletionItem;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
@@ -506,7 +506,7 @@ impl ToDocumentResponse for ProgramCompletion {
         } = self;
         CompletionItem {
             label,
-            kind: Some(kind.to_document_response(program_offset, o2p)),
+            kind: Some(kind.into_document_response(program_offset, o2p)),
             documentation: Some(Documentation::String(documentation)),
             insert_text_format: Some(InsertTextFormat::PlainText),
             ..CompletionItem::default()
@@ -517,14 +517,14 @@ impl ToDocumentResponse for ProgramCompletion {
 impl ToDocumentResponse for Vec<ProgramCompletion> {
     type DocumentResponse = CompletionResponse;
 
-    fn to_document_response(
+    fn into_document_response(
         self,
         program_offset: usize,
         o2p: &impl Fn(usize) -> Position,
     ) -> Self::DocumentResponse {
         CompletionResponse::Array(
             self.into_iter()
-                .map(|c| c.to_document_response(program_offset, o2p))
+                .map(|c| c.into_document_response(program_offset, o2p))
                 .collect(),
         )
     }

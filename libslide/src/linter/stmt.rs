@@ -25,6 +25,7 @@ macro_rules! define_stmt_lints {
                 }
             }
 
+            #[allow(clippy::vec_init_then_push)]
             pub fn all_explanations() -> Vec<(&'static str, &'static str)> {
                 let mut vec = Vec::new();
                 $(vec.push(($linter::CODE, $linter::EXPLANATION));)*

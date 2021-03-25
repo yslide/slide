@@ -61,7 +61,7 @@ pub enum TokenType {
     Invalid(String),
 
     /// End of file.
-    EOF,
+    Eof,
 }
 
 impl TokenType {
@@ -101,7 +101,7 @@ impl fmt::Display for TokenType {
                 ConstPattern(s) => s.to_string(),
                 AnyPattern(s) => s.to_string(),
                 Invalid(s) => s.to_string(),
-                EOF => "end of file".into(),
+                Eof => "end of file".into(),
             }
         )
     }

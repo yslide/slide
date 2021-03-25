@@ -3,7 +3,7 @@
 use libslide::visit::StmtVisitor;
 use libslide::*;
 
-pub type AST = StmtList;
+pub type Ast = StmtList;
 
 pub enum AstItem<'a> {
     Assignment(&'a Assignment),
@@ -27,7 +27,7 @@ impl<'a> AstItem<'a> {
 /// ```
 ///
 /// The path would be { "a = 1 ^ (2 + 3)", "1 ^ (2 + 3)", "2 + 3", "2" }.
-pub fn get_item_path_to_offset(pos: usize, program: &AST) -> Vec<AstItem> {
+pub fn get_item_path_to_offset(pos: usize, program: &Ast) -> Vec<AstItem> {
     let mut finder = ItemPathFinder { pos, path: vec![] };
     finder.visit_stmt_list(program);
     finder.path
@@ -61,7 +61,7 @@ impl<'a> StmtVisitor<'a> for ItemPathFinder<'a> {
 ///
 /// where `|` is the offset position, the expression corresponding to `1 + 2`
 /// will be found.
-pub fn get_tightest_expr(pos: usize, program: &AST) -> Option<&RcExpr> {
+pub fn get_tightest_expr(pos: usize, program: &Ast) -> Option<&RcExpr> {
     match get_item_path_to_offset(pos, program).pop() {
         Some(AstItem::Expr(e)) => Some(e),
         _ => None,
@@ -78,7 +78,7 @@ pub fn get_tightest_expr(pos: usize, program: &AST) -> Option<&RcExpr> {
 /// ^^^^^^^^^^^^^^^^^^^^^ will return "a = 1 + 2 * 3 / 4 ^ 5"
 ///       ^^^^^           will return nothing
 /// ```
-pub fn get_item_at_span(span: Span, program: &AST) -> Option<AstItem> {
+pub fn get_item_at_span(span: Span, program: &Ast) -> Option<AstItem> {
     let mut finder = ItemAtSpanFinder { item: None, span };
     finder.visit_stmt_list(program);
     finder.item

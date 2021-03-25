@@ -47,7 +47,7 @@ impl Document {
             .map(|p| {
                 p.diagnostics()
                     .clone()
-                    .to_document_response(p.start, &to_position)
+                    .into_document_response(p.start, &to_position)
             })
             .flatten()
             .collect()

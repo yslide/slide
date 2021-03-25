@@ -5,7 +5,7 @@ use libslide::ProgramContext;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use tower_lsp::lsp_types::Url;
 
-use crate::ast::AST;
+use crate::ast::Ast;
 use crate::ptr::P;
 
 mod services;
@@ -15,9 +15,9 @@ pub use services::response;
 #[derive(Debug)]
 struct CompletedAnalysis {
     /// The "original" AST parsed from the slide program text.
-    original: AST,
+    original: Ast,
     /// The AST of the slide program after undergoing evaluation.
-    simplified: AST,
+    simplified: Ast,
     /// Diagnostics for the slide program.
     diagnostics: Vec<response::ProgramDiagnostic>,
 }
@@ -39,8 +39,8 @@ impl Analysis {
 
     /// Creates a fresh [complete analysis](Analysis::Complete).
     fn fresh(
-        original: AST,
-        simplified: AST,
+        original: Ast,
+        simplified: Ast,
         diagnostics: Vec<response::ProgramDiagnostic>,
     ) -> Self {
         Self::Complete(CompletedAnalysis {
@@ -51,7 +51,7 @@ impl Analysis {
     }
 
     fn is_complete(&self) -> bool {
-        matches!(self, Analysis::Complete{..})
+        matches!(self, Analysis::Complete { .. })
     }
 }
 
@@ -101,12 +101,12 @@ impl Program {
 
     /// Returns the "original" [AST](crate::ast::AST) of the program, after parsing but before
     /// evaluation.
-    pub fn original_ast(&self) -> MappedRwLockReadGuard<AST> {
+    pub fn original_ast(&self) -> MappedRwLockReadGuard<Ast> {
         MappedRwLockReadGuard::map(self.get_analysis(), |a| &a.original)
     }
 
     /// Returns the "simplified" [AST](crate::ast::AST) of the program, after evaluation.
-    pub fn simplified_ast(&self) -> MappedRwLockReadGuard<AST> {
+    pub fn simplified_ast(&self) -> MappedRwLockReadGuard<Ast> {
         MappedRwLockReadGuard::map(self.get_analysis(), |a| &a.simplified)
     }
 

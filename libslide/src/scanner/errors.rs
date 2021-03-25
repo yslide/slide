@@ -16,6 +16,7 @@ macro_rules! define_errors {
         pub struct ScanErrors;
 
         impl DiagnosticRegistry for ScanErrors {
+            #[allow(clippy::vec_init_then_push)]
             fn codes_with_explanations() -> Vec<(&'static str, &'static str)> {
                 let mut vec = Vec::new();
                 $(vec.push(($error::CODE, $error::EXPLANATION));)*

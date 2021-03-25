@@ -62,7 +62,7 @@ macro_rules! binary_expr_parser {
 /// Returns a diagnostic for an unclosed delimiter.
 fn unclosed_delimiter(opener: Token, expected_closer: TT, found_closer: Token) -> Diagnostic {
     let mut found_str = found_closer.to_string();
-    if !matches!(found_closer.ty, TT::EOF) {
+    if !matches!(found_closer.ty, TT::Eof) {
         found_str = format!("`{}`", found_str);
     }
     MismatchedClosingDelimiter!(expected expected_closer, at found_closer.span,
@@ -109,7 +109,7 @@ where
 
     #[inline]
     fn done(&mut self) -> bool {
-        self.input().peek().map(|t| &t.ty) == Some(&TT::EOF)
+        self.input().peek().map(|t| &t.ty) == Some(&TT::Eof)
     }
 
     #[inline]
@@ -147,7 +147,7 @@ where
     fn num_term(&mut self) -> Self::Expr {
         let tok = self.next();
         let tok_span = tok.span;
-        if matches!(tok.ty, TT::EOF) {
+        if matches!(tok.ty, TT::Eof) {
             self.push_diag(ExpectedExpr!(tok.span, "end of file"));
             return Self::Expr::empty(tok.span);
         }
@@ -214,7 +214,7 @@ where
 
         let first_tok_span = self.peek().span;
         let Span { lo, mut hi } = first_tok_span;
-        while self.peek().ty != TT::EOF {
+        while self.peek().ty != TT::Eof {
             hi = self.next().span.hi;
         }
         let diag = additional_diags(ExtraTokens!(lo..hi), first_tok_span);

@@ -266,7 +266,10 @@ impl RcExpression for RcExprPat {
 
     #[inline]
     fn is_var(&self) -> bool {
-        matches!(**self, ExprPat::ConstPat(_) | ExprPat::VarPat(_) | ExprPat::AnyPat(_))
+        matches!(
+            **self,
+            ExprPat::ConstPat(_) | ExprPat::VarPat(_) | ExprPat::AnyPat(_)
+        )
     }
 
     #[inline]

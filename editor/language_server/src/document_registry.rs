@@ -103,7 +103,8 @@ impl DocumentRegistry {
 
         // Marshall to absolute position in document and get the document response.
         let to_position = |offset| document.source_map.to_position(offset);
-        let document_response = program_response.to_document_response(program.start, &to_position);
+        let document_response =
+            program_response.into_document_response(program.start, &to_position);
         Some(document_response)
     }
 
@@ -137,7 +138,8 @@ impl DocumentRegistry {
 
         // Marshall to absolute position in document and get the document response.
         let to_position = |offset| document.source_map.to_position(offset);
-        let document_response = program_response.to_document_response(program.start, &to_position);
+        let document_response =
+            program_response.into_document_response(program.start, &to_position);
         Some(document_response)
     }
 
@@ -161,7 +163,7 @@ impl DocumentRegistry {
             .iter()
             .filter_map(|program| callback(program).map(|r| (r, program.start)))
             .map(|(program_response, program_offset)| {
-                program_response.to_document_response(program_offset, &to_position)
+                program_response.into_document_response(program_offset, &to_position)
             })
             .collect();
         Some(document_response)

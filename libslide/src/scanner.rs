@@ -65,7 +65,7 @@ impl Scanner {
 
     fn peek_n(&self, n: usize) -> String {
         let to = std::cmp::min(self.pos + n, self.input.len());
-        self.input[self.pos..to].into_iter().collect()
+        self.input[self.pos..to].iter().collect()
     }
 
     fn expect(&mut self, what: &str) {
@@ -109,7 +109,7 @@ impl Scanner {
             }
         }
 
-        self.push_tok(TT::EOF, (self.pos, self.pos + 1));
+        self.push_tok(TT::Eof, (self.pos, self.pos + 1));
     }
 
     /// Scans leading trivia, including whitespace.

@@ -296,7 +296,7 @@ impl Emit for Expr {
         match self {
             Self::Const(nf64) if config.contains(EmitConfig::HEX) => {
                 let nu64 = *nf64 as u64;
-                if nu64 as f64 == *nf64 {
+                if (nu64 as f64 - *nf64).abs() < std::f64::EPSILON {
                     format!("0x{:X}", nu64)
                 } else {
                     nf64.to_string()

@@ -92,11 +92,12 @@ where
                     \ttimes         (latex):        Emit \"\\times\" for multiplications.\n\
                     \tdiv           (latex):        Emit \"\\div\" for divisions.\n\
                     \timplicit-mult (pretty|latex): Use implicit multiplication where possible.\n\
+                    \thex           (pretty):       Emit integers as hexadecimal.\n\
                     ",
                 )
                 .hide_possible_values(true)
                 .takes_value(true)
-                .possible_values(&["frac", "times", "div", "implicit-mult"])
+                .possible_values(&["frac", "times", "div", "implicit-mult", "hex"])
                 .multiple(true),
         )
         .arg(

@@ -1,9 +1,13 @@
+!!!args
+--emit-config hex
+!!!args
+
 ===in
-0xff + 0x10A
+0xff / 0x10A
 ===in
 
 ~~~stdout
-521
+0.9586466165413534
 ~~~stdout
 
 ~~~stderr

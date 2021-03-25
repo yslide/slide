@@ -15,7 +15,6 @@ pub enum EmitFormat {
     SExpression,
     /// LaTeX output form.
     /// For example, `(1 + 1)` is output as `\left(1 + 1\right)`.
-    /// NB: this is not yet implemented.
     Latex,
     /// Slide internal debug form.
     /// NB: this form is not stable, and no assumptions should be made about it.
@@ -50,6 +49,9 @@ bitflags::bitflags! {
         /// Emits divisions as "\div".
         /// Applies to LaTeX emit.
         const DIV = 16;
+        /// Emits integers as hex decimals, where possible.
+        /// Applies to pretty emit.
+        const HEX = 32;
     }
 }
 
@@ -62,6 +64,7 @@ impl From<Vec<String>> for EmitConfig {
                 "implicit-mult" => EmitConfig::IMPLICIT_MULT,
                 "times" => EmitConfig::TIMES,
                 "div" => EmitConfig::DIV,
+                "hex" => EmitConfig::HEX,
                 _ => unreachable!(),
             }
         }
@@ -291,6 +294,14 @@ fmt_emit_impl!(Expr);
 impl Emit for Expr {
     fn emit_pretty(&self, config: EmitConfig) -> String {
         match self {
+            Self::Const(nf64) if config.contains(EmitConfig::HEX) => {
+                let nu64 = *nf64 as u64;
+                if nu64 as f64 == *nf64 {
+                    format!("0x{:X}", nu64)
+                } else {
+                    nf64.to_string()
+                }
+            }
             Self::Const(num) => num.to_string(),
             Self::Var(var) => var.to_string(),
             Self::BinaryExpr(binary_expr) => binary_expr.emit_pretty(config),

@@ -1,0 +1,18 @@
+!!!args
+--emit-config hex
+!!!args
+
+===in
+0xff + 0x10A
+===in
+
+~~~stdout
+0x209
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

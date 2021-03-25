@@ -27,6 +27,7 @@ OPTIONS:
             	times         (latex):        Emit "\times" for multiplications.
             	div           (latex):        Emit "\div" for divisions.
             	implicit-mult (pretty|latex): Use implicit multiplication where possible.
+            	hex           (pretty):       Emit integers as hexadecimal.
         --explain <diagnostic>            Provide a detailed explanation for a diagnostic code.
     -o, --output-form <output-form>
             Slide emit format. Possible values:

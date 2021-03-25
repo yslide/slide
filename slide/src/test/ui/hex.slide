@@ -1,0 +1,14 @@
+===in
+0xff + 0x10A
+===in
+
+~~~stdout
+521
+~~~stdout
+
+~~~stderr
+~~~stderr
+
+~~~exitcode
+0
+~~~exitcode

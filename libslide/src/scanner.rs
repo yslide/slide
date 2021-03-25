@@ -63,6 +63,17 @@ impl Scanner {
         ch
     }
 
+    fn peek_n(&self, n: usize) -> String {
+        let to = std::cmp::min(self.pos + n, self.input.len());
+        self.input[self.pos..to].into_iter().collect()
+    }
+
+    fn expect(&mut self, what: &str) {
+        for c in what.chars() {
+            debug_assert!(*self.next().unwrap() == c);
+        }
+    }
+
     #[inline]
     fn push_diag(&mut self, diagnostic: Diagnostic) {
         self.diagnostics.push(diagnostic);
@@ -152,6 +163,22 @@ impl Scanner {
     fn scan_num(&mut self) {
         let start = self.pos;
 
+        let num = if self.peek_n(2) == "0x" {
+            self.scan_hex() as f64
+        } else {
+            self.scan_float()
+        };
+
+        self.push_tok(TT::Float(num), (start, self.pos));
+    }
+
+    fn scan_hex(&mut self) -> u64 {
+        self.expect("0x");
+        let hex = self.collect_while(char::is_ascii_hexdigit);
+        u64::from_str_radix(&hex, 16).unwrap()
+    }
+
+    fn scan_float(&mut self) -> f64 {
         let mut float_str = self.collect_while(|c| c.is_digit(10));
         if let Some('.') = self.peek() {
             float_str.push(*self.next().unwrap());
@@ -159,9 +186,7 @@ impl Scanner {
         }
         // TODO(https://github.com/rust-lang/rust/issues/31407): rustc's float parser may drop some
         // valid float literals. For now, use an external parser.
-        let float = strtod(&float_str).unwrap();
-
-        self.push_tok(TT::Float(float), (start, self.pos));
+        strtod(&float_str).unwrap()
     }
 
     fn scan_var_str(&mut self) -> String {
@@ -215,7 +240,7 @@ mod tests {
     /// See [Token]'s impl of Display for more details.
     /// [Token]: src/scanner/types.rs
     macro_rules! scanner_tests {
-        ($($name:ident: $program:expr, $format_str:expr)*) => {
+        ($($name:ident: $program:expr, $format_str:expr$(,$checkspan:expr)?)*) => {
         $(
             #[test]
             fn $name() {
@@ -235,7 +260,7 @@ mod tests {
                 // Now check the token spans are correct.
                 for token in tokens {
                     let Span {lo, hi} = token.span;
-                    assert_eq!($program[lo..hi], token.to_string());
+                    assert!($program[lo..hi] == token.to_string() $( || !$checkspan)?);
                 }
             }
         )*
@@ -246,6 +271,7 @@ mod tests {
         scanner_tests! {
             integer: "2", "2"
             float: "3.2", "3.2"
+            hex: "0x0fF", "255", false
             plus: "+", "+"
             minus: "-", "-"
             mult: "*", "*"

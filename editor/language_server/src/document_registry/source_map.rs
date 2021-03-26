@@ -24,14 +24,15 @@ impl SourceMap {
     /// Creates a new `SourceFile`.
     pub fn new(source: &str) -> Self {
         let mut offset = 0;
-        let lines = LinesWithEndings::from(source)
+        let mut lines: Vec<_> = LinesWithEndings::from(source)
             .into_iter()
             .map(|line| {
-                let line_offset_and_width = (offset, line.len());
+                let line_offset_and_width = (offset, line.len() - 1);
                 offset += line.len();
                 line_offset_and_width
             })
             .collect();
+        lines.last_mut().map(|l| l.1 += 1);
 
         Self {
             lines,

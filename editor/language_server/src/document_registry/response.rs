@@ -529,3 +529,55 @@ impl IntoDocumentResponse for Vec<ProgramCompletion> {
         )
     }
 }
+
+impl IntoDocumentResponse for ProgramActionRef {
+    type DocumentResponse = Command;
+
+    fn into_document_response(
+        self,
+        _program_offset: usize,
+        _o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        let ProgramActionRef { title, handle } = self;
+        Command {
+            title,
+            command: handle,
+            arguments: None,
+        }
+    }
+}
+
+impl IntoDocumentResponse for ProgramAnnotation {
+    type DocumentResponse = CodeLens;
+
+    fn into_document_response(
+        self,
+        program_offset: usize,
+        o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        let ProgramAnnotation {
+            span,
+            annotation,
+            action,
+        } = self;
+        CodeLens {
+            range: to_range!(o2p, program_offset, span),
+            data: Some(serde_json::Value::String(annotation)),
+            command: Some(action.into_document_response(program_offset, o2p)),
+        }
+    }
+}
+
+impl IntoDocumentResponse for Vec<ProgramAnnotation> {
+    type DocumentResponse = Vec<CodeLens>;
+
+    fn into_document_response(
+        self,
+        program_offset: usize,
+        o2p: &impl Fn(usize) -> Position,
+    ) -> Self::DocumentResponse {
+        self.into_iter()
+            .map(|lens| lens.into_document_response(program_offset, o2p))
+            .collect()
+    }
+}

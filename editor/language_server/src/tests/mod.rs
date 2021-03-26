@@ -4,6 +4,7 @@ mod mocks;
 mod utils;
 
 mod code_action;
+mod code_lens;
 mod completion;
 mod definitions;
 mod diagnostics;

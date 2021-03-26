@@ -81,6 +81,11 @@ pub struct ProgramFoldingRanges(pub Vec<Span>);
 
 pub struct ProgramSelectionRanges(pub Vec<Span>);
 
+pub struct ProgramActionRef {
+    pub title: String,
+    pub handle: String,
+}
+
 pub enum ProgramActionKind {
     DiagnosticFix,
     Rewrite,
@@ -103,4 +108,10 @@ pub struct ProgramCompletion {
     pub label: String,
     pub kind: ProgramCompletionKind,
     pub documentation: String,
+}
+
+pub struct ProgramAnnotation {
+    pub span: Span,
+    pub annotation: String,
+    pub action: ProgramActionRef,
 }

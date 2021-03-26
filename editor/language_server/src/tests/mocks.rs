@@ -279,6 +279,18 @@ impl MockService {
         serde_json::from_value(completion_resp.get("result").unwrap().clone()).ok()
     }
 
+    pub async fn code_lens(
+        &mut self,
+        uri: &Url,
+    ) -> Option<Vec<CodeLens>> {
+        self.assert_ready();
+        let code_lens_response = self
+            .send(text_document::code_lens::request(uri))
+            .await
+            .unwrap();
+        serde_json::from_value(code_lens_response.get("result").unwrap().clone()).ok()
+    }
+
     pub async fn workspace_symbol(&mut self, query: &str) -> Option<Vec<SymbolInformation>> {
         self.assert_ready();
         let hover_resp = self.send(workspace::symbol::request(query)).await.unwrap();
@@ -678,6 +690,25 @@ pub mod text_document {
                         "uri": uri,
                     },
                     "position": position,
+                },
+                "id": 1,
+            })
+        }
+    }
+
+    pub mod code_lens {
+        use serde_json::{json, Value};
+        use tower_lsp::lsp_types::*;
+
+        #[allow(unused)]
+        pub fn request(uri: &Url) -> Value {
+            json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/codeLens",
+                "params": {
+                    "textDocument": {
+                        "uri": uri,
+                    },
                 },
                 "id": 1,
             })

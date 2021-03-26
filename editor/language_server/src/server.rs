@@ -85,6 +85,7 @@ impl SlideLS {
             ),
             ..CompletionOptions::default()
         });
+        let code_lens_provider= Some(CodeLensOptions{resolve_provider:Some(true)});
 
         ServerCapabilities {
             text_document_sync,
@@ -101,6 +102,7 @@ impl SlideLS {
             document_range_formatting_provider,
             rename_provider,
             folding_range_provider,
+            code_lens_provider,
             ..ServerCapabilities::default()
         }
     }
@@ -448,6 +450,18 @@ impl LanguageServer for SlideLS {
                 });
 
         Ok(completions)
+    }
+
+    async fn code_lens(&self, params: CodeLensParams) -> Result<Option<Vec<CodeLens>>> {
+        let TextDocumentIdentifier{uri}  = params.text_document;
+
+        let lenses = self.registry().with_programs_at_uri(&uri, |program| program.annotations()).map(|lenses| lenses.concat());
+
+        Ok(lenses)
+    }
+
+    async fn code_lens_resolve(&self, code_lens: CodeLens) -> Result<CodeLens> {
+        Ok(code_lens)
     }
 }
 

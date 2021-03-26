@@ -14,8 +14,7 @@ impl Program {
         let mut collect = AnnotationsCollector {
             annotations: vec![],
             context: self.context.as_ref(),
-            // TODO: we only need to build rules once.
-            rules: build_rules(self.context.as_ref()).ok()?,
+            rules: &self.rules,
         };
         collect.visit_stmt_list(&ast);
         Some(collect.annotations)
@@ -25,7 +24,7 @@ impl Program {
 struct AnnotationsCollector<'a> {
     annotations: Vec<ProgramAnnotation>,
     context: &'a ProgramContext,
-    rules: Vec<Rule>,
+    rules: &'a [Rule],
 }
 impl<'a> StmtVisitor<'a> for AnnotationsCollector<'a> {
     fn visit_expr(&mut self, expr: &'a RcExpr) {

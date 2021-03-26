@@ -1,7 +1,8 @@
 //! Module `program` describes a single slide program, and is the heart of the server's query and
 //! analysis work.
 
-use libslide::ProgramContext;
+use libslide::evaluator_rules::Rule;
+use libslide::{build_rules, ProgramContext};
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use tower_lsp::lsp_types::Url;
 
@@ -60,8 +61,6 @@ impl Analysis {
 #[derive(Debug)]
 pub(crate) struct Program {
     /// The text source of the slide program.
-    // TODO: make this a &str with the same lifetime as the entire document source (?)
-    // May be less efficient actually if document is very large, think about this later.
     pub source: String,
     /// The `Url` of the document this program resides in.
     pub document_uri: P<Url>,
@@ -70,6 +69,8 @@ pub(crate) struct Program {
     /// The end offset of this program in the enclosing document.
     pub end: usize,
 
+    /// Evaluator rules for the relevant program.
+    pub rules: Vec<Rule>,
     /// The slide [context](ProgramContext) the slide program described by this program should be
     /// processed and evaluated with.
     pub context: P<ProgramContext>,
@@ -94,6 +95,8 @@ impl Program {
             document_uri,
             start,
             end,
+            // TODO: handle error
+            rules: build_rules(context.as_ref()).unwrap(),
             context,
             analysis: RwLock::new(Analysis::unknown()),
         }

@@ -31,9 +31,7 @@ impl Program {
     /// has any rewrite.
     fn rewrite_action(&self, span: Span) -> Option<ProgramAction> {
         let ast = self.original_ast();
-        // TODO: only need to build rules once.
-        let rules = build_rules(self.context.as_ref()).ok()?;
-        let simplify_expr = |e| evaluate_expr(e, rules.as_ref(), self.context.as_ref());
+        let simplify_expr = |e| evaluate_expr(e, &self.rules, self.context.as_ref());
         let (span, original, simplified) = match get_item_at_span(span, &ast)? {
             AstItem::Expr(e) => (e.span, e.to_string(), simplify_expr(e.clone()).to_string()),
             AstItem::Assignment(a) => (

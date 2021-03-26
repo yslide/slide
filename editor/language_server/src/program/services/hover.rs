@@ -28,9 +28,7 @@ impl Program {
             fmt_var_symbol_definition(var_asgns.get(&var).map(AsRef::as_ref))
         } else {
             // A subexpression - simplify it.
-            // TODO: we only need to build rules once.
-            let rules = build_rules(self.context.as_ref()).ok()?;
-            evaluate_expr(tightest_expr.clone(), &rules, self.context.as_ref()).to_string()
+            evaluate_expr(tightest_expr.clone(), &self.rules, self.context.as_ref()).to_string()
         };
         let hover_info = fmt_symbol_info(simplified);
 

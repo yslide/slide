@@ -134,7 +134,7 @@ impl Rule {
     }
 
     /// Creates an [pattern rule](Rule::PatternMap) from a suitable string pattern.
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_pat_str(s: &str) -> Self {
         Self::PatternMap(PatternMap::from_str(s))
     }
 }

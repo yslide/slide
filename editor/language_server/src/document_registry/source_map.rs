@@ -32,7 +32,9 @@ impl SourceMap {
                 line_offset_and_width
             })
             .collect();
-        lines.last_mut().map(|l| l.1 += 1);
+        if let Some(l) = lines.last_mut() {
+            l.1 += 1;
+        }
 
         Self {
             lines,

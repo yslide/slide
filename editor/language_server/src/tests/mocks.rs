@@ -279,10 +279,7 @@ impl MockService {
         serde_json::from_value(completion_resp.get("result").unwrap().clone()).ok()
     }
 
-    pub async fn code_lens(
-        &mut self,
-        uri: &Url,
-    ) -> Option<Vec<CodeLens>> {
+    pub async fn code_lens(&mut self, uri: &Url) -> Option<Vec<CodeLens>> {
         self.assert_ready();
         let code_lens_response = self
             .send(text_document::code_lens::request(uri))

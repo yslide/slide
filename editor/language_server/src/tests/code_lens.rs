@@ -12,10 +12,15 @@ async fn drive_code_lens_test(content: &str, ranges: &[(Range, &str)]) {
     let code_lenses = service.code_lens(&file).await.unwrap();
     for (cl, (range, simpl)) in code_lenses.into_iter().zip(ranges) {
         assert_eq!(cl.range, *range);
-        assert_eq!(cl.data.map(|v| match v {
-            serde_json::Value::String(s) => s,
-            _ => Default::default(),
-        }).unwrap_or_default(), *simpl);
+        assert_eq!(
+            cl.data
+                .map(|v| match v {
+                    serde_json::Value::String(s) => s,
+                    _ => Default::default(),
+                })
+                .unwrap_or_default(),
+            *simpl
+        );
     }
 
     service.shutdown().await;
@@ -32,7 +37,7 @@ async fn code_lenses() {
         let start = content.find(over).unwrap();
         Range::new(sm.to_position(start), sm.to_position(start + over.len()))
     };
-    
+
     let lenses_ranges = [
         (range("2 / 4"), "0.5"),
         (range("1 + 2 / 4"), "1.5"),

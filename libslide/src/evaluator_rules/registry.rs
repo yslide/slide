@@ -198,8 +198,8 @@ impl RuleSet {
             .iter()
             .map(|r| rule_set.get(r).unwrap())
             .flat_map(|r| match r {
-                UnbuiltRule::S(s) => vec![Rule::from_str(s)],
-                UnbuiltRule::M(m) => m.iter().map(|s| Rule::from_str(s)).collect(),
+                UnbuiltRule::S(s) => vec![Rule::from_pat_str(s)],
+                UnbuiltRule::M(m) => m.iter().map(|s| Rule::from_pat_str(s)).collect(),
                 UnbuiltRule::F(f) => vec![Rule::from_fn(*f)],
             })
             .collect()

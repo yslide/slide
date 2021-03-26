@@ -30,21 +30,18 @@ struct AnnotationsCollector<'a> {
 impl<'a> StmtVisitor<'a> for AnnotationsCollector<'a> {
     fn visit_expr(&mut self, expr: &'a RcExpr) {
         libslide::visit::descend_expr(self, expr);
-        match expr.as_ref() {
-            Expr::BinaryExpr(..) => {
-                let simpl = evaluate_expr(expr.clone(), &self.rules, self.context);
-                if *expr != simpl {
-                    self.annotations.push(ProgramAnnotation {
-                        span: expr.span,
-                        annotation: simpl.to_string(),
-                        action: ProgramActionRef {
-                            title: simpl.to_string(),
-                            handle: String::new(),
-                        },
-                    })
-                }
+        if let Expr::BinaryExpr(..) = expr.as_ref() {
+            let simpl = evaluate_expr(expr.clone(), &self.rules, self.context);
+            if *expr != simpl {
+                self.annotations.push(ProgramAnnotation {
+                    span: expr.span,
+                    annotation: simpl.to_string(),
+                    action: ProgramActionRef {
+                        title: simpl.to_string(),
+                        handle: String::new(),
+                    },
+                })
             }
-            _ => {}
         }
     }
 }

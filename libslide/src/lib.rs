@@ -244,7 +244,7 @@ pub use partial_evaluator::evaluate_expr;
 pub use partial_evaluator::EvaluationResult;
 pub(crate) use partial_evaluator::PartialEvaluatorErrors;
 
-mod evaluator_rules;
+pub mod evaluator_rules;
 
 mod math;
 pub use math::Poly; // Since poly! is exposed, expose Poly too.

@@ -11,10 +11,14 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 
 macro_rules! define_rules {
-    ($($kind:ident: $def:expr)*) => {
+    ($($(#[doc = $doc:expr])+ $kind:ident: $def:expr)*) => {
         #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+        /// Built-in rewrite rule names.
         pub enum RuleName {
-            $($kind,)*
+            $(
+                $(#[doc = $doc])+
+                $kind,
+            )*
         }
 
         fn get_all_rules() -> HashMap<RuleName, UnbuiltRule> {
@@ -25,41 +29,62 @@ macro_rules! define_rules {
     };
 }
 
+// The order matters... (TODO) we should make that more explicit, or be smarter about it.
 define_rules! {
-           UnwrapExplicitParens: S("(_a) -> _a")
-         UnwrapExplicitBrackets: S("[_a] -> _a")
-                            Add: F(add)
-                       Subtract: F(subtract)
-                       Multiply: F(multiply)
-                         Divide: F(divide)
-                         Modulo: F(modulo)
-                   Exponentiate: F(exponentiate)
-                         Posate: F(posate)
-                         Negate: F(negate)
-           MultiplicateIdentity: S("_a * 1 -> _a")
-               AdditiveIdentity: S("_a + 0 -> _a")
-                AdditiveInverse: S("_a - _a -> 0")
-            SubtractiveIdentity: S("_a - 0 -> _a")
-               ReorderConstants: S("#a + $b -> $b + #a")
-             DistributeNegation: M(&[
-                      "-(_a - _b) -> _b - _a",
-                      "_a - (_b - _c) -> _a - _b + _c",
-                  ])
-            FoldNegatedAddition: S("_a + -_b -> _a - _b")
-                   FoldDivision: M(&[
-                      "_a * 1 / _b -> _a / _b",
-                      "_a * (1 / _b) -> _a / _b",
-                  ])
-                  FoldExponents: M(&[
-                      "_a * _a -> _a^2",
-                      "_a * _a^_b -> _a^(_b + 1)",
-                      "_a^_b * _a -> _a^(_b + 1)",
-                      "_a^_b * _a^_c -> _a^(_b + _c)",
-                      "_a / _a^_b -> _a^(1 - _b)",
-                      "_a^_b / _a -> _a^(_b - 1)",
-                      "_a^_b / _a^_c -> _a^(_b - _c)",
-                  ])
-         ExponentiativeIdentity: S("_a^0 -> _a")
+    /// Unwraps parantheses.
+    UnwrapExplicitParens: S("(_a) -> _a")
+    /// Unwraps brackets.
+    UnwrapExplicitBrackets: S("[_a] -> _a")
+    /// Binary addition.
+    Add: F(add)
+    /// Binary subtraction.
+    Subtract: F(subtract)
+    /// Binary multiplication.
+    Multiply: F(multiply)
+    /// Binary division.
+    Divide: F(divide)
+    /// Binary modulo.
+    Modulo: F(modulo)
+    /// Binary exponentiation.
+    Exponentiate: F(exponentiate)
+    /// Unary posation.
+    Posate: F(posate)
+    /// Unary negation.
+    Negate: F(negate)
+    /// The multiplicative identity `a*1=a`.
+    MultiplicateIdentity: S("_a * 1 -> _a")
+    /// The additive identity `a+0=a`.
+    AdditiveIdentity: S("_a + 0 -> _a")
+    /// The additive inverse `a+(-a)=0`.
+    AdditiveInverse: S("_a - _a -> 0")
+    /// The equivalent additive identity `a-0=a`.
+    SubtractiveIdentity: S("_a - 0 -> _a")
+    /// The commutative axiom with constants.
+    ReorderConstants: S("#a + $b -> $b + #a")
+    /// The distributive axiom on negation.
+    DistributeNegation: M(&[
+        "-(_a - _b) -> _b - _a",
+        "_a - (_b - _c) -> _a - _b + _c",
+    ])
+    /// Collapses the addition of a negation to a subtraction.
+    FoldNegatedAddition: S("_a + -_b -> _a - _b")
+    /// Collapses the multiplication of a reciprocal to a division.
+    FoldDivision: M(&[
+        "_a * 1 / _b -> _a / _b",
+        "_a * (1 / _b) -> _a / _b",
+    ])
+    /// Exponentiation axioms.
+    FoldExponents: M(&[
+        "_a * _a -> _a^2",
+        "_a * _a^_b -> _a^(_b + 1)",
+        "_a^_b * _a -> _a^(_b + 1)",
+        "_a^_b * _a^_c -> _a^(_b + _c)",
+        "_a / _a^_b -> _a^(1 - _b)",
+        "_a^_b / _a -> _a^(_b - 1)",
+        "_a^_b / _a^_c -> _a^(_b - _c)",
+    ])
+    /// Exponentiation identity `a^0=a`.
+    ExponentiativeIdentity: S("_a^0 -> _a")
 }
 
 impl PartialOrd for RuleName {
@@ -191,6 +216,7 @@ impl RuleSet {
     }
 }
 
+/// Errors that result from an attempt to [build a set of rules](RuleSet::build).
 #[derive(Debug)]
 pub struct BuildRuleErrors {
     errors: Vec<Box<dyn Error>>,

@@ -114,16 +114,26 @@ impl PatternMap {
     }
 }
 
+/// An expression rewrite rule.
 pub enum Rule {
+    /// A `PatternMap` rewrite rule attempts to match an expression via a pattern specified by
+    /// [`PatternMap::from`](PatternMap::from). If a match is found, an instance of
+    /// [`PatternMap::to`](PatternMap::to) with relevant substitutions from the initial match is
+    /// instantiated, and the matched expression is replaced accordingly.
     PatternMap(PatternMap),
+    /// An `Evaluate` rewrite rule takes an expression and attempts to programatically apply a
+    /// transformation to another expression. If no transformation can be undertaken by the rule,
+    /// `None` is returned.
     Evaluate(fn(RcExpr) -> Option<RcExpr>),
 }
 
 impl Rule {
+    /// Creates an [evaluation rule](Rule::Evaluate) from a suitable function.
     pub fn from_fn(f: fn(RcExpr) -> Option<RcExpr>) -> Self {
         Self::Evaluate(f)
     }
 
+    /// Creates an [pattern rule](Rule::PatternMap) from a suitable string pattern.
     pub fn from_str(s: &str) -> Self {
         Self::PatternMap(PatternMap::from_str(s))
     }

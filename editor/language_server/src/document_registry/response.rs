@@ -11,7 +11,7 @@ use tower_lsp::lsp_types::*;
 /// Describes how a response (namely a [program-level response](crate::program::response)) should
 /// be converted to a response at the level of a [Document](super::document::Document) (namely on
 /// the surface of the LSP API).
-pub trait ToDocumentResponse {
+pub trait IntoDocumentResponse {
     /// The document-level response targeted by the conversion.
     type DocumentResponse;
 
@@ -38,7 +38,7 @@ enum ServerErrorCode {
     CursorNotOverVariable = 100,
 }
 
-impl ToDocumentResponse for ProgramLocation {
+impl IntoDocumentResponse for ProgramLocation {
     type DocumentResponse = Location;
 
     fn into_document_response(
@@ -51,7 +51,7 @@ impl ToDocumentResponse for ProgramLocation {
     }
 }
 
-impl ToDocumentResponse for Vec<ProgramLocation> {
+impl IntoDocumentResponse for Vec<ProgramLocation> {
     type DocumentResponse = Vec<Location>;
 
     fn into_document_response(
@@ -67,7 +67,7 @@ impl ToDocumentResponse for Vec<ProgramLocation> {
     }
 }
 
-impl ToDocumentResponse for Vec<ProgramLocationLink> {
+impl IntoDocumentResponse for Vec<ProgramLocationLink> {
     type DocumentResponse = Vec<LocationLink>;
 
     fn into_document_response(
@@ -103,7 +103,7 @@ impl ToDocumentResponse for Vec<ProgramLocationLink> {
     }
 }
 
-impl ToDocumentResponse for ProgramHoverResponse {
+impl IntoDocumentResponse for ProgramHoverResponse {
     type DocumentResponse = Hover;
 
     fn into_document_response(
@@ -117,7 +117,7 @@ impl ToDocumentResponse for ProgramHoverResponse {
     }
 }
 
-impl ToDocumentResponse for ProgramHighlight {
+impl IntoDocumentResponse for ProgramHighlight {
     type DocumentResponse = DocumentHighlight;
 
     fn into_document_response(
@@ -133,7 +133,7 @@ impl ToDocumentResponse for ProgramHighlight {
     }
 }
 
-impl ToDocumentResponse for Vec<ProgramHighlight> {
+impl IntoDocumentResponse for Vec<ProgramHighlight> {
     type DocumentResponse = Vec<DocumentHighlight>;
 
     fn into_document_response(
@@ -150,7 +150,7 @@ impl ToDocumentResponse for Vec<ProgramHighlight> {
     }
 }
 
-impl ToDocumentResponse for ProgramDefinitionResponse {
+impl IntoDocumentResponse for ProgramDefinitionResponse {
     type DocumentResponse = GotoDefinitionResponse;
 
     fn into_document_response(
@@ -169,7 +169,7 @@ impl ToDocumentResponse for ProgramDefinitionResponse {
     }
 }
 
-impl ToDocumentResponse for Vec<ProgramDiagnostic> {
+impl IntoDocumentResponse for Vec<ProgramDiagnostic> {
     type DocumentResponse = Vec<Diagnostic>;
 
     fn into_document_response(
@@ -216,7 +216,7 @@ impl ToDocumentResponse for Vec<ProgramDiagnostic> {
     }
 }
 
-impl ToDocumentResponse for ProgramSymbolKind {
+impl IntoDocumentResponse for ProgramSymbolKind {
     type DocumentResponse = SymbolKind;
 
     fn into_document_response(
@@ -230,7 +230,7 @@ impl ToDocumentResponse for ProgramSymbolKind {
     }
 }
 
-impl ToDocumentResponse for Vec<ProgramSymbolInformation> {
+impl IntoDocumentResponse for Vec<ProgramSymbolInformation> {
     type DocumentResponse = Vec<SymbolInformation>;
 
     fn into_document_response(
@@ -262,7 +262,7 @@ impl ToDocumentResponse for Vec<ProgramSymbolInformation> {
     }
 }
 
-impl ToDocumentResponse for ProgramTextEdit {
+impl IntoDocumentResponse for ProgramTextEdit {
     type DocumentResponse = TextEdit;
 
     fn into_document_response(
@@ -278,7 +278,7 @@ impl ToDocumentResponse for ProgramTextEdit {
     }
 }
 
-impl ToDocumentResponse for ProgramCanRenameResponse {
+impl IntoDocumentResponse for ProgramCanRenameResponse {
     type DocumentResponse = PrepareRenameResponse;
 
     fn into_document_response(
@@ -294,7 +294,7 @@ impl ToDocumentResponse for ProgramCanRenameResponse {
     }
 }
 
-impl ToDocumentResponse for ProgramCannotRenameBecause {
+impl IntoDocumentResponse for ProgramCannotRenameBecause {
     type DocumentResponse = tower_lsp::jsonrpc::Error;
 
     fn into_document_response(
@@ -317,7 +317,7 @@ impl ToDocumentResponse for ProgramCannotRenameBecause {
     }
 }
 
-impl ToDocumentResponse for Result<ProgramCanRenameResponse, ProgramCannotRenameBecause> {
+impl IntoDocumentResponse for Result<ProgramCanRenameResponse, ProgramCannotRenameBecause> {
     type DocumentResponse = tower_lsp::jsonrpc::Result<Option<PrepareRenameResponse>>;
 
     fn into_document_response(
@@ -330,7 +330,7 @@ impl ToDocumentResponse for Result<ProgramCanRenameResponse, ProgramCannotRename
     }
 }
 
-impl ToDocumentResponse for ProgramRenameResponse {
+impl IntoDocumentResponse for ProgramRenameResponse {
     type DocumentResponse = WorkspaceEdit;
 
     fn into_document_response(
@@ -356,7 +356,7 @@ impl ToDocumentResponse for ProgramRenameResponse {
     }
 }
 
-impl ToDocumentResponse for ProgramFoldingRanges {
+impl IntoDocumentResponse for ProgramFoldingRanges {
     type DocumentResponse = Vec<FoldingRange>;
 
     fn into_document_response(
@@ -391,7 +391,7 @@ impl ToDocumentResponse for ProgramFoldingRanges {
     }
 }
 
-impl ToDocumentResponse for ProgramSelectionRanges {
+impl IntoDocumentResponse for ProgramSelectionRanges {
     type DocumentResponse = SelectionRange;
 
     fn into_document_response(
@@ -413,7 +413,7 @@ impl ToDocumentResponse for ProgramSelectionRanges {
     }
 }
 
-impl ToDocumentResponse for ProgramActionKind {
+impl IntoDocumentResponse for ProgramActionKind {
     type DocumentResponse = CodeActionKind;
 
     fn into_document_response(
@@ -428,7 +428,7 @@ impl ToDocumentResponse for ProgramActionKind {
     }
 }
 
-impl ToDocumentResponse for ProgramAction {
+impl IntoDocumentResponse for ProgramAction {
     type DocumentResponse = CodeAction;
 
     fn into_document_response(
@@ -463,7 +463,7 @@ impl ToDocumentResponse for ProgramAction {
     }
 }
 
-impl ToDocumentResponse for Vec<ProgramAction> {
+impl IntoDocumentResponse for Vec<ProgramAction> {
     type DocumentResponse = Vec<CodeAction>;
 
     fn into_document_response(
@@ -477,7 +477,7 @@ impl ToDocumentResponse for Vec<ProgramAction> {
     }
 }
 
-impl ToDocumentResponse for ProgramCompletionKind {
+impl IntoDocumentResponse for ProgramCompletionKind {
     type DocumentResponse = CompletionItemKind;
 
     fn into_document_response(
@@ -491,7 +491,7 @@ impl ToDocumentResponse for ProgramCompletionKind {
     }
 }
 
-impl ToDocumentResponse for ProgramCompletion {
+impl IntoDocumentResponse for ProgramCompletion {
     type DocumentResponse = CompletionItem;
 
     fn into_document_response(
@@ -514,7 +514,7 @@ impl ToDocumentResponse for ProgramCompletion {
     }
 }
 
-impl ToDocumentResponse for Vec<ProgramCompletion> {
+impl IntoDocumentResponse for Vec<ProgramCompletion> {
     type DocumentResponse = CompletionResponse;
 
     fn into_document_response(

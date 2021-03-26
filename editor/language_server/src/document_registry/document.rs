@@ -6,7 +6,7 @@
 //!
 //! Programs are extracted from a document using a [`DocumentParser`](super::DocumentParser).
 
-use super::response::ToDocumentResponse;
+use super::response::IntoDocumentResponse;
 use super::source_map::SourceMap;
 use crate::Program;
 

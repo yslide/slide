@@ -85,7 +85,7 @@ impl DocumentRegistry {
     /// [`Program`](Program) via a `callback` that returns a program-level response that can be
     /// [converted to](response::ToDocumentResponse) a document-level response, and optionally
     /// converting that to an LSP API response if needed.
-    pub fn with_program_at_uri_and_position<ProgramResponse: response::ToDocumentResponse>(
+    pub fn with_program_at_uri_and_position<ProgramResponse: response::IntoDocumentResponse>(
         &self,
         uri: &Url,
         position: Position,
@@ -110,7 +110,7 @@ impl DocumentRegistry {
 
     /// Like [`with_program_at_uri_and_position`](Self::with_program_at_uri_and_position), but
     /// matches a program at a range and provides the callback a span.
-    pub fn with_program_at_uri_and_range<ProgramResponse: response::ToDocumentResponse>(
+    pub fn with_program_at_uri_and_range<ProgramResponse: response::IntoDocumentResponse>(
         &self,
         uri: &Url,
         range: Range,
@@ -149,7 +149,7 @@ impl DocumentRegistry {
     /// Returns a `Vec` of responses, each response corresponding to a `Program` in the document.
     /// `Program`s returning an empty response are dropped, and linear order of `Program` response
     /// is not guaranteed.
-    pub fn with_programs_at_uri<ProgramResponse: response::ToDocumentResponse>(
+    pub fn with_programs_at_uri<ProgramResponse: response::IntoDocumentResponse>(
         &self,
         uri: &Url,
         callback: impl Fn(&Program) -> Option<ProgramResponse>,
@@ -175,7 +175,7 @@ impl DocumentRegistry {
     /// Returns a `Vec` of responses, each response corresponding to a `Program` in the server
     /// session. `Program`s returning an empty response are dropped, and linear order of `Program`
     /// response is not guaranteed.
-    pub fn with_all_programs<ProgramResponse: response::ToDocumentResponse>(
+    pub fn with_all_programs<ProgramResponse: response::IntoDocumentResponse>(
         &self,
         callback: impl Fn(&Program) -> Option<ProgramResponse>,
     ) -> Option<Vec<ProgramResponse::DocumentResponse>> {

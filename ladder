@@ -110,7 +110,7 @@ class Test(Cmd):
 
     @staticmethod
     def execute(args, runner_args):
-        cargo_args = ["cargo", "test"]
+        cargo_args = ["cargo", "test", "--no-fail-fast"]
         env = os.environ.copy()
         if args.sys:
             cargo_args.append("--test")

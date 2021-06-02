@@ -23,7 +23,7 @@ required-features = ["benchmark-internals"]
 
 [dependencies]
 bitflags = "1.2.1"
-lasso = "0.4.1"
+lasso = "0.5.1"
 lazy_static = "1.4.0"
 strtod = "0.0.1"
 

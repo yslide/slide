@@ -8,6 +8,36 @@
 [![Crates.io](https://img.shields.io/crates/v/slide)](https://crates.io/crates/slide)
 [![Github help-wanted](https://img.shields.io/github/issues/yslide/slide/help%20wanted)](https://github.com/yslide/slide/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
 
+slide is archived because I don't have too much time to work on it these days.
+I do want to get back to it eventually, though. For the interested, here are some
+thoughts on what can be done differently:
+
+- I think editor integration is key. Realistically a tool like this is something
+  you want free-form input to, like WolframAlpha, but also run over a document, e.g.
+  a TeX buffer or an OCR-ed page. I'm happy with how the current editor integration
+  works, but more than LSP is needed - only software people know what that is.
+- Rewrite rules are not the right approach. You run into the phase ordering problem
+  really quickly. At some point I had ideas about using a lightweight model to drive
+  phase ordering heuristically. This is promising, but useless below a critical mass.
+  I think what you really want here are e-graphs, or similar tools that preserve
+  expression state while applying transformations without loss.
+- Algorithmic evaluation rules are right approach. That's the stuff in the "math"
+  module. The idea is that eventually you do want to be able to do stuff like [factor
+  out polymonial divisors](./libslide/src/math/gcd_poly_zz.rs) - that's what drives
+  the basis example below.
+  - A good question is how to order such evaluation rules, because they can't always be
+    translated to equivalence relations in an e-graph trivially. You might want to
+    run them when an e-graph gets stuck. In general you just keep going until you hit
+    a constant state.
+- Performance is not a problem, at all really. These tools are meant to be used real-time.
+  Humans can't tell apart cycles. Your inpust are also tiny, so be okay with wasting work,
+  even a lot of it, if it gets better results. I really just don't see performance being
+  a problem until you get to higher-dimensional mathematics. But for this kind of
+  high-school algebra it's fine.
+- Be okay with giving up dense representations very quickly. This was a mistake I made.
+  Really you only want to represent the smallest polynomials densely. As soon as you have
+  a high-order polynomial, it's likely to only grow larger; just represent it sparsely.
+
 slide is an expression rewrite system and validator. Given an expression like
 
 ```math
